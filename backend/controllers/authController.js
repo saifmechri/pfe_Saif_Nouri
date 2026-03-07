@@ -1,5 +1,6 @@
 const pool = require("../db");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
 
 const SECRET = "jwt_secret_key";
 
@@ -21,9 +22,13 @@ const register = async (req, res) => {
     if (userCheck.rows.length > 0)
       return res.status(400).json({ message: "Email already exists" });
 
+    // Hasher le mot de passe avec bcrypt
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     const newUser = await pool.query(
       "INSERT INTO users(name,email,password) VALUES($1,$2,$3) RETURNING id, name, email, created_at",
-      [name, email, password]
+      [name, email, hashedPassword]
     );
 
     res.status(201).json({ message: "User created", user: newUser.rows[0] });
@@ -49,7 +54,10 @@ const login = async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
-    if (password !== user.rows[0].password) {
+    // Comparer le mot de passe avec bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.rows[0].password);
+    
+    if (!isPasswordValid) {
       return res.status(400).json({ message: "Wrong password" });
     }
 

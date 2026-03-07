@@ -101,38 +101,21 @@ Rôle : centraliser toutes les ressources graphiques.
 
 ## 📁 src/components/
 
-Contient les composants réutilisables globaux :
-
-Exemples :
-
-* Navbar
-* Footer
-* Sidebar
-* Button
-* Input
-* Modal
-* Card
-* Loader
-* ProtectedRoute
-* ChatBox
-* MapComponent
-
-Rôle :
-
-* Réutilisabilité
-* Séparation UI / logique
-* Composants indépendants
-
----
-
+C
 ## 📁 src/pages/
 
 Chaque fichier représente une page correspondant à une route.
 
 ### 🔐 auth/
 
-* Login.jsx → Page de connexion
-* Register.jsx → Page d'inscription
+* Login.jsx → Page de connexion --> contien email de creation de compte et mot de passe un boutton pour faire la connexion pour fonctionné au platforme
+
+* Register.jsx → Page d'inscription --> contien un formulaire d'inscription avec 6 chmp obligatoire a rmplir avec des contore de saisir sur chaque champs comme suit:
+-->nom et prenom :ne pas vide
+-->email : non vide @obligatoire au mail et .com a la fin
+-->telephone : non vide contien 8 chifre et commence par 2 , 5 ou 9
+-->mot de passe: non vide minimum 8 caractére une majuscule , un chiffre et un symbole
+-->Rôle: selection un Rôle
 
 ### 👤 automobiliste/
 

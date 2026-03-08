@@ -33,14 +33,17 @@ const verifyToken = async (req, res, next) => {
     req.user = user.rows[0];
     next();
   } catch (err) {
+    console.error("Erreur dans verifyToken:", err.name, err.message);
+    
     if (err.name === "JsonWebTokenError") {
       return res.status(401).json({ message: "Token invalide" });
     }
     if (err.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Token expiré" });
     }
-    console.log(err);
-    return res.status(500).json({ message: "Erreur serveur" });
+    
+    // Toute autre erreur JWT doit être traitée comme une erreur 401
+    return res.status(401).json({ message: "Erreur d'authentification" });
   }
 };
 

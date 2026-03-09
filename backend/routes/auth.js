@@ -4,7 +4,7 @@ const pool = require("../db");
 
 const { register, login } = require("../controllers/authController");
 const { verifyToken } = require("../middlwares/authMiddleware");
-const { isAdmin, isProfessional, checkRole } = require("../middlwares/roleMiddleware");
+const { isAdmin, isProfessional, checkRole, isGarage, isVendeur, isAutomobiliste } = require("../middlwares/roleMiddleware");
 
 router.post("/register", register);
 router.post("/login", login);
@@ -46,10 +46,28 @@ router.get("/professional/dashboard", verifyToken, isProfessional, (req, res) =>
 });
 
 // Route accessible SEULEMENT aux automobilistes
-router.get("/automobiliste/mes-vehicules", verifyToken, checkRole('automobiliste'), (req, res) => {
+router.get("/automobiliste/mes-vehicules", verifyToken, isAutomobiliste, (req, res) => {
   res.json({ 
     message: "Liste de vos véhicules",
     userId: req.user.id
+  });
+});
+
+// Route accessible SEULEMENT aux garages
+router.get("/garage/mes-services", verifyToken, isGarage, (req, res) => {
+  res.json({ 
+    message: "Liste de vos services",
+    garageId: req.user.id,
+    role: req.userRole
+  });
+});
+
+// Route accessible SEULEMENT aux vendeurs
+router.get("/vendeur/mes-annonces", verifyToken, isVendeur, (req, res) => {
+  res.json({ 
+    message: "Liste de vos annonces de véhicules",
+    vendeurId: req.user.id,
+    role: req.userRole
   });
 });
 

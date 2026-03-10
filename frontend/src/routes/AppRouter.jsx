@@ -3,6 +3,7 @@ import Home from "../pages/Home"; // situé directement dans pages/
 import Login from "../pages/auth/login";
 import Register from "../pages/auth/Register";
 import Unauthorized from "../pages/Unauthorized";
+import Profil from '../pages/profil/profil';
 
 // Import des pages spécifiques aux rôles
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
@@ -12,6 +13,7 @@ import AdminDashboard from "../pages/admin/Dashboard";                   // exem
 
 import ProtectedRoute from "../components/ProtectedRoute";
 import RoleBasedRedirect from "../components/RoleBasedRedirect";
+
 
 const AppRouter = () => {
   return (
@@ -101,6 +103,14 @@ const AppRouter = () => {
 
         {/* Route 404 - optionnelle */}
         <Route path="*" element={<div>Page non trouvée</div>} />
+        <Route
+  path="/profil"
+  element={
+    <ProtectedRoute>
+      <Profil />
+    </ProtectedRoute>
+  }
+/>
       </Routes>
     </BrowserRouter>
   );

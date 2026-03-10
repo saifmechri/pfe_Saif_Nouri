@@ -1,22 +1,21 @@
 import { createContext, useState, useEffect } from "react";
-import API from "../services/api"; // votre instance axios
+import API from "../services/api";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // pour attendre le chargement du profil
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      // Appel à l'API pour obtenir le profil complet
       API.get("/auth/profile")
         .then((res) => {
-          setUser(res.data); // contient { nom, prenom, email, role, ... }
+          setUser(res.data);
         })
         .catch(() => {
-          localStorage.removeItem("token"); // token invalide ou expiré
+          localStorage.removeItem("token");
         })
         .finally(() => setLoading(false));
     } else {
@@ -27,7 +26,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (formData) => {
     const res = await API.post("/auth/login", formData);
     localStorage.setItem("token", res.data.token);
-    setUser(res.data.user); // utilisateur complet avec rôle
+    setUser(res.data.user);
   };
 
   const register = async (formData) => {
@@ -39,8 +38,12 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const updateUser = (newUserData) => {
+    setUser(newUserData);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

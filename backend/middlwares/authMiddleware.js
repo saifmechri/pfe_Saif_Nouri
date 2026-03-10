@@ -22,14 +22,20 @@ const verifyToken = async (req, res, next) => {
     // Vérifier et décoder le token
     const decoded = jwt.verify(token, SECRET);
 
-    // Vérifier si l'utilisateur existe toujours dans la base de données
-    const user = await pool.query("SELECT id, name, email, created_at FROM users WHERE id=$1", [decoded.id]);
+    // Vérifier si l'utilisateur existe toujours dans la base de données ET récupérer son rôle
+    const user = await pool.query(
+      `SELECT u.id, u.name, u.email, u.created_at, r.name as role 
+       FROM users u 
+       JOIN roles r ON u.role_id = r.id 
+       WHERE u.id = $1`,
+      [decoded.id]
+    );
 
     if (user.rows.length === 0) {
       return res.status(401).json({ message: "Utilisateur non trouvé" });
     }
 
-    // Attacher les informations de l'utilisateur à la requête
+    // Attacher les informations de l'utilisateur à la requête (avec le rôle)
     req.user = user.rows[0];
     next();
   } catch (err) {

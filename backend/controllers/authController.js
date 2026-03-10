@@ -29,7 +29,8 @@ const register = async (req, res) => {
     const roleMap = {
       automobiliste: 1,
       garage: 2,
-      vendeur: 3
+      vendeur: 3,
+      admin: 4
     };
     const roleId = roleMap[role];
     
@@ -70,8 +71,15 @@ const login = async (req, res) => {
       return res.status(400).json({ message: "Email et mot de passe requis" });
     }
 
-    const user = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
-
+    // Récupérer l'utilisateur ET son rôle
+    const user = await pool.query(
+      `SELECT u.*, r.name as role_name 
+       FROM users u 
+       JOIN roles r ON u.role_id = r.id 
+       WHERE u.email = $1`,
+      [email]
+    );
+    
     if (user.rows.length === 0) {
       return res.status(400).json({ message: "User not found" });
     }
@@ -99,7 +107,8 @@ const login = async (req, res) => {
       user: {
         id: user.rows[0].id,
         name: user.rows[0].name,
-        email: user.rows[0].email
+        email: user.rows[0].email,
+        role: user.rows[0].role_name
       }
     });
   } catch (err) {

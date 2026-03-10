@@ -12,8 +12,11 @@ router.post("/login", login);
 // Route protégée - nécessite un token JWT valide
 router.get("/profile", verifyToken, (req, res) => {
   res.json({
-    message: "Profil utilisateur",
-    user: req.user
+    id: req.user.id,
+    name: req.user.name,
+    email: req.user.email,
+    role: req.user.role,
+    created_at: req.user.created_at
   });
 });
 // ============================================

@@ -24,7 +24,7 @@ const Navbar = () => {
           <div className="space-x-4">
             {user ? (
               <>
-                <span>Bonjour, {user.prenom}</span>
+                <span>Bonjour, {user.name}</span>
                 <Link to={getDashboardLink()}>Tableau de bord</Link>
                 <button onClick={logout} className="bg-red-500 px-3 py-1 rounded">Déconnexion</button>
               </>

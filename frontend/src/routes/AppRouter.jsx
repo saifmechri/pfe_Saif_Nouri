@@ -11,6 +11,7 @@ import VendeurDashboard from "../pages/vendeur/Dashboard";               // exem
 import AdminDashboard from "../pages/admin/Dashboard";                   // exemple
 
 import ProtectedRoute from "../components/ProtectedRoute";
+import RoleBasedRedirect from "../components/RoleBasedRedirect";
 
 const AppRouter = () => {
   return (
@@ -22,9 +23,27 @@ const AppRouter = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
+        {/* Redirection vers le dashboard approprié - DOIT être avant les routes avec wildcard */}
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <RoleBasedRedirect />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Tableaux de bord protégés par rôle */}
         <Route
           path="/automobiliste/*"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
+              <AutomobilisteDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/automobiliste"
           element={
             <ProtectedRoute allowedRoles={["automobiliste"]}>
               <AutomobilisteDashboard />
@@ -40,7 +59,23 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/garage"
+          element={
+            <ProtectedRoute allowedRoles={["garage"]}>
+              <GarageDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/vendeur/*"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur"]}>
+              <VendeurDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendeur"
           element={
             <ProtectedRoute allowedRoles={["vendeur"]}>
               <VendeurDashboard />
@@ -55,20 +90,11 @@ const AppRouter = () => {
             </ProtectedRoute>
           }
         />
-
-        {/* Redirection vers le dashboard approprié quand on tape /dashboard */}
         <Route
-          path="/dashboard"
+          path="/admin"
           element={
-            <ProtectedRoute>
-              {/* Composant de redirection dynamique selon le rôle */}
-              {({ user }) => {
-                if (user.role === "automobiliste") return <Navigate to="/automobiliste" replace />;
-                if (user.role === "garage") return <Navigate to="/garage" replace />;
-                if (user.role === "vendeur") return <Navigate to="/vendeur" replace />;
-                if (user.role === "admin") return <Navigate to="/admin" replace />;
-                return <Navigate to="/" replace />;
-              }}
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />

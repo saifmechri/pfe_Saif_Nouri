@@ -37,7 +37,7 @@ const Login = () => {
     setLoading(true);
     try {
       await login(form);
-      navigate("/");
+      navigate("/dashboard"); // Redirection vers le dashboard approprié
     } catch (err) {
       setError("Email ou mot de passe incorrect");
     } finally {

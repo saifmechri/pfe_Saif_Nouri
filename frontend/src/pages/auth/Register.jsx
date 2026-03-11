@@ -12,7 +12,7 @@ const Register = () => {
     email: "",
     telephone: "",
     password: "",
-    role: "", // Initialisé vide pour forcer la sélection
+    role: "",
   });
 
   const [error, setError] = useState("");

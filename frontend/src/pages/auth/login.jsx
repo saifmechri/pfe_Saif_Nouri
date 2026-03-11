@@ -37,7 +37,7 @@ const Login = () => {
     setLoading(true);
     try {
       await login(form);
-      navigate("/dashboard"); // Redirection vers le dashboard approprié
+      navigate("/dashboard");
     } catch (err) {
       setError("Email ou mot de passe incorrect");
     } finally {
@@ -47,42 +47,42 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          Connexion
-        </h2>
+      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
+        <h2 className="text-2xl font-bold text-center mb-6">Connexion</h2>
 
         {error && (
-          <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
+          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            {error}
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email
             </label>
             <input
               type="email"
               id="email"
               name="email"
-              placeholder="exemple@domaine.com"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+              value={form.email}
               onChange={handleChange}
+              className="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Mot de passe
             </label>
             <input
               type="password"
               id="password"
               name="password"
-              placeholder="••••••••"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+              value={form.password}
               onChange={handleChange}
+              className="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
@@ -90,16 +90,16 @@ const Login = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
           >
             {loading ? "Chargement..." : "Se connecter"}
           </button>
         </form>
 
-        <p className="text-center mt-5 text-gray-600">
-          Pas encore inscrit ?{" "}
-          <Link to="/register" className="text-blue-600 font-semibold hover:underline">
-            Créer un compte
+        <p className="text-center mt-4 text-sm text-gray-600">
+          Pas encore de compte ?{" "}
+          <Link to="/register" className="text-blue-600 hover:underline">
+            Inscrivez-vous
           </Link>
         </p>
       </div>

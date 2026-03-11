@@ -378,3 +378,33 @@ Ce frontend est :
 Projet réalisé dans le cadre d’un Projet de Fin d’Études (PFE).
 
 ---
+
+## Fonctionnalité : Gestion du profil utilisateur
+
+L'application permet à chaque utilisateur connecté de gérer ses informations personnelles via une page de profil dédiée.
+
+### Pages et composants créés
+
+- `src/pages/profil/Profil.jsx` : page principale de profil, avec trois sections :
+  - Modification des informations (nom, email, téléphone, mot de passe optionnel)
+  - Changement de mot de passe (formulaire séparé)
+  - Suppression du compte (avec confirmation par mot de passe)
+
+- `src/services/user.js` : service contenant les appels API pour :
+  - `updateProfile` : PUT `/users/profile`
+  - `changePassword` : POST `/users/change-password`
+  - `deleteAccount` : DELETE `/users/profile`
+
+### Intégration avec le contexte d'authentification
+
+Le `AuthContext` a été enrichi d'une fonction `updateUser` permettant de rafraîchir les données de l'utilisateur dans le contexte après une mise à jour réussie.
+
+### Routes
+
+- `/profil` : route protégée accessible à tout utilisateur authentifié (ajoutée dans `AppRouter.jsx`).
+
+### Améliorations possibles
+
+- Ajouter une confirmation par email pour le changement de mot de passe.
+- Proposer de téléverser une photo de profil.
+- Historique des actions récentes.

@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require("../db");
 
 const { register, login } = require("../controllers/authController");
+const { updateProfile, deleteProfile, changePassword } = require("../controllers/profileController");
 const { verifyToken } = require("../middlwares/authMiddleware");
 const { isAdmin, isProfessional, checkRole, isGarage, isVendeur, isAutomobiliste } = require("../middlwares/roleMiddleware");
 
@@ -19,6 +20,20 @@ router.get("/profile", verifyToken, (req, res) => {
     created_at: req.user.created_at
   });
 });
+
+// ============================================
+// GESTION DU PROFIL UTILISATEUR (CRUD)
+// ============================================
+
+// Modifier le profil
+router.put("/profile", verifyToken, updateProfile);
+
+// Supprimer le compte
+router.delete("/profile", verifyToken, deleteProfile);
+
+// Changer le mot de passe
+router.put("/profile/password", verifyToken, changePassword);
+
 // ============================================
 // EXEMPLES DE ROUTES PROTÉGÉES PAR RÔLE
 // ============================================

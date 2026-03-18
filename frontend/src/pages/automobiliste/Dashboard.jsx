@@ -13,14 +13,13 @@ const AutomobilisteDashboard = () => {
   // États pour le formulaire
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
+  const [selectedPhotoPreview, setSelectedPhotoPreview] = useState("");
   const [formData, setFormData] = useState({
-    marque: "",
-    modele: "",
-    annee: new Date().getFullYear(),
-    immatriculation: "",
-    couleur: "",
-    kilometrage: "",
-    photo_url: ""
+    modele_voiture: "",
+    matricule_voiture: "",
+    kilometrage_voiture: "",
+    photo_voiture: ""
   });
 
   // Charger les véhicules au montage
@@ -43,14 +42,13 @@ const AutomobilisteDashboard = () => {
 
   const resetForm = () => {
     setFormData({
-      marque: "",
-      modele: "",
-      annee: new Date().getFullYear(),
-      immatriculation: "",
-      couleur: "",
-      kilometrage: "",
-      photo_url: ""
+      modele_voiture: "",
+      matricule_voiture: "",
+      kilometrage_voiture: "",
+      photo_voiture: ""
     });
+    setSelectedPhotoFile(null);
+    setSelectedPhotoPreview("");
     setEditingId(null);
     setShowForm(false);
   };
@@ -70,16 +68,25 @@ const AutomobilisteDashboard = () => {
 
   const handleEditClick = (vehicule) => {
     setFormData({
-      marque: vehicule.marque,
-      modele: vehicule.modele,
-      annee: vehicule.annee,
-      immatriculation: vehicule.immatriculation,
-      couleur: vehicule.couleur || "",
-      kilometrage: vehicule.kilometrage || "",
-      photo_url: vehicule.photo_url || ""
+      modele_voiture: vehicule.modele_voiture,
+      matricule_voiture: vehicule.matricule_voiture,
+      kilometrage_voiture: vehicule.kilometrage_voiture || "",
+      photo_voiture: vehicule.photo_voiture || ""
     });
+    setSelectedPhotoFile(null);
+    setSelectedPhotoPreview(vehicule.photo_voiture || "");
     setEditingId(vehicule.id);
     setShowForm(true);
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setSelectedPhotoFile(file);
+    setSelectedPhotoPreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e) => {
@@ -88,11 +95,19 @@ const AutomobilisteDashboard = () => {
     setLoading(true);
 
     try {
+      const multipartData = new FormData();
+      multipartData.append("modele_voiture", formData.modele_voiture);
+      multipartData.append("matricule_voiture", formData.matricule_voiture);
+      multipartData.append("kilometrage_voiture", formData.kilometrage_voiture || "");
+      if (selectedPhotoFile) {
+        multipartData.append("photo", selectedPhotoFile);
+      }
+
       if (editingId) {
-        await updateVehicule(editingId, formData);
+        await updateVehicule(editingId, multipartData);
         setSuccessMessage("Véhicule modifié avec succès");
       } else {
-        await createVehicule(formData);
+        await createVehicule(multipartData);
         setSuccessMessage("Véhicule ajouté avec succès");
       }
       await fetchVehicules();
@@ -121,12 +136,6 @@ const AutomobilisteDashboard = () => {
       }
     }
   };
-
-  // Données fictives pour rendez-vous
-  const fictitiousVehicules = [
-    { id: 1, marque: "Toyota", modele: "Corolla", annee: 2020, immatriculation: "AB-123-CD" },
-    { id: 2, marque: "Renault", modele: "Clio", annee: 2019, immatriculation: "EF-456-GH" },
-  ];
 
   const rendezVous = [
     { id: 1, garage: "Garage Auto Plus", date: "2026-03-15", heure: "10:00", service: "Vidange" },
@@ -192,67 +201,49 @@ const AutomobilisteDashboard = () => {
                   <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input
                       type="text"
-                      name="marque"
-                      placeholder="Marque *"
-                      value={formData.marque}
+                      name="modele_voiture"
+                      placeholder="Modele de voiture *"
+                      value={formData.modele_voiture}
                       onChange={handleInputChange}
                       required
                       className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
                     />
                     <input
                       type="text"
-                      name="modele"
-                      placeholder="Modèle *"
-                      value={formData.modele}
+                      name="matricule_voiture"
+                      placeholder="Matricule de voiture *"
+                      value={formData.matricule_voiture}
                       onChange={handleInputChange}
                       required
                       className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
                     />
                     <input
                       type="number"
-                      name="annee"
-                      placeholder="Année *"
-                      value={formData.annee}
-                      onChange={handleInputChange}
-                      required
-                      min="1900"
-                      max={new Date().getFullYear() + 1}
-                      className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                    />
-                    <input
-                      type="text"
-                      name="immatriculation"
-                      placeholder="Immatriculation *"
-                      value={formData.immatriculation}
-                      onChange={handleInputChange}
-                      required
-                      className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                    />
-                    <input
-                      type="text"
-                      name="couleur"
-                      placeholder="Couleur"
-                      value={formData.couleur}
-                      onChange={handleInputChange}
-                      className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                    />
-                    <input
-                      type="number"
-                      name="kilometrage"
-                      placeholder="Kilométrage"
-                      value={formData.kilometrage}
+                      name="kilometrage_voiture"
+                      placeholder="Kilometrage de voiture"
+                      value={formData.kilometrage_voiture}
                       onChange={handleInputChange}
                       min="0"
                       className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
                     />
                     <input
-                      type="url"
-                      name="photo_url"
-                      placeholder="URL de la photo"
-                      value={formData.photo_url}
-                      onChange={handleInputChange}
+                      type="file"
+                      name="photo"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handlePhotoChange}
+                      aria-label="Ajouter photo voiture"
                       className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 md:col-span-2"
                     />
+                    {selectedPhotoPreview && (
+                      <div className="md:col-span-2">
+                        <img
+                          src={selectedPhotoPreview}
+                          alt="Apercu"
+                          className="w-full h-40 object-cover rounded"
+                        />
+                      </div>
+                    )}
                     <div className="flex gap-2 md:col-span-2">
                       <button
                         type="submit"
@@ -281,18 +272,16 @@ const AutomobilisteDashboard = () => {
               <div className="grid gap-4 md:grid-cols-2">
                 {vehicules.map((v) => (
                   <div key={v.id} className="border p-4 rounded-lg shadow-sm hover:shadow-md transition">
-                    {v.photo_url && (
+                    {v.photo_voiture && (
                       <img 
-                        src={v.photo_url} 
-                        alt={`${v.marque} ${v.modele}`}
+                        src={v.photo_voiture.startsWith("http") ? v.photo_voiture : `${import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "")}${v.photo_voiture}`} 
+                        alt={v.modele_voiture}
                         className="w-full h-40 object-cover rounded mb-3"
                       />
                     )}
-                    <h3 className="font-bold text-lg">{v.marque} {v.modele}</h3>
-                    <p className="text-gray-600">Année : {v.annee}</p>
-                    <p className="text-gray-600">Immatriculation : {v.immatriculation}</p>
-                    {v.couleur && <p className="text-gray-600">Couleur : {v.couleur}</p>}
-                    {v.kilometrage !== null && <p className="text-gray-600">Kilométrage : {v.kilometrage} km</p>}
+                    <h3 className="font-bold text-lg">{v.modele_voiture}</h3>
+                    <p className="text-gray-600">Matricule : {v.matricule_voiture}</p>
+                    {v.kilometrage_voiture !== null && <p className="text-gray-600">Kilometrage : {v.kilometrage_voiture} km</p>}
                     <div className="mt-3 flex space-x-2">
                       <button 
                         onClick={() => handleEditClick(v)}

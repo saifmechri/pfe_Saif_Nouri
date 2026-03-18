@@ -167,3 +167,62 @@ CREATE TABLE users (
 - ✅ Validation des données
 - ✅ Gestion des erreurs
 - ✅ Connexion PostgreSQL fonctionnelle
+
+---
+
+## 🚗 Tests CRUD Véhicules (Sprint 2)
+
+Assurez-vous d'abord d'exécuter le script SQL:
+
+```sql
+\i backend/sql/vehicules.sql
+```
+
+Tous les endpoints véhicules nécessitent un token JWT.
+
+### 1. Ajouter un véhicule
+
+**Endpoint:** `POST /api/vehicules`
+
+```bash
+curl -X POST http://localhost:3000/api/vehicules ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer VOTRE_TOKEN" ^
+  -d "{\"marque\":\"Toyota\",\"modele\":\"Corolla\",\"annee\":2020,\"immatriculation\":\"AB-123-CD\",\"couleur\":\"Bleu\",\"kilometrage\":45000,\"photo_url\":\"https://example.com/toyota.jpg\"}"
+```
+
+### 2. Lister les véhicules de l'utilisateur connecté
+
+**Endpoint:** `GET /api/vehicules`
+
+```bash
+curl -X GET http://localhost:3000/api/vehicules ^
+  -H "Authorization: Bearer VOTRE_TOKEN"
+```
+
+### 3. Modifier un véhicule
+
+**Endpoint:** `PUT /api/vehicules/:id`
+
+```bash
+curl -X PUT http://localhost:3000/api/vehicules/1 ^
+  -H "Content-Type: application/json" ^
+  -H "Authorization: Bearer VOTRE_TOKEN" ^
+  -d "{\"marque\":\"Toyota\",\"modele\":\"Corolla\",\"annee\":2021,\"immatriculation\":\"AB-123-CD\",\"couleur\":\"Noir\",\"kilometrage\":50000,\"photo_url\":\"https://example.com/toyota-new.jpg\"}"
+```
+
+### 4. Supprimer un véhicule
+
+**Endpoint:** `DELETE /api/vehicules/:id`
+
+```bash
+curl -X DELETE http://localhost:3000/api/vehicules/1 ^
+  -H "Authorization: Bearer VOTRE_TOKEN"
+```
+
+### 5. Vérifier les cas d'erreur
+
+- Sans token: retourne `401 Token non fourni`
+- ID invalide: retourne `400 ID vehicule invalide`
+- Véhicule inexistant: retourne `404 Vehicule non trouve`
+- Immatriculation déjà utilisée: retourne `400 Cette immatriculation existe deja`

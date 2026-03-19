@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../db");
+const { pool } = require("../db");
 
 const { register, login } = require("../controllers/authController");
 const { updateProfile, deleteProfile, changePassword } = require("../controllers/profileController");

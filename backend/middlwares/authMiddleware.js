@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const pool = require("../db");
+const { pool } = require("../db");
 
 const SECRET = "jwt_secret_key";
 
@@ -24,7 +24,7 @@ const verifyToken = async (req, res, next) => {
 
     // Vérifier si l'utilisateur existe toujours dans la base de données ET récupérer son rôle
     const user = await pool.query(
-      `SELECT u.id, u.name, u.email, u.created_at, r.name as role 
+      `SELECT u.id, u.name, u.email, u.created_at, u.updated_at, r.name as role 
        FROM users u 
        JOIN roles r ON u.role_id = r.id 
        WHERE u.id = $1`,

@@ -5,6 +5,8 @@
 ```bash
 cd backend
 node server.js
+#ou
+npm start
 # ou avec nodemon pour le rechargement automatique
 npx nodemon server.js
 ```
@@ -226,3 +228,25 @@ curl -X DELETE http://localhost:3000/api/vehicules/1 ^
 - ID invalide: retourne `400 ID vehicule invalide`
 - Véhicule inexistant: retourne `404 Vehicule non trouve`
 - Immatriculation déjà utilisée: retourne `400 Cette immatriculation existe deja`
+
+
+
+# test de intervention avec postman
+*/{
+  "vehicule": "megane - 1235tu166",
+  "date": "2026-03-23",
+  "type": "Vidange",
+  "kilometrage": 120000,
+  "nomGarage": "Garage Auto",
+  "adresseGarage": "Tunis",
+  "description": "Changement huile",
+  "pieces": []
+}
+*/
+
+Endpoint (API) à tester  : POST http://localhost:3000/api/interventions
+
+# resultat attendu
+{
+  "message": "Intervention créée avec succès"
+}

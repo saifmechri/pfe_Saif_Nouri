@@ -6,7 +6,7 @@ const pool = new Pool({
   user: "postgres",
   host: "localhost",
   database: "autodb",
-  password: "saif12345",
+  password: "123456",
   port: 5432
 });
 
@@ -14,7 +14,7 @@ const pool = new Pool({
 const sequelize = new Sequelize({
   database: 'autodb',
   username: 'postgres',
-  password: 'saif12345',
+  password: '123456',
   host: 'localhost',
   port: 5432,
   dialect: 'postgres',

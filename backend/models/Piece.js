@@ -30,7 +30,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Piece.associate = (models) => {
     Piece.belongsToMany(models.Intervention, {
-      through: 'InterventionPieces',
+      through: models.InterventionPiece,
       foreignKey: 'pieceId',
       otherKey: 'interventionId'
     });

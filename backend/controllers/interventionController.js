@@ -60,7 +60,7 @@ exports.createIntervention = async (req, res) => {
 
     // Recharger l'intervention avec ses pièces
     const result = await Intervention.findByPk(intervention.id, {
-      include: [{ model: Piece, as: 'pieces', through: { attributes: ['quantite', 'prix_unitaire_applique'] } }]
+      include: [{ model: Piece, as: 'pieces', through: { model: InterventionPiece, attributes: ['quantite', 'prix_unitaire_applique'] } }]
     });
 
     res.status(201).json(result);
@@ -80,7 +80,7 @@ exports.getInterventionsByVehicle = async (req, res) => {
     }
     const interventions = await Intervention.findAll({
       where: { vehicleId },
-      include: [{ model: Piece, as: 'pieces', through: { attributes: ['quantite', 'prix_unitaire_applique'] } }],
+      include: [{ model: Piece, as: 'pieces', through: { model: InterventionPiece, attributes: ['quantite', 'prix_unitaire_applique'] } }],
       order: [['date_intervention', 'DESC']]
     });
     res.json(interventions);
@@ -95,7 +95,7 @@ exports.getInterventionById = async (req, res) => {
   const { id } = req.params;
   try {
     const intervention = await Intervention.findByPk(id, {
-      include: [{ model: Piece, as: 'pieces', through: { attributes: ['quantite', 'prix_unitaire_applique'] } }]
+      include: [{ model: Piece, as: 'pieces', through: { model: InterventionPiece, attributes: ['quantite', 'prix_unitaire_applique'] } }]
     });
     if (!intervention) {
       return res.status(404).json({ message: 'Intervention non trouvée' });
@@ -198,7 +198,7 @@ exports.addPieceToIntervention = async (req, res) => {
     await intervention.update({ cout_total: total });
 
     const updated = await Intervention.findByPk(id, {
-      include: [{ model: Piece, as: 'pieces', through: { attributes: ['quantite', 'prix_unitaire_applique'] } }]
+      include: [{ model: Piece, as: 'pieces', through: { model: InterventionPiece, attributes: ['quantite', 'prix_unitaire_applique'] } }]
     });
     res.json(updated);
   } catch (error) {
@@ -228,7 +228,7 @@ exports.removePieceFromIntervention = async (req, res) => {
     await intervention.update({ cout_total: total });
 
     const updated = await Intervention.findByPk(id, {
-      include: [{ model: Piece, as: 'pieces', through: { attributes: ['quantite', 'prix_unitaire_applique'] } }]
+      include: [{ model: Piece, as: 'pieces', through: { model: InterventionPiece, attributes: ['quantite', 'prix_unitaire_applique'] } }]
     });
     res.json(updated);
   } catch (error) {

@@ -39,13 +39,16 @@ const verifyToken = async (req, res, next) => {
     req.user = user.rows[0];
     next();
   } catch (err) {
+    // L'expiration du JWT est un cas attendu en production, on évite un log d'erreur bruyant.
+    if (err.name === "TokenExpiredError") {
+      console.warn("Token expiré dans verifyToken");
+      return res.status(401).json({ message: "Token expiré", code: "TOKEN_EXPIRED" });
+    }
+
     console.error("Erreur dans verifyToken:", err.name, err.message);
     
     if (err.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Token invalide" });
-    }
-    if (err.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Token expiré" });
+      return res.status(401).json({ message: "Token invalide", code: "TOKEN_INVALID" });
     }
     
     // Toute autre erreur JWT doit être traitée comme une erreur 401

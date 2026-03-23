@@ -34,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
     Intervention.belongsTo(models.Vehicle, { foreignKey: 'vehicleId', targetKey: 'id', onDelete: 'CASCADE' });
     // Une intervention peut avoir plusieurs pièces (relation many-to-many)
     Intervention.belongsToMany(models.Piece, {
-      through: 'InterventionPieces',
+      through: models.InterventionPiece,
       foreignKey: 'interventionId',
       otherKey: 'pieceId',
       as: 'pieces'

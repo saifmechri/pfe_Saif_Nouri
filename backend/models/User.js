@@ -8,7 +8,17 @@ module.exports = (sequelize, DataTypes) => {
     email: DataTypes.STRING,
     phone: DataTypes.STRING,
     password: DataTypes.STRING,
-    role_id: DataTypes.INTEGER
+    role_id: DataTypes.INTEGER,
+    latitude: {
+      type: DataTypes.DECIMAL(10, 8),
+      defaultValue: 33.8869,
+      comment: 'Latitude GPS de l\'utilisateur (Tunis par défaut)'
+    },
+    longitude: {
+      type: DataTypes.DECIMAL(11, 8),
+      defaultValue: 9.5375,
+      comment: 'Longitude GPS de l\'utilisateur (Tunis par défaut)'
+    }
   }, {
     tableName: 'users',
     timestamps: false

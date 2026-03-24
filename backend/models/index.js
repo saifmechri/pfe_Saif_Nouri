@@ -6,6 +6,7 @@ module.exports = {
   Intervention: db.Intervention,
   Piece: db.Piece,
   InterventionPiece: db.InterventionPiece,
+  Garage: db.Garage,
   sequelize: db.sequelize,
   Sequelize: db.Sequelize
 };

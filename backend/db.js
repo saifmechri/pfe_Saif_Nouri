@@ -40,12 +40,14 @@ const Vehicle = require('./models/Vehicle')(sequelize, Sequelize.DataTypes);
 const Intervention = require('./models/Intervention')(sequelize, Sequelize.DataTypes);
 const Piece = require('./models/Piece')(sequelize, Sequelize.DataTypes);
 const InterventionPiece = require('./models/InterventionPiece')(sequelize, Sequelize.DataTypes);
+const Garage = require('./models/Garage')(sequelize, Sequelize.DataTypes);
 
 db.User = User;
 db.Vehicle = Vehicle;
 db.Intervention = Intervention;
 db.Piece = Piece;
 db.InterventionPiece = InterventionPiece;
+db.Garage = Garage;
 
 // Associations
 Object.keys(db).forEach(modelName => {

@@ -10,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     modele_voiture: DataTypes.STRING,
     matricule_voiture: DataTypes.STRING,
+    type_vehicule: DataTypes.STRING,
     kilometrage_voiture: DataTypes.INTEGER,
     photo_voiture: DataTypes.STRING
   }, {

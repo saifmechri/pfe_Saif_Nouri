@@ -8,6 +8,7 @@ const authRoutes = require("./routes/auth");
 const vehiculeRoutes = require("./routes/vehicules");
 const interventionRoutes = require("./routes/interventions");
 const pieceRoutes = require("./routes/pieces");
+const recommendationsRoutes = require("./routes/recommendations");
 const { sequelize, pool } = require("./db");
 
 const app = express();
@@ -34,6 +35,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/vehicules", vehiculeRoutes);
 app.use("/api/pieces", pieceRoutes);
+app.use("/api/recommandations", recommendationsRoutes);
 
 // Route pour les interventions d'un véhicule
 app.use("/api/vehicules/:vehicleId/interventions", interventionRoutes);

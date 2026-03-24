@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { pool } = require("../db");
 
-const SECRET = "jwt_secret_key";
+const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
 
 const verifyToken = async (req, res, next) => {
   try {

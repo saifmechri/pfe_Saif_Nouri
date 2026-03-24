@@ -2,7 +2,7 @@ const { pool } = require("../db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-const SECRET = "adszerAKIODtyu565e5re6r6r5r4ZIZIDJKEEEfdvmgf56gt6ythfd5fd54fd5ff@fgrfrf#fdfvdf";
+const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
 
 const isValidBcryptHash = (value) => {
   return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);

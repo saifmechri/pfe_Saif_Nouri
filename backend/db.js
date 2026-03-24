@@ -1,22 +1,28 @@
 const { Sequelize } = require('sequelize');
 const { Pool } = require("pg");
 
+const DB_USER = process.env.DB_USER || "postgres";
+const DB_HOST = process.env.DB_HOST || "localhost";
+const DB_NAME = process.env.DB_NAME || "autodb";
+const DB_PASSWORD = process.env.DB_PASSWORD || "saif12345";
+const DB_PORT = Number(process.env.DB_PORT || 5432);
+
 // Pool PostgreSQL pour les requêtes existantes (auth, vehicles)
 const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "autodb",
-  password: "123456",
-  port: 5432
+  user: DB_USER,
+  host: DB_HOST,
+  database: DB_NAME,
+  password: DB_PASSWORD,
+  port: DB_PORT
 });
 
 // Sequelize pour les modèles ORM (interventions, pieces)
 const sequelize = new Sequelize({
-  database: 'autodb',
-  username: 'postgres',
-  password: '123456',
-  host: 'localhost',
-  port: 5432,
+  database: DB_NAME,
+  username: DB_USER,
+  password: DB_PASSWORD,
+  host: DB_HOST,
+  port: DB_PORT,
   dialect: 'postgres',
   logging: false
 });

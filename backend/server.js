@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -9,6 +11,7 @@ const pieceRoutes = require("./routes/pieces");
 const { sequelize, pool } = require("./db");
 
 const app = express();
+const PORT = Number(process.env.PORT || 3000);
 
 app.use(cors());
 app.use(express.json());
@@ -60,8 +63,8 @@ const startServer = async () => {
     await pool.query("UPDATE vehicules SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL");
     console.log('Schéma vehicules vérifié (created_at, updated_at)');
     
-    app.listen(3000, () => {
-      console.log("Server running on port 3000");
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
     console.error('Erreur de connexion Sequelize:', error);

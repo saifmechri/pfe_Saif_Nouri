@@ -19,3 +19,18 @@ export const updateVehicule = (vehiculeId, vehiculeData) => {
 export const deleteVehicule = (vehiculeId) => {
   return API.delete(`/vehicules/${vehiculeId}`);
 };
+
+// GET - Historique des interventions d'un véhicule
+export const getInterventionsByVehicle = (vehiculeId) => {
+  return API.get(`/vehicules/${vehiculeId}/interventions`);
+};
+
+// POST - Créer une intervention pour un véhicule
+export const createIntervention = (vehiculeId, interventionData) => {
+  return API.post(`/vehicules/${vehiculeId}/interventions`, interventionData);
+};
+
+// GET - Récupérer la liste des pièces disponibles
+export const getPieces = () => {
+  return API.get('/pieces');
+};

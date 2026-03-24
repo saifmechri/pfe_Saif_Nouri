@@ -1,12 +1,16 @@
-const pool = require("../db");
+const { pool } = require("../db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-const SECRET = "jwt_secret_key";
+const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
+
+const isValidBcryptHash = (value) => {
+  return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
+};
 
 // REGISTER
 const register = async (req, res) => {
-  const { nom, prenom, email, telephone, password, role } = req.body;
+  const { nom, prenom, email, telephone, password, role } = req.body || {};
 
   try {
     // Validation des champs obligatoires
@@ -63,7 +67,7 @@ const register = async (req, res) => {
 
 // LOGIN
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body || {};
 
   try {
     // Validation des champs
@@ -84,6 +88,10 @@ const login = async (req, res) => {
       return res.status(400).json({ message: "User not found" });
     }
 
+    if (!user.rows[0].password || !isValidBcryptHash(user.rows[0].password)) {
+      return res.status(400).json({ message: "Compte incomplet: mot de passe non défini" });
+    }
+
     // Comparer le mot de passe avec bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.rows[0].password);
     
@@ -98,7 +106,7 @@ const login = async (req, res) => {
         email: user.rows[0].email 
       }, 
       SECRET, 
-      { expiresIn: "24h" }
+      { expiresIn: "7d" }
     );
 
     res.json({ 

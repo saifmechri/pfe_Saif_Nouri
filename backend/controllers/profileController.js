@@ -1,12 +1,16 @@
-const pool = require("../db");
+const { pool } = require("../db");
 const bcrypt = require("bcrypt");
+
+const isValidBcryptHash = (value) => {
+  return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
+};
 
 // ============================================
 // UPDATE PROFILE - Modifier le profil
 // ============================================
 const updateProfile = async (req, res) => {
   const userId = req.user.id; // ID de l'utilisateur connecté (vient du middleware verifyToken)
-  const { name, email, phone, password } = req.body;
+  const { name, email, phone, password } = req.body || {};
 
   try {
     // Validation : au moins un champ doit être fourni
@@ -32,7 +36,7 @@ const updateProfile = async (req, res) => {
     let updateName = name || user.name;
     let updateEmail = email || user.email;
     let updatePhone = phone || user.phone;
-    let updatePassword = user.password; // Par défaut, garder l'ancien
+    let updatePassword = null; // Null => ne pas modifier le mot de passe existant
 
     // Si un nouvel email est fourni, vérifier qu'il n'existe pas déjà
     if (email && email !== user.email) {
@@ -76,9 +80,9 @@ const updateProfile = async (req, res) => {
     }
 
     // Mettre à jour dans la base de données
-    const updatedUser = await pool.query(
+     const updatedUser = await pool.query(
       `UPDATE users 
-       SET name = $1, email = $2, phone = $3, password = $4, updated_at = NOW()
+       SET name = $1, email = $2, phone = $3, password = COALESCE($4, password), updated_at = NOW()
        WHERE id = $5 
        RETURNING id, name, email, phone, created_at, updated_at`,
       [updateName, updateEmail, updatePhone, updatePassword, userId]
@@ -109,7 +113,7 @@ const updateProfile = async (req, res) => {
 // ============================================
 const deleteProfile = async (req, res) => {
   const userId = req.user.id; // ID de l'utilisateur connecté
-  const { confirmPassword } = req.body; // Mot de passe de confirmation
+  const { confirmPassword } = req.body || {}; // Mot de passe de confirmation
 
   try {
     // Validation : le mot de passe de confirmation est obligatoire
@@ -130,8 +134,15 @@ const deleteProfile = async (req, res) => {
     }
 
     // Vérifier le mot de passe
+    if (!user.rows[0].password || !isValidBcryptHash(user.rows[0].password)) {
+      await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+      return res.json({
+        message: "Votre compte a été supprimé avec succès"
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(
-      confirmPassword, 
+      confirmPassword,
       user.rows[0].password
     );
 
@@ -159,13 +170,13 @@ const deleteProfile = async (req, res) => {
 // ============================================
 const changePassword = async (req, res) => {
   const userId = req.user.id;
-  const { oldPassword, newPassword } = req.body;
+  const { oldPassword, newPassword } = req.body || {};
 
   try {
-    // Validation des champs
-    if (!oldPassword || !newPassword) {
+    // Validation minimale
+    if (!newPassword) {
       return res.status(400).json({ 
-        message: "L'ancien et le nouveau mot de passe sont requis" 
+        message: "Le nouveau mot de passe est requis" 
       });
     }
 
@@ -186,9 +197,29 @@ const changePassword = async (req, res) => {
       return res.status(404).json({ message: "Utilisateur non trouvé" });
     }
 
+    // Cas legacy: utilisateur sans hash de mot de passe en base
+    if (!user.rows[0].password || !isValidBcryptHash(user.rows[0].password)) {
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      await pool.query(
+        "UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2",
+        [hashedPassword, userId]
+      );
+
+      return res.json({
+        message: "Mot de passe défini avec succès"
+      });
+    }
+
+    if (!oldPassword) {
+      return res.status(400).json({
+        message: "L'ancien mot de passe est requis"
+      });
+    }
+
     // Vérifier l'ancien mot de passe
     const isPasswordValid = await bcrypt.compare(
-      oldPassword, 
+      oldPassword,
       user.rows[0].password
     );
 

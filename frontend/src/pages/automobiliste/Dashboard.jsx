@@ -8,8 +8,10 @@ import {
   createIntervention,
   getPieces
 } from "../../services/vehicule";
+import { useNavigate } from "react-router-dom";
 
 const AutomobilisteDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("vehicules");
 
   // États pour les véhicules
@@ -371,7 +373,7 @@ const AutomobilisteDashboard = () => {
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Tableau de bord Automobiliste</h1>
 
         {/* Onglets */}
-        <div className="flex space-x-4 border-b mb-6">
+        <div className="flex flex-wrap items-center gap-2 border-b mb-6 pb-1">
           <button
             onClick={() => setActiveTab("vehicules")}
             className={`pb-2 px-4 font-medium ${activeTab === "vehicules" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
@@ -389,6 +391,12 @@ const AutomobilisteDashboard = () => {
             className={`pb-2 px-4 font-medium ${activeTab === "historique" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
           >
             Historique
+          </button>
+          <button
+            onClick={() => navigate("/automobiliste/recommandations")}
+            className="ml-auto px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+          >
+            Recommandations dynamiques
           </button>
         </div>
 

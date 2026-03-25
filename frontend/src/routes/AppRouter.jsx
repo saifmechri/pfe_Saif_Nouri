@@ -4,6 +4,7 @@ import Login from "../pages/auth/login";
 import Register from "../pages/auth/Register";
 import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
+import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
 
 // Import des pages spécifiques aux rôles
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
@@ -36,6 +37,14 @@ const AppRouter = () => {
         />
 
         {/* Tableaux de bord protégés par rôle */}
+        <Route
+          path="/automobiliste/recommandations"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
+              <AutomobilisteRecommendations />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/automobiliste/*"
           element={

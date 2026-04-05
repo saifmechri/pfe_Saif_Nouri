@@ -3,6 +3,10 @@ const { pool } = require("../db");
 
 const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
 
+/**
+ * Vérifie le JWT, charge l'utilisateur courant et attache req.user.
+ * Bloque la requête avec 401 si le token est absent, expiré ou invalide.
+ */
 const verifyToken = async (req, res, next) => {
   try {
     // Récupérer le token depuis le header Authorization

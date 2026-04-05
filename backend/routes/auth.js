@@ -5,8 +5,9 @@ const { pool } = require("../db");
 const { register, login } = require("../controllers/authController");
 const { updateProfile, deleteProfile, changePassword } = require("../controllers/profileController");
 const { verifyToken } = require("../middlwares/authMiddleware");
-const { isAdmin, isProfessional, checkRole, isGarage, isVendeur, isAutomobiliste } = require("../middlwares/roleMiddleware");
+const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste } = require("../middlwares/roleMiddleware");
 
+// Authentification (public)
 router.post("/register", register);
 router.post("/login", login);
 

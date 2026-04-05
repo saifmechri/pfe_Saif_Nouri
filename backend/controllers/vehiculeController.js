@@ -24,6 +24,9 @@ const validateVehiculePayload = (payload) => {
   return null;
 };
 
+/**
+ * Ajoute un véhicule pour l'utilisateur authentifié.
+ */
 // ===== POST: Ajouter un véhicule =====
 const createVehicule = async (req, res) => {
   const {
@@ -82,6 +85,9 @@ const createVehicule = async (req, res) => {
   }
 };
 
+/**
+ * Retourne la liste des véhicules appartenant à l'utilisateur connecté.
+ */
 // ===== GET: Lister les véhicules de l'utilisateur =====
 const listVehicules = async (req, res) => {
   try {
@@ -100,6 +106,9 @@ const listVehicules = async (req, res) => {
   }
 };
 
+/**
+ * Met à jour les informations d'un véhicule de l'utilisateur connecté.
+ */
 // ===== PUT: Modifier un véhicule =====
 const updateVehicule = async (req, res) => {
   const vehiculeId = Number(req.params.id);
@@ -180,6 +189,9 @@ const updateVehicule = async (req, res) => {
   }
 };
 
+/**
+ * Supprime un véhicule appartenant à l'utilisateur connecté.
+ */
 // ===== DELETE: Supprimer un véhicule =====
 const deleteVehicule = async (req, res) => {
   const vehiculeId = Number(req.params.id);

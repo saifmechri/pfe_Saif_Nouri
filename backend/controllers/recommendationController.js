@@ -1,4 +1,4 @@
-const { Vehicle, User, Intervention, Garage } = require('../models');
+const { pool } = require('../db');
 const {
   calculateInterventionScore,
   calculateGarageScore,
@@ -6,18 +6,21 @@ const {
   haversine
 } = require('../utils/algorithms');
 
+// Convertit en nombre avec fallback si valeur absente/invalide.
 function toNumber(value, fallback = null) {
   if (value === undefined || value === null || value === '') return fallback;
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
 
+// Parse un entier strictement positif.
 function parsePositiveInt(value, fallback) {
   const n = Number.parseInt(value, 10);
   if (!Number.isFinite(n) || n <= 0) return fallback;
   return n;
 }
 
+// Normalise les clés de tri supportées.
 function normalizeSortBy(value) {
   const sortBy = String(value || 'urgence').toLowerCase();
   if (['urgence', 'score', 'distance', 'type'].includes(sortBy)) {
@@ -26,11 +29,13 @@ function normalizeSortBy(value) {
   return 'urgence';
 }
 
+// Normalise l'ordre de tri (asc|desc).
 function normalizeSortOrder(value) {
   const order = String(value || 'desc').toLowerCase();
   return order === 'asc' ? 'asc' : 'desc';
 }
 
+// Compare deux valeurs en tenant compte de l'ordre et des null.
 function compareValues(a, b, order = 'desc') {
   if (a === b) return 0;
   if (a === null || a === undefined) return 1;
@@ -39,11 +44,13 @@ function compareValues(a, b, order = 'desc') {
   return order === 'asc' ? base : -base;
 }
 
+// Transforme un niveau d'urgence en rang numérique.
 function getUrgencyRank(label) {
   const ranks = { URGENT: 3, 'RECOMMANDÉ': 2, FUTUR: 1 };
   return ranks[label] || 0;
 }
 
+// Uniformise la valeur d'urgence reçue depuis la query string.
 function normalizeUrgency(value) {
   if (value === undefined || value === null || value === '') return null;
   const raw = String(value).toUpperCase();
@@ -52,6 +59,21 @@ function normalizeUrgency(value) {
   return null;
 }
 
+// Retourne la dernière intervention pour un type et un véhicule.
+async function getLastInterventionByType(vehicleId, type) {
+  const result = await pool.query(
+    `SELECT id, date_intervention, kilometrage, created_at
+     FROM interventions
+     WHERE vehicle_id = $1 AND type = $2
+     ORDER BY date_intervention DESC, id DESC
+     LIMIT 1`,
+    [vehicleId, type]
+  );
+
+  return result.rows[0] || null;
+}
+
+// Construit une liste classée de recommandations dynamiques pour l'utilisateur connecté.
 async function getRecommendations(req, res) {
   try {
     const TUNIS_DEFAULT_LAT = 36.8065;
@@ -130,50 +152,71 @@ async function getRecommendations(req, res) {
     const garageLimit = Math.min(parsePositiveInt(rawGarageLimit, 5), 10);
     const page = parsePositiveInt(rawPage, 1);
     const limit = Math.min(parsePositiveInt(rawLimit, 10), 50);
-    
-    console.log(`[RECOMMANDATIONS] Calcul pour userId: ${userId}`);
-    
-    // 1️⃣ Récupérer l'utilisateur
-    const user = await User.findByPk(userId);
-    if (!user) {
+
+    const userResult = await pool.query(
+      'SELECT id, latitude, longitude FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
-    
-    // 2️⃣ Récupérer les véhicules
-    const vehicles = await Vehicle.findAll({ 
-      where: { userId } 
-    });
-    
+
+    const user = userResult.rows[0];
+
+    const vehiclesResult = await pool.query(
+      `SELECT id, modele_voiture, type_vehicule, kilometrage_voiture, matricule_voiture
+       FROM vehicules
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    const vehicles = vehiclesResult.rows;
+
     if (!vehicles || vehicles.length === 0) {
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         data: [],
         message: 'Aucun véhicule trouvé'
       });
     }
-    
-    // 3️⃣ Récupérer types intervention
-    const interventionTypesRaw = await Intervention.findAll({
-      attributes: ['id', 'type', 'km_recommande', 'jours_recommandes'],
-      raw: true
-    });
-    const interventionTypes = Array.from(
-      new Map(interventionTypesRaw.map(item => [item.type, item])).values()
+
+    const interventionTypesResult = await pool.query(
+      `SELECT DISTINCT ON (type)
+         id,
+         type,
+         km_recommande,
+         jours_recommandes
+       FROM interventions
+       WHERE type IS NOT NULL
+       ORDER BY type, id DESC`
     );
-    
-    // 4️⃣ Récupérer garages
-    const garages = await Garage.findAll({
-      raw: true
-    });
-    
+
+    const interventionTypes = interventionTypesResult.rows;
+
+    if (!interventionTypes || interventionTypes.length === 0) {
+      return res.json({
+        success: true,
+        data: [],
+        message: 'Aucun type d intervention trouvé (table interventions vide)'
+      });
+    }
+
+    const garagesResult = await pool.query(
+      `SELECT id, name, adresse, telephone, latitude, longitude, rating, is_open
+       FROM garages`
+    );
+
+    const garages = garagesResult.rows;
+
     if (!garages || garages.length === 0) {
-      return res.json({ 
-        success: true, 
+      return res.json({
+        success: true,
         data: [],
         message: 'Aucun garage trouvé'
       });
     }
-    
+
     const parsedUserLat = Number(user.latitude);
     const parsedUserLon = Number(user.longitude);
     const hasValidCoordinates = Number.isFinite(parsedUserLat) && Number.isFinite(parsedUserLon);
@@ -185,28 +228,15 @@ async function getRecommendations(req, res) {
     const userLat = hasValidCoordinates && !usesLegacyDefaults ? parsedUserLat : TUNIS_DEFAULT_LAT;
     const userLon = hasValidCoordinates && !usesLegacyDefaults ? parsedUserLon : TUNIS_DEFAULT_LON;
 
-    // 5️⃣ Calculer recommandations
     const allRecommendations = [];
-    
+
     for (const vehicle of vehicles) {
-      const kmActuel = Number(vehicle.kilometrage_voiture ?? vehicle.kilometrage ?? 0);
-      const vehicleType = vehicle.type_vehicule || vehicle.type || 'Essence';
-      const vehicleLabel = vehicle.modele_voiture || vehicle.modele || 'Vehicule';
-      
-      console.log(`  [VEHICLE] ${vehicleLabel} - ${kmActuel} km`);
-      
+      const kmActuel = Number(vehicle.kilometrage_voiture ?? 0);
+      const vehicleType = vehicle.type_vehicule || 'Essence';
+
       for (const interventionType of interventionTypes) {
-        // Dernière intervention de ce type
-        const lastIntervention = await Intervention.findOne({
-          where: { 
-            vehicleId: vehicle.id,
-            type: interventionType.type 
-          },
-          order: [['date_intervention', 'DESC']],
-          raw: true
-        });
-        
-        // Score intervention
+        const lastIntervention = await getLastInterventionByType(vehicle.id, interventionType.type);
+
         const interventionScore = calculateInterventionScore(
           {
             ...vehicle,
@@ -216,14 +246,10 @@ async function getRecommendations(req, res) {
           lastIntervention,
           interventionType
         );
-        
-        // Si score > 50, recommander
+
         if (interventionScore >= 50) {
-          console.log(`    ✅ ${interventionType.type}: score = ${interventionScore}`);
-          
-          // Meilleurs garages
           const bestGarages = garages
-            .map(garage => {
+            .map((garage) => {
               const garageLat = Number(garage.latitude);
               const garageLon = Number(garage.longitude);
               const hasGps = Number.isFinite(garageLat) && Number.isFinite(garageLon);
@@ -234,7 +260,8 @@ async function getRecommendations(req, res) {
                 {
                   ...garage,
                   latitude: garageLat,
-                  longitude: garageLon
+                  longitude: garageLon,
+                  isOpen: Boolean(garage.is_open)
                 }
               );
               return {
@@ -245,12 +272,12 @@ async function getRecommendations(req, res) {
             })
             .sort((a, b) => b.score_global - a.score_global)
             .slice(0, garageLimit);
-          
+
           allRecommendations.push({
             vehicle: {
               id: vehicle.id,
-              marque: vehicle.marque || null,
-              modele: vehicle.modele_voiture || vehicle.modele || null,
+              marque: null,
+              modele: vehicle.modele_voiture || null,
               kilometrage: kmActuel,
               type: vehicleType,
               matricule: vehicle.matricule_voiture || null
@@ -262,11 +289,12 @@ async function getRecommendations(req, res) {
               score: parseFloat(interventionScore.toFixed(2)),
               km_recommande: interventionType.km_recommande,
               km_actuel: kmActuel,
-              km_restant: interventionType.km_recommande ? 
-                Math.max(0, interventionType.km_recommande - kmActuel) : null,
+              km_restant: interventionType.km_recommande
+                ? Math.max(0, interventionType.km_recommande - kmActuel)
+                : null,
               jours_recommandes: interventionType.jours_recommandes
             },
-            garages: bestGarages.map(g => ({
+            garages: bestGarages.map((g) => ({
               id: g.id,
               name: g.name,
               adresse: g.adresse,
@@ -274,19 +302,18 @@ async function getRecommendations(req, res) {
               distance_km: g.distance_km,
               rating: parseFloat(g.rating) || 3.5,
               score_global: parseFloat(g.score_global.toFixed(2)),
-              isOpen: g.isOpen
+              isOpen: Boolean(g.is_open)
             }))
           });
         }
       }
     }
-    
-    let filteredRecommendations = allRecommendations.filter(item => item.intervention.score >= minInterventionScore);
+
+    let filteredRecommendations = allRecommendations.filter((item) => item.intervention.score >= minInterventionScore);
     if (urgency) {
-      filteredRecommendations = filteredRecommendations.filter(item => item.intervention.urgence === urgency);
+      filteredRecommendations = filteredRecommendations.filter((item) => item.intervention.urgence === urgency);
     }
 
-    // 6️⃣ Trier les recommandations classées
     filteredRecommendations.sort((a, b) => {
       if (sortBy === 'score') {
         return compareValues(a.intervention.score, b.intervention.score, order);
@@ -302,7 +329,6 @@ async function getRecommendations(req, res) {
         return compareValues(a.intervention.type, b.intervention.type, order);
       }
 
-      // Tri par urgence puis score (par défaut)
       const urgencyDiff = compareValues(
         getUrgencyRank(a.intervention.urgence),
         getUrgencyRank(b.intervention.urgence),
@@ -323,9 +349,7 @@ async function getRecommendations(req, res) {
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
-    
-    console.log(`[RECOMMANDATIONS] Total trouvées: ${total}`);
-    
+
     return res.json({
       success: true,
       data: pagedRecommendations,
@@ -346,7 +370,6 @@ async function getRecommendations(req, res) {
         }
       }
     });
-    
   } catch (error) {
     console.error('[RECOMMANDATIONS ERROR]', error);
     return res.status(500).json({

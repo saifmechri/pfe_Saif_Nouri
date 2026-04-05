@@ -5,6 +5,10 @@ const isValidBcryptHash = (value) => {
   return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
 };
 
+/**
+ * Met à jour le profil de l'utilisateur connecté.
+ * Champs supportés: name, email, phone, password.
+ */
 // ============================================
 // UPDATE PROFILE - Modifier le profil
 // ============================================
@@ -80,7 +84,7 @@ const updateProfile = async (req, res) => {
     }
 
     // Mettre à jour dans la base de données
-     const updatedUser = await pool.query(
+    await pool.query(
       `UPDATE users 
        SET name = $1, email = $2, phone = $3, password = COALESCE($4, password), updated_at = NOW()
        WHERE id = $5 
@@ -108,6 +112,9 @@ const updateProfile = async (req, res) => {
   }
 };
 
+/**
+ * Supprime le compte de l'utilisateur connecté après confirmation du mot de passe.
+ */
 // ============================================
 // DELETE PROFILE - Supprimer le compte
 // ============================================
@@ -165,6 +172,9 @@ const deleteProfile = async (req, res) => {
   }
 };
 
+/**
+ * Change uniquement le mot de passe de l'utilisateur connecté.
+ */
 // ============================================
 // CHANGE PASSWORD - Changer le mot de passe uniquement
 // ============================================

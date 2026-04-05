@@ -2,11 +2,13 @@ const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 
+// Dossier de stockage local des photos véhicules.
 const uploadDir = path.join(__dirname, "..", "uploads", "vehicules");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Configuration du nommage et de la destination des fichiers uploadés.
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadDir);
@@ -18,6 +20,7 @@ const storage = multer.diskStorage({
   }
 });
 
+// Accepte uniquement les fichiers image.
 const fileFilter = (_req, file, cb) => {
   if (file.mimetype && file.mimetype.startsWith("image/")) {
     cb(null, true);
@@ -26,6 +29,7 @@ const fileFilter = (_req, file, cb) => {
   }
 };
 
+// Middleware prêt à l'emploi pour l'upload photo véhicule.
 const uploadVehiculePhoto = multer({
   storage,
   fileFilter,

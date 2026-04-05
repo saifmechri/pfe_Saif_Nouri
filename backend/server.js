@@ -36,6 +36,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/vehicules", vehiculeRoutes);
 app.use("/api/pieces", pieceRoutes);
 app.use("/api/recommandations", recommendationsRoutes);
+app.use("/api/recommendations", recommendationsRoutes);
 
 // Route pour les interventions d'un véhicule
 app.use("/api/vehicules/:vehicleId/interventions", interventionRoutes);

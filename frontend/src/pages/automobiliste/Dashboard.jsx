@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import {
   getVehicules,
   createVehicule,
@@ -9,9 +9,11 @@ import {
   getPieces
 } from "../../services/vehicule";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 
 const AutomobilisteDashboard = () => {
   const navigate = useNavigate();
+  const { logout } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("vehicules");
 
   // États pour les véhicules
@@ -367,10 +369,31 @@ const AutomobilisteDashboard = () => {
     { id: 2, garage: "Centre Pneus", date: "2026-03-20", heure: "14:30", service: "Changement pneus" },
   ];
 
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Tableau de bord Automobiliste</h1>
+        <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-3xl font-bold text-gray-800">Tableau de bord Automobiliste</h1>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => navigate("/profil")}
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            >
+              Mon profil
+            </button>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+            >
+              Deconnexion
+            </button>
+          </div>
+        </div>
 
         {/* Onglets */}
         <div className="flex flex-wrap items-center gap-2 border-b mb-6 pb-1">

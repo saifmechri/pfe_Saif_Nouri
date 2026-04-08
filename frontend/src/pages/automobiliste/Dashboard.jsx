@@ -10,6 +10,7 @@ import {
 } from "../../services/vehicule";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
+import PlatformLayout from "../../components/PlatformLayout";
 
 const AutomobilisteDashboard = () => {
   const navigate = useNavigate();
@@ -369,59 +370,41 @@ const AutomobilisteDashboard = () => {
     { id: 2, garage: "Centre Pneus", date: "2026-03-20", heure: "14:30", service: "Changement pneus" },
   ];
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-8 px-4">
-        <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-3xl font-bold text-gray-800">Tableau de bord Automobiliste</h1>
-          <div className="flex flex-wrap gap-2">
+    <PlatformLayout>
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-7xl mx-auto py-8 px-4">
+          <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
+            <h1 className="text-3xl font-bold text-gray-800">Tableau de bord Automobiliste</h1>
+          </div>
+
+          {/* Onglets */}
+          <div className="flex flex-wrap items-center gap-2 border-b mb-6 pb-1">
             <button
-              onClick={() => navigate("/profil")}
-              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              onClick={() => setActiveTab("vehicules")}
+              className={`pb-2 px-4 font-medium ${activeTab === "vehicules" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
             >
-              Mon profil
+              Mes véhicules
             </button>
             <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+              onClick={() => setActiveTab("rendezvous")}
+              className={`pb-2 px-4 font-medium ${activeTab === "rendezvous" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
             >
-              Deconnexion
+              Rendez-vous
+            </button>
+            <button
+              onClick={() => setActiveTab("historique")}
+              className={`pb-2 px-4 font-medium ${activeTab === "historique" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            >
+              Historique
+            </button>
+            <button
+              onClick={() => navigate("/automobiliste/recommandations")}
+              className="ml-auto px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+            >
+              Recommandations dynamiques
             </button>
           </div>
-        </div>
-
-        {/* Onglets */}
-        <div className="flex flex-wrap items-center gap-2 border-b mb-6 pb-1">
-          <button
-            onClick={() => setActiveTab("vehicules")}
-            className={`pb-2 px-4 font-medium ${activeTab === "vehicules" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
-          >
-            Mes véhicules
-          </button>
-          <button
-            onClick={() => setActiveTab("rendezvous")}
-            className={`pb-2 px-4 font-medium ${activeTab === "rendezvous" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
-          >
-            Rendez-vous
-          </button>
-          <button
-            onClick={() => setActiveTab("historique")}
-            className={`pb-2 px-4 font-medium ${activeTab === "historique" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
-          >
-            Historique
-          </button>
-          <button
-            onClick={() => navigate("/automobiliste/recommandations")}
-            className="ml-auto px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-          >
-            Recommandations dynamiques
-          </button>
-        </div>
 
         {/* Contenu des onglets */}
         <div className="bg-white p-6 rounded-lg shadow">
@@ -852,7 +835,8 @@ const AutomobilisteDashboard = () => {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </PlatformLayout>
   );
 };
 

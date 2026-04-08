@@ -53,27 +53,24 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            {user ? (
-              <div className="hidden items-center gap-3 text-sm font-semibold text-slate-600 md:flex">
-                <span className="rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm">Plateforme de gestion automobile</span>
+            <div className="hidden items-center gap-3 text-sm font-semibold text-slate-600 md:flex">
+              {user && (
                 <span className="rounded-full bg-slate-100 px-4 py-2">Bonjour, {user.prenom || user.name}</span>
-              </div>
-            ) : (
-              <div className="hidden items-center gap-3 md:flex">
-                <Link
-                  to="/login"
-                  className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400"
-                >
-                  Connexion
-                </Link>
-                <Link
-                  to="/register"
-                  className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
-                >
-                  Inscription
-                </Link>
-              </div>
-            )}
+              )}
+              <span className="rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm">Plateforme de gestion automobile</span>
+              <Link
+                to="/register"
+                className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400"
+              >
+                Créer un compte
+              </Link>
+              <Link
+                to="/login"
+                className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
+              >
+                Se connecter
+              </Link>
+            </div>
           </div>
         </div>
       </nav>
@@ -141,7 +138,7 @@ const Navbar = () => {
             to="/register"
             className="rounded-2xl border border-blue-200 bg-white px-6 py-4 text-center font-semibold text-blue-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
           >
-            Creer un compte
+            Créer un compte
           </Link>
           <Link
             to="/login"

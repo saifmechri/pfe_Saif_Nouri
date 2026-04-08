@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PlatformLayout from "../../components/PlatformLayout";
 
 const GarageDashboard = () => {
   const [activeTab, setActiveTab] = useState("aujourdhui");
@@ -15,9 +16,10 @@ const GarageDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Espace Garage</h1>
+    <PlatformLayout>
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-7xl mx-auto py-8 px-4">
+          <h1 className="text-3xl font-bold text-gray-800 mb-6">Espace Garage</h1>
 
         {/* Statistiques rapides */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -134,8 +136,9 @@ const GarageDashboard = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </PlatformLayout>
   );
 };
 

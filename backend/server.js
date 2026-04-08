@@ -18,16 +18,16 @@ app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// Route racine
 app.get("/", (req, res) => {
-  res.json({
-    message: "Bienvenue sur l API backend",
+  res.json({ 
+    message: "Bienvenue sur l'API d'authentification",
     routes: {
       register: "POST /api/auth/register",
       login: "POST /api/auth/login",
-      profile: "GET /api/auth/profile",
-      vehicules: "CRUD /api/vehicules",
-      interventions: "CRUD /api/vehicules/:vehicleId/interventions",
-      recommendations: "GET /api/recommendations/classees"
+      profile: "GET /api/auth/profile (protégée - nécessite token JWT)",
+      vehicules: "CRUD /api/vehicules (protégé - nécessite token JWT)",
+      interventions: "CRUD /api/vehicules/:vehicleId/interventions (protégé)"
     }
   });
 });
@@ -43,14 +43,19 @@ app.use("/api/vehicules/:vehicleId/interventions", interventionRoutes);
 
 const startServer = async () => {
   try {
+    console.log('Startup step: PostgreSQL connection test');
     await testConnection();
-    await initDatabase();
+    console.log('Connexion PostgreSQL (Supabase) OK');
 
+    console.log('Startup step: database compatibility bootstrap');
+    await initDatabase();
+    console.log('Schéma PostgreSQL vérifié');
+    
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   } catch (error) {
-    console.error("Erreur de demarrage backend:", error);
+    console.error('Erreur de démarrage backend:', error);
     process.exit(1);
   }
 };

@@ -1,7 +1,6 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getDynamicRecommendations } from "../../services/recommendation";
-import { AuthContext } from "../../context/AuthContext";
 
 const initialFilters = {
   urgency: "",
@@ -25,7 +24,6 @@ function formatDistance(value) {
 
 const Recommendations = () => {
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
 
   const [filters, setFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
@@ -33,7 +31,6 @@ const Recommendations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [recommendations, setRecommendations] = useState([]);
-  const [emptyMessage, setEmptyMessage] = useState("Aucune recommandation trouvee pour les filtres actuels.");
   const [meta, setMeta] = useState({
     total: 0,
     page: 1,
@@ -59,14 +56,8 @@ const Recommendations = () => {
 
         const res = await getDynamicRecommendations(params);
         const payload = res.data || {};
-        const data = Array.isArray(payload.data) ? payload.data : [];
 
-        setRecommendations(data);
-        if (data.length === 0) {
-          setEmptyMessage(payload.message || "Aucune recommandation trouvee pour les filtres actuels.");
-        } else {
-          setEmptyMessage("");
-        }
+        setRecommendations(Array.isArray(payload.data) ? payload.data : []);
         setMeta(payload.meta || {
           total: 0,
           page: 1,
@@ -79,7 +70,6 @@ const Recommendations = () => {
         const details = Array.isArray(apiErrors) ? apiErrors.join(" | ") : "";
         setError(details || err.response?.data?.message || "Erreur lors du chargement des recommandations.");
         setRecommendations([]);
-        setEmptyMessage("Aucune recommandation trouvee pour les filtres actuels.");
       } finally {
         setLoading(false);
       }
@@ -87,15 +77,6 @@ const Recommendations = () => {
 
     fetchRecommendations();
   }, [appliedFilters, page]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setPage(1);
-      setAppliedFilters(filters);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [filters]);
 
   const urgencyStats = useMemo(() => {
     const stats = meta?.stats?.byUrgency || {};
@@ -133,11 +114,6 @@ const Recommendations = () => {
   const canGoPrev = currentPage > 1;
   const canGoNext = currentPage < totalPages;
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
-
   return (
     <div className="min-h-screen bg-slate-100">
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
@@ -146,26 +122,12 @@ const Recommendations = () => {
             <h1 className="text-3xl font-bold text-slate-800">Recommandations dynamiques</h1>
             <p className="text-slate-600 mt-1">Interventions prioritaires selon vos vehicules et garages proches.</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => navigate("/automobiliste")}
-              className="w-full md:w-auto px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => navigate("/profil")}
-              className="w-full md:w-auto px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-            >
-              Mon profil
-            </button>
-            <button
-              onClick={handleLogout}
-              className="w-full md:w-auto px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
-            >
-              Deconnexion
-            </button>
-          </div>
+          <button
+            onClick={() => navigate("/automobiliste")}
+            className="w-full md:w-auto px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+          >
+            Retour au dashboard
+          </button>
         </div>
 
         <form onSubmit={applyFilters} className="bg-white rounded-xl shadow p-4 border border-slate-200">
@@ -274,7 +236,7 @@ const Recommendations = () => {
           <div className="bg-white border border-slate-200 rounded-xl p-8 text-slate-500">Chargement...</div>
         ) : recommendations.length === 0 ? (
           <div className="bg-white border border-slate-200 rounded-xl p-8 text-slate-500">
-            {emptyMessage}
+            Aucune recommandation trouvee pour les filtres actuels.
           </div>
         ) : (
           <div className="space-y-4">

@@ -6,7 +6,17 @@ const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_NAME = process.env.DB_NAME || 'autodb';
 const DB_PASSWORD = process.env.DB_PASSWORD || '';
 const DB_PORT = Number(process.env.DB_PORT || 5432);
-const USE_SSL = String(process.env.DB_SSL || 'true').toLowerCase() === 'true';
+const RAW_DB_SSL = process.env.DB_SSL;
+
+// Local PostgreSQL servers often do not support SSL. We only force SSL when
+// explicitly requested, or when using a non-local connection URL.
+const isDatabaseUrlLocal = DATABASE_URL
+  ? /localhost|127\.0\.0\.1/i.test(DATABASE_URL)
+  : false;
+
+const USE_SSL = RAW_DB_SSL
+  ? ['true', '1', 'yes', 'on'].includes(String(RAW_DB_SSL).toLowerCase())
+  : Boolean(DATABASE_URL && !isDatabaseUrlLocal);
 
 const sslConfig = USE_SSL ? { rejectUnauthorized: false } : false;
 

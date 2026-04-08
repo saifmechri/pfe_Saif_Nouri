@@ -1,8 +1,10 @@
 const { pool } = require("../db");
 
+const ALLOWED_VEHICLE_TYPES = ["Essence", "Diesel", "SUV", "Électrique"];
+
 // ===== VALIDATION =====
 const validateVehiculePayload = (payload) => {
-  const { modele_voiture, matricule_voiture, kilometrage_voiture } = payload;
+  const { modele_voiture, matricule_voiture, kilometrage_voiture, type_vehicule } = payload;
 
   if (!modele_voiture || !matricule_voiture) {
     return "Les champs modele_voiture et matricule_voiture sont obligatoires";
@@ -15,14 +17,22 @@ const validateVehiculePayload = (payload) => {
     }
   }
 
+  if (type_vehicule && !ALLOWED_VEHICLE_TYPES.includes(type_vehicule)) {
+    return `type_vehicule invalide. Valeurs autorisees: ${ALLOWED_VEHICLE_TYPES.join(", ")}`;
+  }
+
   return null;
 };
 
+/**
+ * Ajoute un véhicule pour l'utilisateur authentifié.
+ */
 // ===== POST: Ajouter un véhicule =====
 const createVehicule = async (req, res) => {
   const {
     modele_voiture,
     matricule_voiture,
+    type_vehicule,
     kilometrage_voiture,
     photo_voiture
   } = req.body;
@@ -31,6 +41,7 @@ const createVehicule = async (req, res) => {
   const validationError = validateVehiculePayload({
     modele_voiture,
     matricule_voiture,
+    type_vehicule,
     kilometrage_voiture
   });
 
@@ -44,17 +55,19 @@ const createVehicule = async (req, res) => {
         user_id,
         modele_voiture,
         matricule_voiture,
+        type_vehicule,
         kilometrage_voiture,
         photo_voiture
       )
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, user_id, modele_voiture, matricule_voiture, kilometrage_voiture, photo_voiture, created_at, updated_at
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, user_id, modele_voiture, matricule_voiture, type_vehicule, kilometrage_voiture, photo_voiture, created_at, updated_at
     `;
 
     const values = [
       req.user.id,
       modele_voiture,
       matricule_voiture,
+      type_vehicule || "Essence",
       kilometrage_voiture !== undefined && kilometrage_voiture !== null && kilometrage_voiture !== ""
         ? Number(kilometrage_voiture)
         : null,
@@ -72,11 +85,14 @@ const createVehicule = async (req, res) => {
   }
 };
 
+/**
+ * Retourne la liste des véhicules appartenant à l'utilisateur connecté.
+ */
 // ===== GET: Lister les véhicules de l'utilisateur =====
 const listVehicules = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, user_id, modele_voiture, matricule_voiture, kilometrage_voiture, photo_voiture, created_at, updated_at
+      `SELECT id, user_id, modele_voiture, matricule_voiture, type_vehicule, kilometrage_voiture, photo_voiture, created_at, updated_at
        FROM vehicules
        WHERE user_id = $1
        ORDER BY created_at DESC`,
@@ -90,12 +106,16 @@ const listVehicules = async (req, res) => {
   }
 };
 
+/**
+ * Met à jour les informations d'un véhicule de l'utilisateur connecté.
+ */
 // ===== PUT: Modifier un véhicule =====
 const updateVehicule = async (req, res) => {
   const vehiculeId = Number(req.params.id);
   const {
     modele_voiture,
     matricule_voiture,
+    type_vehicule,
     kilometrage_voiture,
     photo_voiture
   } = req.body;
@@ -108,6 +128,7 @@ const updateVehicule = async (req, res) => {
   const validationError = validateVehiculePayload({
     modele_voiture,
     matricule_voiture,
+    type_vehicule,
     kilometrage_voiture
   });
 
@@ -132,16 +153,18 @@ const updateVehicule = async (req, res) => {
       SET
         modele_voiture = $1,
         matricule_voiture = $2,
-        kilometrage_voiture = $3,
-        photo_voiture = $4,
+        type_vehicule = $3,
+        kilometrage_voiture = $4,
+        photo_voiture = $5,
         updated_at = NOW()
-      WHERE id = $5 AND user_id = $6
-      RETURNING id, user_id, modele_voiture, matricule_voiture, kilometrage_voiture, photo_voiture, created_at, updated_at
+      WHERE id = $6 AND user_id = $7
+      RETURNING id, user_id, modele_voiture, matricule_voiture, type_vehicule, kilometrage_voiture, photo_voiture, created_at, updated_at
     `;
 
     const values = [
       modele_voiture,
       matricule_voiture,
+      type_vehicule || "Essence",
       kilometrage_voiture !== undefined && kilometrage_voiture !== null && kilometrage_voiture !== ""
         ? Number(kilometrage_voiture)
         : null,
@@ -166,6 +189,9 @@ const updateVehicule = async (req, res) => {
   }
 };
 
+/**
+ * Supprime un véhicule appartenant à l'utilisateur connecté.
+ */
 // ===== DELETE: Supprimer un véhicule =====
 const deleteVehicule = async (req, res) => {
   const vehiculeId = Number(req.params.id);

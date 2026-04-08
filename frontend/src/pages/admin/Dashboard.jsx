@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PlatformLayout from "../../components/PlatformLayout";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("utilisateurs");
@@ -18,9 +19,10 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Administration</h1>
+    <PlatformLayout>
+      <div className="min-h-screen bg-gray-100">
+        <div className="max-w-7xl mx-auto py-8 px-4">
+          <h1 className="text-3xl font-bold text-gray-800 mb-6">Administration</h1>
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -123,8 +125,9 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </PlatformLayout>
   );
 };
 

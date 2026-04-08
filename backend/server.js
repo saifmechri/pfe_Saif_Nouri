@@ -36,6 +36,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/vehicules", vehiculeRoutes);
 app.use("/api/pieces", pieceRoutes);
 app.use("/api/recommendations", recommendationRoutes);
+app.use("/api/recommandations", recommendationRoutes);
+
+// Route pour les interventions d'un véhicule
 app.use("/api/vehicules/:vehicleId/interventions", interventionRoutes);
 
 const startServer = async () => {

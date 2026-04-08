@@ -2,6 +2,34 @@ const jwt = require("jsonwebtoken");
 const { pool } = require("../db");
 
 const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
+const isTransientDbError = (error) => {
+  const transientCodes = new Set(["ECONNRESET", "ETIMEDOUT", "EPIPE", "57P01", "57P02", "57P03"]);
+  return transientCodes.has(error?.code) || /connection terminated unexpectedly/i.test(error?.message || "");
+};
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const fetchUserForToken = async (userId) => {
+  const query = `SELECT u.id, u.name, u.email, u.created_at, u.updated_at, r.name as role 
+       FROM users u 
+       JOIN roles r ON u.role_id = r.id 
+       WHERE u.id = $1`;
+
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      return await pool.query(query, [userId]);
+    } catch (error) {
+      if (!isTransientDbError(error) || attempt === 2) {
+        throw error;
+      }
+
+      // Petit retry pour les coupures réseau transitoires (Supabase/PG over TLS).
+      await wait(150);
+    }
+  }
+
+  return { rows: [] };
+};
 
 /**
  * Vérifie le JWT, charge l'utilisateur courant et attache req.user.
@@ -27,13 +55,7 @@ const verifyToken = async (req, res, next) => {
     const decoded = jwt.verify(token, SECRET);
 
     // Vérifier si l'utilisateur existe toujours dans la base de données ET récupérer son rôle
-    const user = await pool.query(
-      `SELECT u.id, u.name, u.email, u.created_at, u.updated_at, r.name as role 
-       FROM users u 
-       JOIN roles r ON u.role_id = r.id 
-       WHERE u.id = $1`,
-      [decoded.id]
-    );
+    const user = await fetchUserForToken(decoded.id);
 
     if (user.rows.length === 0) {
       return res.status(401).json({ message: "Utilisateur non trouvé" });
@@ -50,6 +72,10 @@ const verifyToken = async (req, res, next) => {
     }
 
     console.error("Erreur dans verifyToken:", err.name, err.message);
+
+    if (isTransientDbError(err)) {
+      return res.status(503).json({ message: "Service d'authentification temporairement indisponible", code: "AUTH_DB_UNAVAILABLE" });
+    }
     
     if (err.name === "JsonWebTokenError") {
       return res.status(401).json({ message: "Token invalide", code: "TOKEN_INVALID" });

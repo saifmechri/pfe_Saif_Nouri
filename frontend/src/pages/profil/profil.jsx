@@ -114,7 +114,26 @@ const Profil = () => {
   return (
     <div className="min-h-screen bg-gray-100 py-8">
       <div className="max-w-3xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Mon profil</h1>
+        <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-3xl font-bold text-gray-800">Mon profil</h1>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => navigate('/automobiliste')}
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+            >
+              Deconnexion
+            </button>
+          </div>
+        </div>
 
         {message.text && (
           <div className={`mb-4 p-3 rounded ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

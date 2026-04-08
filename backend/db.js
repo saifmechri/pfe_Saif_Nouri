@@ -4,9 +4,17 @@ const DATABASE_URL = process.env.DATABASE_URL;
 const DB_USER = process.env.DB_USER || 'postgres';
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_NAME = process.env.DB_NAME || 'autodb';
-const DB_PASSWORD = process.env.DB_PASSWORD || 'saif12345';
+const DB_PASSWORD = process.env.DB_PASSWORD || '';
 const DB_PORT = Number(process.env.DB_PORT || 5432);
-const USE_SSL = String(process.env.DB_SSL || 'true').toLowerCase() === 'true';
+const RAW_DB_SSL = process.env.DB_SSL;
+
+const isDatabaseUrlLocal = DATABASE_URL
+  ? /localhost|127\.0\.0\.1/i.test(DATABASE_URL)
+  : false;
+
+const USE_SSL = RAW_DB_SSL
+  ? ['true', '1', 'yes', 'on'].includes(String(RAW_DB_SSL).toLowerCase())
+  : Boolean(DATABASE_URL && !isDatabaseUrlLocal);
 const DB_POOL_MAX = Number(process.env.DB_POOL_MAX || 10);
 const DB_POOL_IDLE_TIMEOUT_MS = Number(process.env.DB_POOL_IDLE_TIMEOUT_MS || 10000);
 const DB_POOL_CONNECTION_TIMEOUT_MS = Number(process.env.DB_POOL_CONNECTION_TIMEOUT_MS || 10000);
@@ -185,9 +193,41 @@ const initDatabase = async () => {
     BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'interventions' AND column_name = 'createdAt'
+      ) THEN
+        EXECUTE 'ALTER TABLE interventions ALTER COLUMN "createdAt" SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE interventions SET "createdAt" = COALESCE("createdAt", CURRENT_TIMESTAMP)';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'interventions' AND column_name = 'updatedAt'
+      ) THEN
+        EXECUTE 'ALTER TABLE interventions ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE interventions SET "updatedAt" = COALESCE("updatedAt", CURRENT_TIMESTAMP)';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
         WHERE table_name = 'interventions' AND column_name = 'vehicleId'
       ) THEN
         EXECUTE 'UPDATE interventions SET vehicle_id = COALESCE(vehicle_id, "vehicleId")';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'interventions' AND column_name = 'created_at'
+      ) THEN
+        EXECUTE 'ALTER TABLE interventions ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE interventions SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP)';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'interventions' AND column_name = 'updated_at'
+      ) THEN
+        EXECUTE 'ALTER TABLE interventions ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE interventions SET updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP)';
       END IF;
 
       IF EXISTS (

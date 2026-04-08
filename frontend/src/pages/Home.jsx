@@ -123,54 +123,33 @@ const Navbar = () => {
         )}
       </aside>
 
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
-        <section className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-sm font-semibold text-orange-700 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-orange-500" />
-              Gestion intelligente des véhicules
-            </div>
-
-            <div className="space-y-5">
-              <h1 className="max-w-3xl text-4xl font-black leading-tight text-slate-900 sm:text-5xl lg:text-6xl">
-                Une interface professionnelle pour centraliser l’entretien, le suivi et les recommandations.
-              </h1>
-              <p className="max-w-2xl text-lg leading-8 text-slate-600">
-                Visualisez les véhicules, suivez les interventions, accédez aux recommandations adaptées et gardez un espace clair pour vos actions clés.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to="/register"
-                className="rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
-              >
-                Créer un compte
-              </Link>
-              <Link
-                to="/login"
-                className="rounded-2xl border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400"
-              >
-                Se connecter
-              </Link>
-            </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-x-10 top-8 h-32 rounded-full bg-orange-100 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-[0_28px_60px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-              <div className="rounded-[1.5rem] bg-slate-900 p-8 text-white">
-                <div className="mt-3 text-3xl font-black leading-tight sm:text-4xl">
-                  Bienvenue sur la plateforme intelligente d'automobile.
-                </div>
-                <p className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">
-                  Retrouvez vos services essentiels dans un espace simple, moderne et professionnel.
-                </p>
-              </div>
-            </div>
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
+        <section className="overflow-hidden rounded-[0.85rem] border border-blue-500/35 shadow-[0_24px_50px_rgba(30,64,175,0.28)]">
+          <div className="h-5 bg-blue-900" />
+          <div className="bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_52%,#1d4ed8_100%)] px-6 py-14 text-center sm:px-10 sm:py-16">
+            <h1 className="text-3xl font-black leading-tight text-white sm:text-4xl lg:text-5xl">
+              Plateforme Intelligente de Gestion Automobile
+            </h1>
+            <p className="mx-auto mt-4 max-w-3xl text-sm font-medium text-blue-100 sm:text-base lg:text-lg">
+              Gerez vos vehicules, trouvez des pieces, reservez des garages facilement.
+            </p>
           </div>
         </section>
 
+        <section className="grid gap-4 sm:grid-cols-2">
+          <Link
+            to="/register"
+            className="rounded-2xl border border-blue-200 bg-white px-6 py-4 text-center font-semibold text-blue-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
+          >
+            Creer un compte
+          </Link>
+          <Link
+            to="/login"
+            className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
+          >
+            Se connecter
+          </Link>
+        </section>
       </main>
     </div>
   );

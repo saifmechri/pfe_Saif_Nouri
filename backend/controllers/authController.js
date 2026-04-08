@@ -8,6 +8,9 @@ const isValidBcryptHash = (value) => {
   return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
 };
 
+/**
+ * Crée un nouvel utilisateur avec validation métier minimale et hash du mot de passe.
+ */
 // REGISTER
 const register = async (req, res) => {
   const { nom, prenom, email, telephone, password, role } = req.body || {};
@@ -65,6 +68,9 @@ const register = async (req, res) => {
   }
 };
 
+/**
+ * Authentifie un utilisateur et retourne un token JWT + profil simplifié.
+ */
 // LOGIN
 const login = async (req, res) => {
   const { email, password } = req.body || {};

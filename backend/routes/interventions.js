@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router({ mergeParams: true }); // pour récupérer vehicleId depuis l'URL parent
 const interventionController = require('../controllers/interventionController');
 const { verifyToken } = require('../middlwares/authMiddleware');
-const { body, param } = require('express-validator');
+const { body } = require('express-validator');
 
 // Toutes les routes nécessitent une authentification
 router.use(verifyToken);
 
-// Validation
+// Validation du payload intervention
 const validateIntervention = [
   body('type').isIn(['révision', 'réparation', 'vidange', 'autre']),
   body('date_intervention').optional().isISO8601(),

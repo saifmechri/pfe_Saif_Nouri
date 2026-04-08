@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useContext } from "react";
 import Home from "../pages/Home"; // situé directement dans pages/
 import Login from "../pages/auth/login";
 import Register from "../pages/auth/Register";
@@ -14,9 +15,12 @@ import AdminDashboard from "../pages/admin/Dashboard";                   // exem
 
 import ProtectedRoute from "../components/ProtectedRoute";
 import RoleBasedRedirect from "../components/RoleBasedRedirect";
+import { AuthContext } from "../context/AuthContext";
 
 
 const AppRouter = () => {
+  const { user } = useContext(AuthContext);
+
   return (
     <BrowserRouter>
       <Routes>

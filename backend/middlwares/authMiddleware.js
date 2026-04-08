@@ -2,7 +2,6 @@ const jwt = require("jsonwebtoken");
 const { pool } = require("../db");
 
 const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
-
 const isTransientDbError = (error) => {
   const transientCodes = new Set(["ECONNRESET", "ETIMEDOUT", "EPIPE", "57P01", "57P02", "57P03"]);
   return transientCodes.has(error?.code) || /connection terminated unexpectedly/i.test(error?.message || "");
@@ -32,6 +31,10 @@ const fetchUserForToken = async (userId) => {
   return { rows: [] };
 };
 
+/**
+ * Vérifie le JWT, charge l'utilisateur courant et attache req.user.
+ * Bloque la requête avec 401 si le token est absent, expiré ou invalide.
+ */
 const verifyToken = async (req, res, next) => {
   try {
     // Récupérer le token depuis le header Authorization

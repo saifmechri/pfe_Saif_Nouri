@@ -175,9 +175,41 @@ const initDatabase = async () => {
     BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'interventions' AND column_name = 'createdAt'
+      ) THEN
+        EXECUTE 'ALTER TABLE interventions ALTER COLUMN "createdAt" SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE interventions SET "createdAt" = COALESCE("createdAt", CURRENT_TIMESTAMP)';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'interventions' AND column_name = 'updatedAt'
+      ) THEN
+        EXECUTE 'ALTER TABLE interventions ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE interventions SET "updatedAt" = COALESCE("updatedAt", CURRENT_TIMESTAMP)';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
         WHERE table_name = 'interventions' AND column_name = 'vehicleId'
       ) THEN
         EXECUTE 'UPDATE interventions SET vehicle_id = COALESCE(vehicle_id, "vehicleId")';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'interventions' AND column_name = 'created_at'
+      ) THEN
+        EXECUTE 'ALTER TABLE interventions ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE interventions SET created_at = COALESCE(created_at, CURRENT_TIMESTAMP)';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'interventions' AND column_name = 'updated_at'
+      ) THEN
+        EXECUTE 'ALTER TABLE interventions ALTER COLUMN updated_at SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE interventions SET updated_at = COALESCE(updated_at, CURRENT_TIMESTAMP)';
       END IF;
 
       IF EXISTS (

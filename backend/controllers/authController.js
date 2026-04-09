@@ -1,6 +1,7 @@
 const { pool } = require("../db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const { sendApiResponse } = require("../utils/apiResponse");
 
 const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
 
@@ -18,18 +19,33 @@ const register = async (req, res) => {
   try {
     // Validation des champs obligatoires
     if (!nom || !prenom || !email || !telephone || !password || !role) {
-      return res.status(400).json({ message: "Tous les champs sont requis" });
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Tous les champs sont requis",
+        error: { code: 'VALIDATION_ERROR' }
+      });
     }
 
     // Validation du mot de passe
     if (password.length < 6) {
-      return res.status(400).json({ message: "Le mot de passe doit contenir au moins 6 caractères" });
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Le mot de passe doit contenir au moins 6 caractères",
+        error: { code: 'VALIDATION_ERROR' }
+      });
     }
 
     // Vérifier si l'email existe déjà
     const userCheck = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
     if (userCheck.rows.length > 0) {
-      return res.status(400).json({ message: "Cet email existe déjà" });
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Cet email existe déjà",
+        error: { code: 'EMAIL_ALREADY_EXISTS' }
+      });
     }
 
     // Mapper le rôle vers role_id
@@ -42,7 +58,12 @@ const register = async (req, res) => {
     const roleId = roleMap[role];
     
     if (!roleId) {
-      return res.status(400).json({ message: "Rôle invalide" });
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Rôle invalide",
+        error: { code: 'INVALID_ROLE' }
+      });
     }
 
     // Combiner nom et prénom
@@ -58,13 +79,20 @@ const register = async (req, res) => {
       [fullName, email, hashedPassword, telephone, roleId]
     );
 
-    res.status(201).json({ 
-      message: "Utilisateur créé avec succès", 
-      user: newUser.rows[0] 
+    return sendApiResponse(res, {
+      statusCode: 201,
+      message: "Utilisateur créé avec succès",
+      data: { user: newUser.rows[0] },
+      extra: { user: newUser.rows[0] }
     });
   } catch (err) {
     console.error("Erreur lors de l'inscription:", err);
-    res.status(500).json({ message: "Erreur serveur" });
+    return sendApiResponse(res, {
+      statusCode: 500,
+      success: false,
+      message: "Erreur serveur",
+      error: { code: 'INTERNAL_SERVER_ERROR' }
+    });
   }
 };
 
@@ -78,7 +106,12 @@ const login = async (req, res) => {
   try {
     // Validation des champs
     if (!email || !password) {
-      return res.status(400).json({ message: "Email et mot de passe requis" });
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Email et mot de passe requis",
+        error: { code: 'VALIDATION_ERROR' }
+      });
     }
 
     // Récupérer l'utilisateur ET son rôle
@@ -91,18 +124,33 @@ const login = async (req, res) => {
     );
     
     if (user.rows.length === 0) {
-      return res.status(400).json({ message: "User not found" });
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "User not found",
+        error: { code: 'USER_NOT_FOUND' }
+      });
     }
 
     if (!user.rows[0].password || !isValidBcryptHash(user.rows[0].password)) {
-      return res.status(400).json({ message: "Compte incomplet: mot de passe non défini" });
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Compte incomplet: mot de passe non défini",
+        error: { code: 'ACCOUNT_INCOMPLETE' }
+      });
     }
 
     // Comparer le mot de passe avec bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.rows[0].password);
     
     if (!isPasswordValid) {
-      return res.status(400).json({ message: "Wrong password" });
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Wrong password",
+        error: { code: 'INVALID_PASSWORD' }
+      });
     }
 
     // Générer le token JWT
@@ -115,19 +163,35 @@ const login = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    res.json({ 
+    return sendApiResponse(res, {
       message: "Login success", 
-      token,
-      user: {
-        id: user.rows[0].id,
-        name: user.rows[0].name,
-        email: user.rows[0].email,
-        role: user.rows[0].role_name
+      data: {
+        token,
+        user: {
+          id: user.rows[0].id,
+          name: user.rows[0].name,
+          email: user.rows[0].email,
+          role: user.rows[0].role_name
+        }
+      },
+      extra: {
+        token,
+        user: {
+          id: user.rows[0].id,
+          name: user.rows[0].name,
+          email: user.rows[0].email,
+          role: user.rows[0].role_name
+        }
       }
     });
   } catch (err) {
     console.log(err);
-    res.status(500).json({ message: "Server error" });
+    return sendApiResponse(res, {
+      statusCode: 500,
+      success: false,
+      message: "Server error",
+      error: { code: 'INTERNAL_SERVER_ERROR' }
+    });
   }
 };
 

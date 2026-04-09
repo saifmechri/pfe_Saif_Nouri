@@ -1,5 +1,6 @@
 const { pool } = require("../db");
 const bcrypt = require("bcrypt");
+const { sendApiResponse } = require("../utils/apiResponse");
 
 const isValidBcryptHash = (value) => {
   return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
@@ -19,8 +20,11 @@ const updateProfile = async (req, res) => {
   try {
     // Validation : au moins un champ doit être fourni
     if (!name && !email && !phone && !password) {
-      return res.status(400).json({ 
-        message: "Veuillez fournir au moins un champ à modifier" 
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Veuillez fournir au moins un champ à modifier",
+        error: { code: 'VALIDATION_ERROR' }
       });
     }
 
@@ -31,7 +35,12 @@ const updateProfile = async (req, res) => {
     );
 
     if (currentUser.rows.length === 0) {
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
+      return sendApiResponse(res, {
+        statusCode: 404,
+        success: false,
+        message: "Utilisateur non trouvé",
+        error: { code: 'USER_NOT_FOUND' }
+      });
     }
 
     const user = currentUser.rows[0];
@@ -58,7 +67,12 @@ const updateProfile = async (req, res) => {
     if (email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        return res.status(400).json({ message: "Format d'email invalide" });
+        return sendApiResponse(res, {
+          statusCode: 400,
+          success: false,
+          message: "Format d'email invalide",
+          error: { code: 'INVALID_EMAIL' }
+        });
       }
     }
 
@@ -66,8 +80,11 @@ const updateProfile = async (req, res) => {
     if (phone) {
       const phoneRegex = /^[0-9]{8,15}$/;
       if (!phoneRegex.test(phone)) {
-        return res.status(400).json({ 
-          message: "Le téléphone doit contenir entre 8 et 15 chiffres" 
+        return sendApiResponse(res, {
+          statusCode: 400,
+          success: false,
+          message: "Le téléphone doit contenir entre 8 et 15 chiffres",
+          error: { code: 'INVALID_PHONE' }
         });
       }
     }
@@ -75,8 +92,11 @@ const updateProfile = async (req, res) => {
     // Si un nouveau mot de passe est fourni, le hasher
     if (password) {
       if (password.length < 6) {
-        return res.status(400).json({ 
-          message: "Le mot de passe doit contenir au moins 6 caractères" 
+        return sendApiResponse(res, {
+          statusCode: 400,
+          success: false,
+          message: "Le mot de passe doit contenir au moins 6 caractères",
+          error: { code: 'INVALID_PASSWORD' }
         });
       }
       const saltRounds = 10;
@@ -101,9 +121,10 @@ const updateProfile = async (req, res) => {
       [userId]
     );
 
-    res.json({
+    return sendApiResponse(res, {
       message: "Profil mis à jour avec succès",
-      user: userWithRole.rows[0]
+      data: { user: userWithRole.rows[0] },
+      extra: { user: userWithRole.rows[0] }
     });
 
   } catch (err) {
@@ -125,8 +146,11 @@ const deleteProfile = async (req, res) => {
   try {
     // Validation : le mot de passe de confirmation est obligatoire
     if (!confirmPassword) {
-      return res.status(400).json({ 
-        message: "Veuillez confirmer votre mot de passe pour supprimer votre compte" 
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Veuillez confirmer votre mot de passe pour supprimer votre compte",
+        error: { code: 'VALIDATION_ERROR' }
       });
     }
 
@@ -137,13 +161,18 @@ const deleteProfile = async (req, res) => {
     );
 
     if (user.rows.length === 0) {
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
+      return sendApiResponse(res, {
+        statusCode: 404,
+        success: false,
+        message: "Utilisateur non trouvé",
+        error: { code: 'USER_NOT_FOUND' }
+      });
     }
 
     // Vérifier le mot de passe
     if (!user.rows[0].password || !isValidBcryptHash(user.rows[0].password)) {
       await pool.query("DELETE FROM users WHERE id = $1", [userId]);
-      return res.json({
+      return sendApiResponse(res, {
         message: "Votre compte a été supprimé avec succès"
       });
     }
@@ -154,16 +183,19 @@ const deleteProfile = async (req, res) => {
     );
 
     if (!isPasswordValid) {
-      return res.status(401).json({ 
-        message: "Mot de passe incorrect. Suppression annulée." 
+      return sendApiResponse(res, {
+        statusCode: 401,
+        success: false,
+        message: "Mot de passe incorrect. Suppression annulée.",
+        error: { code: 'INVALID_PASSWORD' }
       });
     }
 
     // Supprimer l'utilisateur de la base de données
     await pool.query("DELETE FROM users WHERE id = $1", [userId]);
 
-    res.json({ 
-      message: "Votre compte a été supprimé avec succès" 
+    return sendApiResponse(res, {
+      message: "Votre compte a été supprimé avec succès"
     });
 
   } catch (err) {
@@ -185,15 +217,21 @@ const changePassword = async (req, res) => {
   try {
     // Validation minimale
     if (!newPassword) {
-      return res.status(400).json({ 
-        message: "Le nouveau mot de passe est requis" 
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Le nouveau mot de passe est requis",
+        error: { code: 'VALIDATION_ERROR' }
       });
     }
 
     // Validation du nouveau mot de passe
     if (newPassword.length < 6) {
-      return res.status(400).json({ 
-        message: "Le nouveau mot de passe doit contenir au moins 6 caractères" 
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Le nouveau mot de passe doit contenir au moins 6 caractères",
+        error: { code: 'INVALID_PASSWORD' }
       });
     }
 
@@ -204,7 +242,12 @@ const changePassword = async (req, res) => {
     );
 
     if (user.rows.length === 0) {
-      return res.status(404).json({ message: "Utilisateur non trouvé" });
+      return sendApiResponse(res, {
+        statusCode: 404,
+        success: false,
+        message: "Utilisateur non trouvé",
+        error: { code: 'USER_NOT_FOUND' }
+      });
     }
 
     // Cas legacy: utilisateur sans hash de mot de passe en base
@@ -217,13 +260,19 @@ const changePassword = async (req, res) => {
       );
 
       return res.json({
-        message: "Mot de passe défini avec succès"
+        success: true,
+        message: "Mot de passe défini avec succès",
+        data: null,
+        error: null
       });
     }
 
     if (!oldPassword) {
-      return res.status(400).json({
-        message: "L'ancien mot de passe est requis"
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "L'ancien mot de passe est requis",
+        error: { code: 'VALIDATION_ERROR' }
       });
     }
 
@@ -234,8 +283,11 @@ const changePassword = async (req, res) => {
     );
 
     if (!isPasswordValid) {
-      return res.status(401).json({ 
-        message: "L'ancien mot de passe est incorrect" 
+      return sendApiResponse(res, {
+        statusCode: 401,
+        success: false,
+        message: "L'ancien mot de passe est incorrect",
+        error: { code: 'INVALID_PASSWORD' }
       });
     }
 
@@ -249,8 +301,8 @@ const changePassword = async (req, res) => {
       [hashedPassword, userId]
     );
 
-    res.json({ 
-      message: "Mot de passe modifié avec succès" 
+    return sendApiResponse(res, {
+      message: "Mot de passe modifié avec succès"
     });
 
   } catch (err) {

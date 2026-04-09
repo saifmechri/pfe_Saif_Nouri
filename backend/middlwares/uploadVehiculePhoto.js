@@ -14,7 +14,14 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    const mimeToExt = {
+      'image/jpeg': '.jpg',
+      'image/jpg': '.jpg',
+      'image/png': '.png',
+      'image/webp': '.webp'
+    };
+
+    const ext = mimeToExt[file.mimetype] || '.bin';
     const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
     cb(null, uniqueName);
   }
@@ -22,7 +29,9 @@ const storage = multer.diskStorage({
 
 // Accepte uniquement les fichiers image.
 const fileFilter = (_req, file, cb) => {
-  if (file.mimetype && file.mimetype.startsWith("image/")) {
+  const allowedMimeTypes = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+
+  if (allowedMimeTypes.has(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error("Seules les images sont autorisees"));

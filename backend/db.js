@@ -101,10 +101,11 @@ const initDatabase = async () => {
       nom VARCHAR(255) NOT NULL,
       reference VARCHAR(255) UNIQUE NOT NULL,
       description TEXT,
-      prix_unitaire NUMERIC(10, 2) NOT NULL,
-      stock INTEGER DEFAULT 0,
+      prix_unitaire NUMERIC(10, 2) NOT NULL DEFAULT 0,
+      stock INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      deleted_at TIMESTAMP
     )
   `);
 
@@ -171,6 +172,7 @@ const initDatabase = async () => {
 
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP');
 
   await pool.query('ALTER TABLE intervention_pieces ADD COLUMN IF NOT EXISTS intervention_id BIGINT');
   await pool.query('ALTER TABLE intervention_pieces ADD COLUMN IF NOT EXISTS piece_id BIGINT');
@@ -185,8 +187,11 @@ const initDatabase = async () => {
   await pool.query('UPDATE vehicules SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
   await pool.query('UPDATE pieces SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL');
   await pool.query('UPDATE pieces SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
+  await pool.query('UPDATE pieces SET deleted_at = NULL WHERE deleted_at IS NULL');
 
   await pool.query('UPDATE garages SET is_open = COALESCE(is_open, true) WHERE is_open IS NULL');
+
+  await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
 
   await pool.query(`
     DO $$
@@ -266,6 +271,14 @@ const initDatabase = async () => {
       END IF;
     END $$;
   `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_deleted_at ON pieces (deleted_at)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_created_at ON pieces (created_at DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_updated_at ON pieces (updated_at DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_nom_trgm ON pieces USING GIN (nom gin_trgm_ops)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_reference_trgm ON pieces USING GIN (reference gin_trgm_ops)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_piece_id ON intervention_pieces (piece_id)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_intervention_id ON intervention_pieces (intervention_id)');
 };
 
 module.exports = {

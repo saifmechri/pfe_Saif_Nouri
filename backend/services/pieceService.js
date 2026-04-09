@@ -3,6 +3,7 @@ const { AppError } = require('../utils/appError');
 
 const ALLOWED_SORT_FIELDS = new Set(['nom', 'reference', 'prix_unitaire', 'created_at', 'updated_at']);
 const ALLOWED_SORT_ORDERS = new Set(['asc', 'desc']);
+const STOCK_MOVEMENT_TYPES = new Set(['IN', 'OUT', 'ADJUSTMENT', 'SET']);
 
 const normalizeText = (value) => {
   if (typeof value !== 'string') {
@@ -62,6 +63,89 @@ const mapPieceRow = (row) => ({
   updated_at: row.updated_at,
   deleted_at: row.deleted_at || null
 });
+
+const mapStockMovementRow = (row) => ({
+  id: row.id,
+  piece_id: Number(row.piece_id),
+  user_id: row.user_id === null ? null : Number(row.user_id),
+  movement_type: row.movement_type,
+  quantity_change: Number(row.quantity_change),
+  stock_before: Number(row.stock_before),
+  stock_after: Number(row.stock_after),
+  reason: row.reason,
+  created_at: row.created_at
+});
+
+const normalizeStockMovementType = (value) => {
+  if (typeof value !== 'string') {
+    throw new AppError('movement_type est obligatoire', 400, 'INVALID_MOVEMENT_TYPE');
+  }
+
+  const normalized = value.trim().toUpperCase();
+  if (!STOCK_MOVEMENT_TYPES.has(normalized)) {
+    throw new AppError('movement_type invalide', 400, 'INVALID_MOVEMENT_TYPE');
+  }
+
+  return normalized;
+};
+
+const runInTransaction = async (executor) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await executor(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+const getPieceForUpdate = async (client, pieceId) => {
+  const result = await client.query(
+    `SELECT id, stock
+     FROM pieces
+     WHERE id = $1 AND deleted_at IS NULL
+     FOR UPDATE`,
+    [pieceId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError('Piece non trouvee', 404, 'PIECE_NOT_FOUND');
+  }
+
+  return result.rows[0];
+};
+
+const createStockMovement = async (client, payload) => {
+  const movementResult = await client.query(
+    `INSERT INTO piece_stock_movements (
+       piece_id,
+       user_id,
+       movement_type,
+       quantity_change,
+       stock_before,
+       stock_after,
+       reason
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, piece_id, user_id, movement_type, quantity_change, stock_before, stock_after, reason, created_at`,
+    [
+      payload.pieceId,
+      payload.userId || null,
+      payload.movementType,
+      payload.quantityChange,
+      payload.stockBefore,
+      payload.stockAfter,
+      payload.reason || null
+    ]
+  );
+
+  return mapStockMovementRow(movementResult.rows[0]);
+};
 
 const createPiece = async (payload) => {
   const nom = normalizeText(payload.nom);
@@ -217,10 +301,151 @@ const deletePiece = async (id) => {
   return true;
 };
 
+const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
+  const quantityChange = Number(payload.quantity_change);
+  if (!Number.isInteger(quantityChange) || quantityChange === 0) {
+    throw new AppError('quantity_change doit etre un entier non nul', 400, 'INVALID_QUANTITY_CHANGE');
+  }
+
+  const movementType = normalizeStockMovementType(payload.movement_type || 'ADJUSTMENT');
+  if (movementType === 'IN' && quantityChange < 0) {
+    throw new AppError('quantity_change doit etre positif pour un mouvement IN', 400, 'INVALID_QUANTITY_CHANGE');
+  }
+
+  if (movementType === 'OUT' && quantityChange > 0) {
+    throw new AppError('quantity_change doit etre negatif pour un mouvement OUT', 400, 'INVALID_QUANTITY_CHANGE');
+  }
+
+  if (movementType === 'SET') {
+    throw new AppError('Utilisez l endpoint de definition de stock pour movement_type SET', 400, 'INVALID_MOVEMENT_TYPE');
+  }
+
+  const reason = normalizeText(payload.reason);
+
+  return runInTransaction(async (client) => {
+    const piece = await getPieceForUpdate(client, id);
+    const stockBefore = Number(piece.stock);
+    const stockAfter = stockBefore + quantityChange;
+
+    if (stockAfter < 0) {
+      throw new AppError('Stock insuffisant pour cette operation', 400, 'INSUFFICIENT_STOCK');
+    }
+
+    const updateResult = await client.query(
+      `UPDATE pieces
+       SET stock = $1,
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, nom, reference, description, prix_unitaire, stock, created_at, updated_at, deleted_at`,
+      [stockAfter, id]
+    );
+
+    const movement = await createStockMovement(client, {
+      pieceId: id,
+      userId: actorUserId,
+      movementType,
+      quantityChange,
+      stockBefore,
+      stockAfter,
+      reason
+    });
+
+    return {
+      piece: mapPieceRow(updateResult.rows[0]),
+      movement
+    };
+  });
+};
+
+const setPieceStock = async (id, payload = {}, actorUserId = null) => {
+  const nextStock = Number(payload.stock);
+  if (!Number.isInteger(nextStock) || nextStock < 0) {
+    throw new AppError('stock doit etre un entier positif ou nul', 400, 'INVALID_STOCK');
+  }
+
+  const reason = normalizeText(payload.reason);
+
+  return runInTransaction(async (client) => {
+    const piece = await getPieceForUpdate(client, id);
+    const stockBefore = Number(piece.stock);
+    const quantityChange = nextStock - stockBefore;
+
+    if (quantityChange === 0) {
+      throw new AppError('Aucun changement de stock detecte', 400, 'NO_STOCK_CHANGE');
+    }
+
+    const updateResult = await client.query(
+      `UPDATE pieces
+       SET stock = $1,
+           updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, nom, reference, description, prix_unitaire, stock, created_at, updated_at, deleted_at`,
+      [nextStock, id]
+    );
+
+    const movement = await createStockMovement(client, {
+      pieceId: id,
+      userId: actorUserId,
+      movementType: 'SET',
+      quantityChange,
+      stockBefore,
+      stockAfter: nextStock,
+      reason
+    });
+
+    return {
+      piece: mapPieceRow(updateResult.rows[0]),
+      movement
+    };
+  });
+};
+
+const getPieceStockMovements = async (id, { page = 1, limit = 20 } = {}) => {
+  const safePage = Math.max(Number.parseInt(page, 10) || 1, 1);
+  const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 20, 1), 100);
+  const offset = (safePage - 1) * safeLimit;
+
+  await getPieceById(id);
+
+  const result = await pool.query(
+    `SELECT
+      id,
+      piece_id,
+      user_id,
+      movement_type,
+      quantity_change,
+      stock_before,
+      stock_after,
+      reason,
+      created_at,
+      COUNT(*) OVER() AS total_count
+     FROM piece_stock_movements
+     WHERE piece_id = $1
+     ORDER BY created_at DESC, id DESC
+     LIMIT $2 OFFSET $3`,
+    [id, safeLimit, offset]
+  );
+
+  const totalItems = result.rows.length > 0 ? Number(result.rows[0].total_count) : 0;
+
+  return {
+    items: result.rows.map(mapStockMovementRow),
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      totalItems,
+      totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / safeLimit)
+    }
+  };
+};
+
 module.exports = {
   createPiece,
   getPieces,
   getPieceById,
   updatePiece,
-  deletePiece
+  deletePiece,
+  adjustPieceStock,
+  setPieceStock,
+  getPieceStockMovements
 };

@@ -70,10 +70,58 @@ const deletePiece = asyncHandler(async (req, res) => {
   });
 });
 
+const adjustPieceStock = asyncHandler(async (req, res) => {
+  const pieceId = Number.parseInt(req.params.id, 10);
+  if (!Number.isFinite(pieceId) || pieceId <= 0) {
+    throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
+  }
+
+  const result = await pieceService.adjustPieceStock(pieceId, req.body || {}, req.user?.id || null);
+
+  return sendApiResponse(res, {
+    message: 'Stock ajuste avec succes',
+    data: result
+  });
+});
+
+const setPieceStock = asyncHandler(async (req, res) => {
+  const pieceId = Number.parseInt(req.params.id, 10);
+  if (!Number.isFinite(pieceId) || pieceId <= 0) {
+    throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
+  }
+
+  const result = await pieceService.setPieceStock(pieceId, req.body || {}, req.user?.id || null);
+
+  return sendApiResponse(res, {
+    message: 'Stock defini avec succes',
+    data: result
+  });
+});
+
+const getPieceStockMovements = asyncHandler(async (req, res) => {
+  const pieceId = Number.parseInt(req.params.id, 10);
+  if (!Number.isFinite(pieceId) || pieceId <= 0) {
+    throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
+  }
+
+  const movements = await pieceService.getPieceStockMovements(pieceId, {
+    page: req.query.page,
+    limit: req.query.limit
+  });
+
+  return sendApiResponse(res, {
+    message: 'Historique de stock recupere avec succes',
+    data: movements
+  });
+});
+
 module.exports = {
   createPiece,
   getAllPieces,
   getPieceById,
   updatePiece,
-  deletePiece
+  deletePiece,
+  adjustPieceStock,
+  setPieceStock,
+  getPieceStockMovements
 };

@@ -139,6 +139,22 @@ const initDatabase = async () => {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS piece_stock_movements (
+      id BIGSERIAL PRIMARY KEY,
+      piece_id BIGINT NOT NULL REFERENCES pieces(id) ON DELETE CASCADE,
+      user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      movement_type VARCHAR(30) NOT NULL,
+      quantity_change INTEGER NOT NULL,
+      stock_before INTEGER NOT NULL,
+      stock_after INTEGER NOT NULL,
+      reason TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT chk_piece_stock_movements_non_zero_change CHECK (quantity_change <> 0),
+      CONSTRAINT chk_piece_stock_movements_non_negative_after CHECK (stock_after >= 0)
+    )
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS garages (
       id BIGSERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
@@ -279,6 +295,8 @@ const initDatabase = async () => {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_reference_trgm ON pieces USING GIN (reference gin_trgm_ops)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_piece_id ON intervention_pieces (piece_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_intervention_id ON intervention_pieces (intervention_id)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_piece_stock_movements_piece_id ON piece_stock_movements (piece_id, created_at DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_piece_stock_movements_user_id ON piece_stock_movements (user_id, created_at DESC)');
 };
 
 module.exports = {

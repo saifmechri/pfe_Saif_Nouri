@@ -10,6 +10,7 @@ const interventionRoutes = require("./routes/interventions");
 const pieceRoutes = require("./routes/pieces");
 const recommendationRoutes = require("./routes/recommendations");
 const { initDatabase, testConnection } = require("./db");
+const { errorHandler } = require("./middlewares/errorHandler");
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -40,6 +41,9 @@ app.use("/api/recommandations", recommendationRoutes);
 
 // Route pour les interventions d'un véhicule
 app.use("/api/vehicules/:vehicleId/interventions", interventionRoutes);
+
+// Gestion globale des erreurs applicatives (AppError et erreurs inattendues)
+app.use(errorHandler);
 
 const startServer = async () => {
   try {

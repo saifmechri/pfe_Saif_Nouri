@@ -103,7 +103,7 @@ router.get("/vendeur/mes-annonces", verifyToken, isVendeur, (req, res) => {
 router.get("/profile-complet", verifyToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT u.id, u.name, u.email, u.phone, r.name as role 
+      `SELECT u.id, u.name, u.email, u.phone, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, r.name as role 
        FROM users u 
        JOIN roles r ON u.role_id = r.id 
        WHERE u.id = $1`,

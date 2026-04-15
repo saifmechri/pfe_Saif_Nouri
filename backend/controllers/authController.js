@@ -171,7 +171,14 @@ const login = async (req, res) => {
           id: user.rows[0].id,
           name: user.rows[0].name,
           email: user.rows[0].email,
-          role: user.rows[0].role_name
+          phone: user.rows[0].phone,
+          role: user.rows[0].role_name,
+          store_name: user.rows[0].store_name || null,
+          store_address: user.rows[0].store_address || null,
+          store_description: user.rows[0].store_description || null,
+          store_hours: user.rows[0].store_hours || null,
+          store_specialties: user.rows[0].store_specialties || null,
+          store_services: user.rows[0].store_services || null
         }
       },
       extra: {
@@ -180,7 +187,14 @@ const login = async (req, res) => {
           id: user.rows[0].id,
           name: user.rows[0].name,
           email: user.rows[0].email,
-          role: user.rows[0].role_name
+          phone: user.rows[0].phone,
+          role: user.rows[0].role_name,
+          store_name: user.rows[0].store_name || null,
+          store_address: user.rows[0].store_address || null,
+          store_description: user.rows[0].store_description || null,
+          store_hours: user.rows[0].store_hours || null,
+          store_specialties: user.rows[0].store_specialties || null,
+          store_services: user.rows[0].store_services || null
         }
       }
     });

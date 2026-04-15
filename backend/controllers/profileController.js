@@ -8,18 +8,18 @@ const isValidBcryptHash = (value) => {
 
 /**
  * Met à jour le profil de l'utilisateur connecté.
- * Champs supportés: name, email, phone, password.
+ * Champs supportés: name, email, phone, password, store_name, store_address, store_description, store_hours, store_specialties, store_services.
  */
 // ============================================
 // UPDATE PROFILE - Modifier le profil
 // ============================================
 const updateProfile = async (req, res) => {
   const userId = req.user.id; // ID de l'utilisateur connecté (vient du middleware verifyToken)
-  const { name, email, phone, password } = req.body || {};
+  const { name, email, phone, password, store_name, store_address, store_description, store_hours, store_specialties, store_services } = req.body || {};
 
   try {
     // Validation : au moins un champ doit être fourni
-    if (!name && !email && !phone && !password) {
+    if (!name && !email && !phone && !password && store_name === undefined && store_address === undefined && store_description === undefined && store_hours === undefined && store_specialties === undefined && store_services === undefined) {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
@@ -49,6 +49,12 @@ const updateProfile = async (req, res) => {
     let updateName = name || user.name;
     let updateEmail = email || user.email;
     let updatePhone = phone || user.phone;
+    let updateStoreName = store_name !== undefined ? store_name : user.store_name;
+    let updateStoreAddress = store_address !== undefined ? store_address : user.store_address;
+    let updateStoreDescription = store_description !== undefined ? store_description : user.store_description;
+    let updateStoreHours = store_hours !== undefined ? store_hours : user.store_hours;
+    let updateStoreSpecialties = store_specialties !== undefined ? store_specialties : user.store_specialties;
+    let updateStoreServices = store_services !== undefined ? store_services : user.store_services;
     let updatePassword = null; // Null => ne pas modifier le mot de passe existant
 
     // Si un nouvel email est fourni, vérifier qu'il n'existe pas déjà
@@ -106,15 +112,25 @@ const updateProfile = async (req, res) => {
     // Mettre à jour dans la base de données
     await pool.query(
       `UPDATE users 
-       SET name = $1, email = $2, phone = $3, password = COALESCE($4, password), updated_at = NOW()
-       WHERE id = $5 
-       RETURNING id, name, email, phone, created_at, updated_at`,
-      [updateName, updateEmail, updatePhone, updatePassword, userId]
+       SET name = $1,
+           email = $2,
+           phone = $3,
+           store_name = $4,
+           store_address = $5,
+           store_description = $6,
+           store_hours = $7,
+           store_specialties = $8,
+           store_services = $9,
+           password = COALESCE($10, password),
+           updated_at = NOW()
+       WHERE id = $11 
+       RETURNING id, name, email, phone, store_name, store_address, store_description, store_hours, store_specialties, store_services, created_at, updated_at`,
+      [updateName, updateEmail, updatePhone, updateStoreName, updateStoreAddress, updateStoreDescription, updateStoreHours, updateStoreSpecialties, updateStoreServices, updatePassword, userId]
     );
 
     // Récupérer aussi le rôle pour la réponse
     const userWithRole = await pool.query(
-      `SELECT u.id, u.name, u.email, u.phone, r.name as role, u.created_at, u.updated_at
+      `SELECT u.id, u.name, u.email, u.phone, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, r.name as role, u.created_at, u.updated_at
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = $1`,

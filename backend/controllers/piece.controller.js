@@ -4,7 +4,15 @@ const { AppError } = require('../utils/appError');
 const pieceService = require('../services/pieceService');
 
 const createPiece = asyncHandler(async (req, res) => {
-  const piece = await pieceService.createPiece(req.body || {});
+  const payload = {
+    ...(req.body || {})
+  };
+
+  if (req.file) {
+    payload.photo_url = `/uploads/pieces/${req.file.filename}`;
+  }
+
+  const piece = await pieceService.createPiece(payload);
 
   return sendApiResponse(res, {
     statusCode: 201,

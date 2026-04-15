@@ -74,6 +74,12 @@ const initDatabase = async () => {
       password VARCHAR(255),
       phone VARCHAR(30),
       role_id INTEGER REFERENCES roles(id),
+      store_name VARCHAR(255),
+      store_address TEXT,
+      store_description TEXT,
+      store_hours TEXT,
+      store_specialties TEXT,
+      store_services TEXT,
       latitude DOUBLE PRECISION,
       longitude DOUBLE PRECISION,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -101,6 +107,7 @@ const initDatabase = async () => {
       nom VARCHAR(255) NOT NULL,
       reference VARCHAR(255) UNIQUE NOT NULL,
       description TEXT,
+      photo_url TEXT,
       prix_unitaire NUMERIC(10, 2) NOT NULL DEFAULT 0,
       stock INTEGER NOT NULL DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -173,6 +180,12 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255)');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS store_name VARCHAR(255)');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS store_address TEXT');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS store_description TEXT');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS store_hours TEXT');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS store_specialties TEXT');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS store_services TEXT');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION');
 
@@ -189,6 +202,12 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS photo_url TEXT');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS condition VARCHAR(50) DEFAULT \'Neuf\'');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS zone_geographique VARCHAR(100)');
+    await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS marque VARCHAR(100)');
+    await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS modele VARCHAR(150)');
+    await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS categorie VARCHAR(150)');
 
   await pool.query('ALTER TABLE intervention_pieces ADD COLUMN IF NOT EXISTS intervention_id BIGINT');
   await pool.query('ALTER TABLE intervention_pieces ADD COLUMN IF NOT EXISTS piece_id BIGINT');

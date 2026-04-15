@@ -12,7 +12,7 @@ const isTransientDbError = (error) => {
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const fetchUserForToken = async (userId) => {
-  const query = `SELECT u.id, u.name, u.email, u.created_at, u.updated_at, r.name as role 
+  const query = `SELECT u.id, u.name, u.email, u.phone, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, u.created_at, u.updated_at, r.name as role 
        FROM users u 
        JOIN roles r ON u.role_id = r.id 
        WHERE u.id = $1`;

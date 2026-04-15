@@ -57,8 +57,14 @@ const mapPieceRow = (row) => ({
   nom: row.nom,
   reference: row.reference,
   description: row.description,
+  photo_url: row.photo_url || null,
   prix_unitaire: Number(row.prix_unitaire),
   stock: Number(row.stock),
+  condition: row.condition || "Neuf",
+  zone_geographique: row.zone_geographique || null,
+  marque: row.marque || null,
+  modele: row.modele || null,
+  categorie: row.categorie || null,
   created_at: row.created_at,
   updated_at: row.updated_at,
   deleted_at: row.deleted_at || null
@@ -151,6 +157,12 @@ const createPiece = async (payload) => {
   const nom = normalizeText(payload.nom);
   const reference = normalizeText(payload.reference);
   const description = normalizeText(payload.description);
+  const photoUrl = normalizeText(payload.photo_url);
+  const condition = normalizeText(payload.condition) || "Neuf";
+  const zone_geographique = normalizeText(payload.zone_geographique);
+  const marque = normalizeText(payload.marque);
+  const modele = normalizeText(payload.modele);
+  const categorie = normalizeText(payload.categorie);
   const prix_unitaire = parsePositiveNumber(payload.prix_unitaire, 'prix_unitaire');
   const stock = payload.stock === undefined || payload.stock === null || payload.stock === ''
     ? 0
@@ -166,10 +178,10 @@ const createPiece = async (payload) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO pieces (nom, reference, description, prix_unitaire, stock)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, nom, reference, description, prix_unitaire, stock, created_at, updated_at, deleted_at`,
-      [nom, reference, description, prix_unitaire, stock]
+      `INSERT INTO pieces (nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       RETURNING id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+      [nom, reference, description, photoUrl, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie]
     );
 
     return mapPieceRow(result.rows[0]);
@@ -195,8 +207,14 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
       nom,
       reference,
       description,
+      photo_url,
       prix_unitaire,
       stock,
+      condition,
+      zone_geographique,
+        marque,
+        modele,
+        categorie,
       created_at,
       updated_at,
       deleted_at,
@@ -225,7 +243,7 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
 
 const getPieceById = async (id) => {
   const result = await pool.query(
-    `SELECT id, nom, reference, description, prix_unitaire, stock, created_at, updated_at, deleted_at
+    `SELECT id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at
      FROM pieces
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]
@@ -240,7 +258,7 @@ const getPieceById = async (id) => {
 
 const updatePiece = async (id, payload) => {
   const currentPiece = await pool.query(
-    `SELECT id, nom, reference, description, prix_unitaire, stock, deleted_at
+    `SELECT id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, deleted_at
      FROM pieces
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]
@@ -254,6 +272,12 @@ const updatePiece = async (id, payload) => {
   const nextNom = normalizeText(payload.nom) || current.nom;
   const nextReference = normalizeText(payload.reference) || current.reference;
   const nextDescription = payload.description === undefined ? current.description : normalizeText(payload.description);
+  const nextPhotoUrl = payload.photo_url === undefined ? current.photo_url : normalizeText(payload.photo_url);
+  const nextCondition = payload.condition === undefined ? current.condition : (normalizeText(payload.condition) || "Neuf");
+  const nextZoneGeographique = payload.zone_geographique === undefined ? current.zone_geographique : normalizeText(payload.zone_geographique);
+    const nextMarque = payload.marque === undefined ? current.marque : normalizeText(payload.marque);
+    const nextModele = payload.modele === undefined ? current.modele : normalizeText(payload.modele);
+    const nextCategorie = payload.categorie === undefined ? current.categorie : normalizeText(payload.categorie);
   const nextPrice = payload.prix_unitaire === undefined || payload.prix_unitaire === null || payload.prix_unitaire === ''
     ? Number(current.prix_unitaire)
     : parsePositiveNumber(payload.prix_unitaire, 'prix_unitaire');
@@ -267,12 +291,18 @@ const updatePiece = async (id, payload) => {
        SET nom = $1,
            reference = $2,
            description = $3,
-           prix_unitaire = $4,
-           stock = $5,
+           photo_url = $4,
+           prix_unitaire = $5,
+           stock = $6,
+           condition = $7,
+           zone_geographique = $8,
+             marque = $9,
+             modele = $10,
+             categorie = $11,
            updated_at = NOW()
-       WHERE id = $6 AND deleted_at IS NULL
-       RETURNING id, nom, reference, description, prix_unitaire, stock, created_at, updated_at, deleted_at`,
-      [nextNom, nextReference, nextDescription, nextPrice, nextStock, id]
+         WHERE id = $12 AND deleted_at IS NULL
+         RETURNING id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+        [nextNom, nextReference, nextDescription, nextPhotoUrl, nextPrice, nextStock, nextCondition, nextZoneGeographique, nextMarque, nextModele, nextCategorie, id]
     );
 
     return mapPieceRow(result.rows[0]);
@@ -336,7 +366,7 @@ const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
        SET stock = $1,
            updated_at = NOW()
        WHERE id = $2
-       RETURNING id, nom, reference, description, prix_unitaire, stock, created_at, updated_at, deleted_at`,
+         RETURNING id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
       [stockAfter, id]
     );
 
@@ -379,7 +409,7 @@ const setPieceStock = async (id, payload = {}, actorUserId = null) => {
        SET stock = $1,
            updated_at = NOW()
        WHERE id = $2
-       RETURNING id, nom, reference, description, prix_unitaire, stock, created_at, updated_at, deleted_at`,
+         RETURNING id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
       [nextStock, id]
     );
 

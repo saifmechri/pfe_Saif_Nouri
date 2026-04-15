@@ -2,6 +2,7 @@ const express = require('express');
 const { body, param, query } = require('express-validator');
 const { verifyToken } = require('../middlwares/authMiddleware');
 const { isVendeurOrAdmin } = require('../middlwares/roleMiddleware');
+const { uploadPiecePhoto } = require('../middlwares/uploadPiecePhoto');
 const { validateRequest } = require('../middlewares/validateRequest');
 const pieceController = require('../controllers/piece.controller');
 
@@ -76,7 +77,7 @@ router.get('/', listPiecesValidation, validateRequest, pieceController.getAllPie
 router.get('/:id', getPieceValidation, validateRequest, pieceController.getPieceById);
 router.get('/:id/stock/movements', verifyToken, isVendeurOrAdmin, stockMovementsValidation, validateRequest, pieceController.getPieceStockMovements);
 
-router.post('/', verifyToken, isVendeurOrAdmin, createPieceValidation, validateRequest, pieceController.createPiece);
+router.post('/', verifyToken, isVendeurOrAdmin, uploadPiecePhoto.single('photo_piece'), createPieceValidation, validateRequest, pieceController.createPiece);
 router.post('/:id/stock/adjust', verifyToken, isVendeurOrAdmin, adjustStockValidation, validateRequest, pieceController.adjustPieceStock);
 router.put('/:id/stock', verifyToken, isVendeurOrAdmin, setStockValidation, validateRequest, pieceController.setPieceStock);
 router.put('/:id', verifyToken, isVendeurOrAdmin, updatePieceValidation, validateRequest, pieceController.updatePiece);

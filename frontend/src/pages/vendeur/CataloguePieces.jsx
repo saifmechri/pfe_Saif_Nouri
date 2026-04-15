@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from "react";
-import { createPiece, getPieces } from "../../services/pieces";
+import { createPiece, deletePiece, getPieces, updatePiece } from "../../services/pieces";
 import { getCompleteProfile, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
 import { AuthContext } from "../../context/AuthContext";
@@ -258,6 +258,24 @@ const getCompatibleVehiclesForPiece = (piece) => {
   return [];
 };
 
+const getPieceImageFallback = (piece) => {
+  if (piece?.categorie) {
+    return buildCategoryImage(piece.categorie);
+  }
+
+  if (piece?.marque) {
+    return buildMarqueImage(piece.marque);
+  }
+
+  return buildSvgDataUrl({
+    top: "#f1f5f9",
+    bottom: "#ffffff",
+    title: "PI",
+    subtitle: "Piece",
+    accent: "#1e293b"
+  });
+};
+
 const presentationSpecialites = [
   "Pieces consommables",
   "Batterie",
@@ -279,6 +297,20 @@ const presentationServices = [
   "Disponibilite rapide",
   "Prix competitifs"
 ];
+
+const createEmptyPieceForm = () => ({
+  nom: "",
+  reference: "",
+  description: "",
+  prix_unitaire: "",
+  stock: "0",
+  condition: "Neuf",
+  zone_geographique: "",
+  marque: "",
+  modele: "",
+  categorie: "",
+  photo_piece: null
+});
 
 const splitLines = (value, fallback) => {
   const source = typeof value === "string" ? value : "";
@@ -325,22 +357,11 @@ const CataloguePieces = () => {
 
   const [selectedPiece, setSelectedPiece] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingPieceId, setEditingPieceId] = useState(null);
   const [createError, setCreateError] = useState("");
   const [createSuccess, setCreateSuccess] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [newPiece, setNewPiece] = useState({
-    nom: "",
-    reference: "",
-    description: "",
-    prix_unitaire: "",
-    stock: "0",
-    condition: "Neuf",
-    zone_geographique: "",
-    marque: "",
-    modele: "",
-    categorie: "",
-    photo_piece: null
-  });
+  const [newPiece, setNewPiece] = useState(createEmptyPieceForm);
 
   const [showMarquesModal, setShowMarquesModal] = useState(false);
   const [showModelesModal, setShowModelesModal] = useState(false);
@@ -626,51 +647,153 @@ const CataloguePieces = () => {
     }));
   };
 
-  const handleCreatePiece = async (event) => {
+  const openCreatePieceModal = () => {
+    setEditingPieceId(null);
+    setCreateError("");
+    setCreateSuccess("");
+    setNewPiece(createEmptyPieceForm());
+    setShowCreateModal(true);
+  };
+
+  const openEditPieceModal = (piece) => {
+    setEditingPieceId(piece.id);
+    setCreateError("");
+    setCreateSuccess("");
+    setNewPiece({
+      nom: piece.nom || "",
+      reference: piece.reference || "",
+      description: piece.description || "",
+      prix_unitaire: piece.prix_unitaire !== undefined && piece.prix_unitaire !== null ? String(piece.prix_unitaire) : "",
+      stock: piece.stock !== undefined && piece.stock !== null ? String(piece.stock) : "0",
+      condition: piece.condition || "Neuf",
+      zone_geographique: piece.zone_geographique || "",
+      marque: piece.marque || "",
+      modele: piece.modele || "",
+      categorie: piece.categorie || "",
+      photo_piece: null
+    });
+    setSelectedPiece(null);
+    setShowCreateModal(true);
+  };
+
+  const closePieceForm = () => {
+    setShowCreateModal(false);
+    setEditingPieceId(null);
+    setCreateError("");
+    setCreateSuccess("");
+  };
+
+  const syncPiecesList = () => {
+    setAppliedFilters((prev) => ({ ...prev }));
+  };
+
+  const handleSubmitPiece = async (event) => {
     event.preventDefault();
     setCreateError("");
     setCreateSuccess("");
     setIsCreating(true);
 
     try {
+      const normalizedNom = String(newPiece.nom || "").trim();
+      const normalizedReference = String(newPiece.reference || "").trim();
+      const normalizedPrice = String(newPiece.prix_unitaire || "").trim().replace(",", ".");
+      const normalizedStock = String(newPiece.stock || "0").trim();
+
+      if (!normalizedNom) {
+        setCreateError("Le nom de la piece est obligatoire.");
+        return;
+      }
+
+      if (!normalizedReference) {
+        setCreateError("La reference de la piece est obligatoire.");
+        return;
+      }
+
+      const parsedPrice = Number(normalizedPrice);
+      if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        setCreateError("Le prix unitaire doit etre un nombre superieur a 0.");
+        return;
+      }
+
+      const parsedStock = Number(normalizedStock);
+      if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+        setCreateError("Le stock doit etre un entier superieur ou egal a 0.");
+        return;
+      }
+
       const formData = new FormData();
-      formData.append("nom", newPiece.nom);
-      formData.append("reference", newPiece.reference);
-      formData.append("description", newPiece.description);
-      formData.append("prix_unitaire", newPiece.prix_unitaire);
-      formData.append("stock", newPiece.stock || "0");
+      formData.append("nom", normalizedNom);
+      formData.append("reference", normalizedReference);
+      formData.append("description", String(newPiece.description || "").trim());
+      formData.append("prix_unitaire", String(parsedPrice));
+      formData.append("stock", String(parsedStock));
       formData.append("condition", newPiece.condition || "Neuf");
-      formData.append("zone_geographique", newPiece.zone_geographique || "");
-      formData.append("marque", newPiece.marque || "");
-      formData.append("modele", newPiece.modele || "");
-      formData.append("categorie", newPiece.categorie || "");
+      formData.append("zone_geographique", String(newPiece.zone_geographique || "").trim());
+      formData.append("marque", String(newPiece.marque || "").trim());
+      formData.append("modele", String(newPiece.modele || "").trim());
+      formData.append("categorie", String(newPiece.categorie || "").trim());
 
       if (newPiece.photo_piece) {
         formData.append("photo_piece", newPiece.photo_piece);
       }
 
-      await createPiece(formData);
+      if (editingPieceId) {
+        await updatePiece(editingPieceId, {
+          nom: normalizedNom,
+          reference: normalizedReference,
+          description: String(newPiece.description || "").trim(),
+          prix_unitaire: String(parsedPrice),
+          stock: String(parsedStock),
+          condition: newPiece.condition || "Neuf",
+          zone_geographique: String(newPiece.zone_geographique || "").trim(),
+          marque: String(newPiece.marque || "").trim(),
+          modele: String(newPiece.modele || "").trim(),
+          categorie: String(newPiece.categorie || "").trim()
+        });
 
-      setCreateSuccess("Piece ajoutee avec succes.");
-      setNewPiece({
-        nom: "",
-        reference: "",
-        description: "",
-        prix_unitaire: "",
-        stock: "0",
-        condition: "Neuf",
-        zone_geographique: "",
-        marque: "",
-        modele: "",
-        categorie: "",
-        photo_piece: null
-      });
+        setCreateSuccess("Piece modifiee avec succes.");
+      } else {
+        await createPiece(formData);
+        setCreateSuccess("Piece ajoutee avec succes.");
+      }
+
+      setNewPiece(createEmptyPieceForm());
+      setEditingPieceId(null);
       setPage(1);
-      setAppliedFilters((prev) => ({ ...prev }));
+      syncPiecesList();
     } catch (err) {
-      setCreateError(err.response?.data?.message || "Erreur lors de l'ajout de la piece");
+      const details = err.response?.data?.error?.details;
+      if (Array.isArray(details) && details.length > 0) {
+        const formatted = details
+          .map((item) => `${item.field || "champ"}: ${item.message || "valeur invalide"}`)
+          .join(" | ");
+        setCreateError(formatted);
+      } else {
+        setCreateError(err.response?.data?.message || "Erreur lors de l'ajout de la piece");
+      }
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleDeletePiece = async (piece) => {
+    if (!piece?.id) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Supprimer la piece \"${piece.nom || piece.reference || ""}\" ?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setError("");
+
+    try {
+      await deletePiece(piece.id);
+      setSelectedPiece(null);
+      syncPiecesList();
+    } catch (err) {
+      setError(err.response?.data?.message || "Erreur lors de la suppression de la piece");
     }
   };
 
@@ -682,18 +805,21 @@ const CataloguePieces = () => {
 
   return (
     <PlatformLayout>
-      <div className="min-h-screen bg-[#f8f8f8]">
-        <div className="mx-auto max-w-6xl px-4 pb-28 pt-6">
-          <div className="mb-4 text-center">
-            <h1 className="text-3xl font-black text-[#111111]">Magasin du Vendeur</h1>
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(244,158,95,0.14),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(30,64,175,0.10),_transparent_30%),linear-gradient(180deg,_#f7f2ea_0%,_#fffdf9_100%)]">
+        <div className="mx-auto max-w-7xl px-4 pb-28 pt-6 sm:px-6 lg:px-8">
+          <div className="mb-5 text-center">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Magasin du Vendeur</h1>
+            <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
+              Gérez les pièces, les photos et les compatibilités dans un espace cohérent avec l’identité visuelle de la plateforme.
+            </p>
           </div>
 
-          <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[#ececec] bg-white p-1">
+          <div className="mb-6 grid grid-cols-2 rounded-[1.35rem] border border-slate-200/80 bg-white/90 p-1 shadow-[0_16px_32px_rgba(15,23,42,0.06)] backdrop-blur-xl">
             <button
               type="button"
               onClick={() => setActiveTab("pieces")}
               className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
-                activeTab === "pieces" ? "bg-[#fff3e0] text-[#f29a00]" : "text-[#a0a0a0]"
+                activeTab === "pieces" ? "bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] text-white shadow-md shadow-blue-900/15" : "text-slate-500 hover:text-slate-800"
               }`}
             >
               Pieces Vendeur
@@ -702,7 +828,7 @@ const CataloguePieces = () => {
               type="button"
               onClick={() => setActiveTab("presentation")}
               className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
-                activeTab === "presentation" ? "bg-[#fff3e0] text-[#f29a00]" : "text-[#a0a0a0]"
+                activeTab === "presentation" ? "bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] text-white shadow-md shadow-blue-900/15" : "text-slate-500 hover:text-slate-800"
               }`}
             >
               Presentation
@@ -712,93 +838,93 @@ const CataloguePieces = () => {
           {activeTab === "pieces" && (
             <>
               <div className="mb-4 flex gap-2">
-                <div className="flex flex-1 items-center rounded-2xl border-2 border-[#ff9d00] bg-white px-3 py-2">
-                  <span className="mr-2 text-lg text-[#676767]">🔍</span>
+                <div className="flex flex-1 items-center rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-[0_10px_20px_rgba(15,23,42,0.05)] focus-within:border-blue-300">
+                  <span className="mr-2 text-lg text-slate-500">🔍</span>
                   <input
                     type="text"
                     value={filters.search}
                     onChange={handleSearchInput}
                     placeholder="Entrer reference, piece, modele..."
-                    className="w-full border-0 bg-transparent text-base text-[#3b3b3b] outline-none"
+                    className="w-full border-0 bg-transparent text-base text-slate-700 outline-none placeholder:text-slate-400"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={applyFilters}
                   disabled={loading || isSubmitting}
-                  className="rounded-2xl border-2 border-[#ff9d00] bg-white px-6 text-xl font-bold text-[#ff9d00] disabled:opacity-50"
+                  className="rounded-2xl bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-6 text-xl font-bold text-white shadow-[0_12px_22px_rgba(30,64,175,0.22)] transition hover:-translate-y-0.5 disabled:opacity-50"
                 >
                   OK
                 </button>
               </div>
 
               <div className="mb-5 flex flex-wrap gap-2">
-                <button type="button" onClick={() => setShowMarquesModal(true)} className="rounded-full border border-[#d8d8d8] bg-white px-4 py-2 text-sm font-semibold text-[#2d2d2d]">
+                <button type="button" onClick={() => setShowMarquesModal(true)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-800">
                   Marques{selectedMarques.length > 0 ? ` (${selectedMarques.length})` : ""}
                 </button>
-                <button type="button" onClick={() => setShowModelesModal(true)} className="rounded-full border border-[#d8d8d8] bg-white px-4 py-2 text-sm font-semibold text-[#2d2d2d]">
+                <button type="button" onClick={() => setShowModelesModal(true)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-800">
                   Modèles{selectedModeles.length > 0 ? ` (${selectedModeles.length})` : ""}
                 </button>
-                <button type="button" onClick={() => setShowCategoriesModal(true)} className="rounded-full border border-[#d8d8d8] bg-white px-4 py-2 text-sm font-semibold text-[#2d2d2d]">
+                <button type="button" onClick={() => setShowCategoriesModal(true)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-800">
                   Catégories{selectedCategories.length > 0 ? ` (${selectedCategories.length})` : ""}
                 </button>
-                <button type="button" onClick={() => setShowConditionModal(true)} className="rounded-full border border-[#d8d8d8] bg-white px-4 py-2 text-sm font-semibold text-[#2d2d2d]">
+                <button type="button" onClick={() => setShowConditionModal(true)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-800">
                   Occasion/Neuf{selectedCondition !== "all" ? `: ${selectedCondition}` : ""}
                 </button>
-                <button type="button" onClick={() => setShowZoneModal(true)} className="rounded-full border border-[#d8d8d8] bg-white px-4 py-2 text-sm font-semibold text-[#2d2d2d]">
+                <button type="button" onClick={() => setShowZoneModal(true)} className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-800">
                   Zone géographique{selectedZone !== "all" ? `: ${selectedZone}` : ""}
                 </button>
                 <button
                   type="button"
                   onClick={resetFilters}
-                  className="rounded-full border border-[#d8d8d8] bg-white px-4 py-2 text-sm font-semibold text-[#7d7d7d]"
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-500 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-700"
                 >
                   Réinitialiser
                 </button>
               </div>
 
-              {error && <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-3 text-red-700">{error}</div>}
+              {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-red-700 shadow-sm">{error}</div>}
 
               {loading ? (
-                <div className="rounded-3xl bg-white p-6 text-[#7d7d7d] shadow-[0_8px_20px_rgba(0,0,0,0.06)]">Chargement du catalogue...</div>
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-[0_16px_30px_rgba(15,23,42,0.06)]">Chargement du catalogue...</div>
               ) : visibleItems.length === 0 ? (
-                <div className="rounded-3xl bg-white p-6 text-[#7d7d7d] shadow-[0_8px_20px_rgba(0,0,0,0.06)]">Aucune piece trouvee avec ces filtres.</div>
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-[0_16px_30px_rgba(15,23,42,0.06)]">Aucune piece trouvee avec ces filtres.</div>
               ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {visibleItems.map((piece) => {
                     const imageSrc = piece.photo_url
                       ? piece.photo_url.startsWith("http")
                         ? piece.photo_url
                         : `${backendBaseUrl}${piece.photo_url}`
-                      : "https://via.placeholder.com/640x480?text=Piece";
+                      : getPieceImageFallback(piece);
 
                     return (
-                      <article key={piece.id} className="overflow-hidden rounded-[24px] border border-[#ececec] bg-white shadow-[0_10px_24px_rgba(0,0,0,0.08)]">
+                      <article key={piece.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.12)]">
                         <button type="button" className="w-full" onClick={() => setSelectedPiece(piece)}>
                           <img src={imageSrc} alt={piece.nom} className="h-52 w-full object-cover" />
                         </button>
 
                         <div className="p-4">
-                          <p className="line-clamp-2 text-lg font-extrabold uppercase tracking-wide text-[#f49600]">{piece.nom}</p>
-                          <p className="mt-1 line-clamp-2 text-2xl font-black text-[#1b1b1b]">{piece.description || "Piece automobile"}</p>
-                          <p className="mt-1 inline-flex rounded-full border border-[#cfd7da] bg-[#f7fafb] px-3 py-1 text-sm font-bold text-[#4d6368]">Ref: {piece.reference}</p>
+                          <p className="line-clamp-2 text-lg font-extrabold uppercase tracking-wide text-blue-700">{piece.nom}</p>
+                          <p className="mt-1 line-clamp-2 text-2xl font-black text-slate-900">{piece.description || "Piece automobile"}</p>
+                          <p className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-bold text-slate-600">Ref: {piece.reference}</p>
 
                           <div className="mt-3 flex items-center justify-between">
-                            <p className="text-3xl font-black text-[#ff9800]">{Number(piece.prix_unitaire).toFixed(2)} DT</p>
-                            <div className="flex items-center gap-3 text-2xl text-[#ff9800]">
+                            <p className="text-3xl font-black text-blue-700">{Number(piece.prix_unitaire).toFixed(2)} DT</p>
+                            <div className="flex items-center gap-3 text-2xl text-slate-400">
                               <button type="button" aria-label="Favori">♡</button>
                               <button type="button" aria-label="Partager">↗</button>
                             </div>
                           </div>
 
                           <div className="mt-3 flex items-center justify-between">
-                            <span className={`rounded-full px-3 py-1 text-xs font-bold ${Number(piece.stock) > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                            <span className={`rounded-full px-3 py-1 text-xs font-bold ${Number(piece.stock) > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
                               {Number(piece.stock) > 0 ? `${piece.stock} en stock` : "Rupture"}
                             </span>
                             <button
                               type="button"
                               onClick={() => setSelectedPiece(piece)}
-                              className="rounded-xl border border-[#ff9d00] px-3 py-1 text-sm font-bold text-[#ff9d00]"
+                              className="rounded-xl border border-blue-200 bg-white px-3 py-1 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
                             >
                               Details
                             </button>
@@ -810,26 +936,26 @@ const CataloguePieces = () => {
                 </div>
               )}
 
-              <div className="mt-5 rounded-2xl bg-white p-4 shadow-[0_8px_20px_rgba(0,0,0,0.06)]">
+              <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_16px_30px_rgba(15,23,42,0.06)]">
                 <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                  <p className="text-sm text-[#6a6a6a]">
-                    Total: <span className="font-bold text-[#1d1d1d]">{pagination.totalItems || 0}</span>
+                  <p className="text-sm text-slate-600">
+                    Total: <span className="font-bold text-slate-900">{pagination.totalItems || 0}</span>
                   </p>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => canGoPrev && setPage((prev) => prev - 1)}
                       disabled={!canGoPrev}
-                      className="rounded-xl border border-[#d3d3d3] px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
                     >
                       Precedent
                     </button>
-                    <span className="text-sm text-[#585858]">Page {pagination.page || page} / {pagination.totalPages || 1}</span>
+                    <span className="text-sm text-slate-500">Page {pagination.page || page} / {pagination.totalPages || 1}</span>
                     <button
                       type="button"
                       onClick={() => canGoNext && setPage((prev) => prev + 1)}
                       disabled={!canGoNext}
-                      className="rounded-xl border border-[#d3d3d3] px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
                     >
                       Suivant
                     </button>
@@ -842,104 +968,104 @@ const CataloguePieces = () => {
           {activeTab === "presentation" && (
             <div className="space-y-5">
               {canManagePieces && (
-                <form onSubmit={handlePresentationSave} className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
+                <form onSubmit={handlePresentationSave} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <h3 className="text-2xl font-black text-[#141414]">Editer la presentation</h3>
-                    {presentationSaving && <span className="text-sm font-semibold text-[#f59a00]">Enregistrement...</span>}
+                    <h3 className="text-2xl font-black text-slate-900">Editer la presentation</h3>
+                    {presentationSaving && <span className="text-sm font-semibold text-blue-700">Enregistrement...</span>}
                   </div>
 
-                  {presentationError && <div className="mb-3 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-700">{presentationError}</div>}
-                  {presentationMessage && <div className="mb-3 rounded-xl border border-green-300 bg-green-50 p-3 text-sm text-green-700">{presentationMessage}</div>}
+                  {presentationError && <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{presentationError}</div>}
+                  {presentationMessage && <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{presentationMessage}</div>}
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <input name="store_name" value={presentationForm.store_name} onChange={handlePresentationChange} placeholder="Nom du magasin" className="rounded-xl border border-[#d9d9d9] px-3 py-2" />
-                    <input name="store_address" value={presentationForm.store_address} onChange={handlePresentationChange} placeholder="Adresse" className="rounded-xl border border-[#d9d9d9] px-3 py-2" />
-                    <textarea name="store_description" value={presentationForm.store_description} onChange={handlePresentationChange} placeholder="Description" rows={3} className="rounded-xl border border-[#d9d9d9] px-3 py-2 sm:col-span-2" />
-                    <textarea name="store_hours" value={presentationForm.store_hours} onChange={handlePresentationChange} placeholder="Horaires, une ligne par jour" rows={4} className="rounded-xl border border-[#d9d9d9] px-3 py-2 sm:col-span-2" />
-                    <textarea name="store_specialties" value={presentationForm.store_specialties} onChange={handlePresentationChange} placeholder="Specialites, une ligne par item" rows={4} className="rounded-xl border border-[#d9d9d9] px-3 py-2 sm:col-span-2" />
-                    <textarea name="store_services" value={presentationForm.store_services} onChange={handlePresentationChange} placeholder="Services, une ligne par item" rows={4} className="rounded-xl border border-[#d9d9d9] px-3 py-2 sm:col-span-2" />
+                    <input name="store_name" value={presentationForm.store_name} onChange={handlePresentationChange} placeholder="Nom du magasin" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300" />
+                    <input name="store_address" value={presentationForm.store_address} onChange={handlePresentationChange} placeholder="Adresse" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300" />
+                    <textarea name="store_description" value={presentationForm.store_description} onChange={handlePresentationChange} placeholder="Description" rows={3} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
+                    <textarea name="store_hours" value={presentationForm.store_hours} onChange={handlePresentationChange} placeholder="Horaires, une ligne par jour" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
+                    <textarea name="store_specialties" value={presentationForm.store_specialties} onChange={handlePresentationChange} placeholder="Specialites, une ligne par item" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
+                    <textarea name="store_services" value={presentationForm.store_services} onChange={handlePresentationChange} placeholder="Services, une ligne par item" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
                   </div>
 
                   <div className="mt-4 flex justify-end">
-                    <button type="submit" disabled={presentationSaving} className="rounded-full bg-[#f59a00] px-5 py-3 text-base font-bold text-white disabled:opacity-60">
+                    <button type="submit" disabled={presentationSaving} className="rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-5 py-3 text-base font-bold text-white shadow-[0_12px_22px_rgba(30,64,175,0.18)] disabled:opacity-60">
                       {presentationSaving ? "Sauvegarde..." : "Enregistrer la presentation"}
                     </button>
                   </div>
                 </form>
               )}
 
-              <div className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-                <h2 className="text-4xl font-black text-[#101010]">{storeDisplayName}</h2>
-                <p className="mt-2 text-lg text-[#3b3b3b]">Specialiste en pieces de rechange automobiles</p>
-                <p className="mt-2 text-base leading-relaxed text-[#565656]">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                <h2 className="text-4xl font-black tracking-tight text-slate-900">{storeDisplayName}</h2>
+                <p className="mt-2 text-lg text-slate-700">Specialiste en pieces de rechange automobiles</p>
+                <p className="mt-2 text-base leading-relaxed text-slate-600">
                   Vous recherchez des pieces fiables, disponibles et au meilleur rapport qualite/prix ?
                   {` ${storeDisplayName}`} est votre partenaire de confiance.
                 </p>
-                <p className="mt-3 text-base font-semibold text-[#323232]">Role: {vendorRole}</p>
-                <p className="text-base font-semibold text-[#323232]">Email: {vendorEmail}</p>
-                <p className="text-base font-semibold text-[#323232]">Telephone: {vendorPhone}</p>
-                {profileLoading && <p className="mt-2 text-sm text-[#787878]">Chargement du profil...</p>}
+                <p className="mt-3 text-base font-semibold text-slate-700">Role: {vendorRole}</p>
+                <p className="text-base font-semibold text-slate-700">Email: {vendorEmail}</p>
+                <p className="text-base font-semibold text-slate-700">Telephone: {vendorPhone}</p>
+                {profileLoading && <p className="mt-2 text-sm text-slate-500">Chargement du profil...</p>}
               </div>
 
-              <div className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-                <h3 className="text-2xl font-black text-[#141414]">Indicateurs en temps reel</h3>
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                <h3 className="text-2xl font-black text-slate-900">Indicateurs en temps reel</h3>
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-[#efefef] bg-[#fafafa] p-3 text-center">
-                    <p className="text-xs uppercase tracking-wide text-[#7a7a7a]">Total pieces</p>
-                    <p className="text-3xl font-black text-[#1b1b1b]">{presentationSummary.totalPieces}</p>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Total pieces</p>
+                    <p className="text-3xl font-black text-slate-900">{presentationSummary.totalPieces}</p>
                   </div>
-                  <div className="rounded-2xl border border-[#e0f2e8] bg-[#f4fff8] p-3 text-center">
-                    <p className="text-xs uppercase tracking-wide text-[#5c7a66]">En stock</p>
-                    <p className="text-3xl font-black text-[#1f8f4b]">{presentationSummary.inStock}</p>
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-center">
+                    <p className="text-xs uppercase tracking-wide text-blue-700">En stock</p>
+                    <p className="text-3xl font-black text-blue-700">{presentationSummary.inStock}</p>
                   </div>
-                  <div className="rounded-2xl border border-[#f7e1e1] bg-[#fff6f6] p-3 text-center">
-                    <p className="text-xs uppercase tracking-wide text-[#855f5f]">Rupture</p>
-                    <p className="text-3xl font-black text-[#c44b4b]">{presentationSummary.outOfStock}</p>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Rupture</p>
+                    <p className="text-3xl font-black text-slate-900">{presentationSummary.outOfStock}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-                <h3 className="text-2xl font-black text-[#141414]">Specialites</h3>
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                <h3 className="text-2xl font-black text-slate-900">Specialites</h3>
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {storeSpecialties.map((item) => (
-                    <span key={item} className="rounded-2xl border border-[#f0a326] px-4 py-2 text-center text-sm font-bold text-[#1e1e1e]">
+                    <span key={item} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-2 text-center text-sm font-bold text-slate-800">
                       {item}
                     </span>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-                <h3 className="text-2xl font-black text-[#141414]">Horaires de Travail</h3>
-                <div className="mt-3 space-y-1 text-lg text-[#252525]">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                <h3 className="text-2xl font-black text-slate-900">Horaires de Travail</h3>
+                <div className="mt-3 space-y-1 text-lg text-slate-700">
                   {storeHours.map((line, index) => (
-                    <p key={line} className={index === 5 ? "font-bold text-[#f59a00]" : ""}>{line}</p>
+                    <p key={line} className={index === 5 ? "font-bold text-blue-700" : ""}>{line}</p>
                   ))}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-                <h3 className="text-2xl font-black text-[#141414]">Services complementaires</h3>
-                <ul className="mt-3 space-y-2 text-lg text-[#272727]">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                <h3 className="text-2xl font-black text-slate-900">Services complementaires</h3>
+                <ul className="mt-3 space-y-2 text-lg text-slate-700">
                   {storeServices.map((service) => (
                     <li key={service}>✓ {service}</li>
                   ))}
                 </ul>
               </div>
 
-              <div className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
-                <h3 className="text-2xl font-black text-[#141414]">Galerie</h3>
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                <h3 className="text-2xl font-black text-slate-900">Galerie</h3>
                 <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
                   {previewImages.length > 0 ? (
-                    previewImages.map((src) => <img key={src} src={src} alt="Galerie vendeur" className="h-36 w-full rounded-xl object-cover" />)
+                    previewImages.map((src) => <img key={src} src={src} alt="Galerie vendeur" className="h-36 w-full rounded-2xl object-cover shadow-sm ring-1 ring-slate-200" />)
                   ) : (
-                    <p className="col-span-full text-[#666]">Ajoute des pieces avec photo pour remplir la galerie.</p>
+                    <p className="col-span-full text-slate-500">Ajoute des pieces avec photo pour remplir la galerie.</p>
                   )}
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-[#ececec] bg-[#fff7ea] p-4 text-sm font-semibold text-[#825516] shadow-[0_8px_18px_rgba(0,0,0,0.06)]">
+              <div className="rounded-3xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                 La section map est volontairement desactivee pour le moment.
               </div>
             </div>
@@ -949,8 +1075,8 @@ const CataloguePieces = () => {
         {activeTab === "pieces" && canManagePieces && (
           <button
             type="button"
-            onClick={() => setShowCreateModal(true)}
-            className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[#f59a00] px-8 py-3 text-lg font-extrabold text-white shadow-[0_16px_30px_rgba(245,154,0,0.35)]"
+            onClick={openCreatePieceModal}
+            className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-8 py-3 text-lg font-extrabold text-white shadow-[0_16px_30px_rgba(30,64,175,0.28)]"
           >
             ＋ Ajouter une piece
           </button>
@@ -958,10 +1084,10 @@ const CataloguePieces = () => {
 
         {showMarquesModal && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
-            <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl bg-white px-4 py-5 shadow-2xl sm:px-5">
+            <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-2xl font-black text-[#111] sm:text-4xl">Choisir • Marques</h3>
-                <button type="button" onClick={() => setShowMarquesModal(false)} className="text-3xl text-[#777]">×</button>
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Marques</h3>
+                <button type="button" onClick={() => setShowMarquesModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                 {marques.map((marque) => {
@@ -973,9 +1099,9 @@ const CataloguePieces = () => {
                       key={marque}
                       type="button"
                       onClick={() => toggleMarque(marque)}
-                      className={`overflow-hidden rounded-[22px] border bg-white p-2 text-center transition ${active ? "border-[#f59a00] shadow-[0_0_0_2px_rgba(245,154,0,0.18)]" : "border-[#e2e2e2]"}`}
+                      className={`overflow-hidden rounded-[22px] border bg-white p-2 text-center transition ${active ? "border-blue-300 shadow-[0_0_0_2px_rgba(37,99,235,0.16)]" : "border-slate-200"}`}
                     >
-                      <div className={`flex h-[112px] items-center justify-center rounded-[16px] border border-[#edf0f2] bg-gradient-to-b from-[#fbfbfb] to-white p-3 ${active ? "ring-1 ring-[#f59a00]/25" : ""}`}>
+                      <div className={`flex h-[112px] items-center justify-center rounded-[16px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3 ${active ? "ring-1 ring-blue-300/40" : ""}`}>
                         <img
                           src={logoUrl || fallbackImage}
                           alt={marque}
@@ -988,7 +1114,7 @@ const CataloguePieces = () => {
                           }}
                         />
                       </div>
-                      <p className={`mt-2 truncate text-[15px] font-bold ${active ? "text-[#111]" : "text-[#1e1e1e]"}`}>{marque}</p>
+                      <p className={`mt-2 truncate text-[15px] font-bold ${active ? "text-slate-900" : "text-slate-700"}`}>{marque}</p>
                     </button>
                   );
                 })}
@@ -999,13 +1125,13 @@ const CataloguePieces = () => {
 
         {showModelesModal && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
-            <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl">
+            <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-[#111]">Choisir • Modèles</h3>
-                <button type="button" onClick={() => setShowModelesModal(false)} className="text-3xl text-[#777]">x</button>
+                <h3 className="text-4xl font-black text-slate-900">Choisir • Modèles</h3>
+                <button type="button" onClick={() => setShowModelesModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               {availableModeles.length === 0 ? (
-                <p className="text-[#666]">Sélectionnez d'abord une marque.</p>
+                <p className="text-slate-500">Sélectionnez d'abord une marque.</p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {availableModeles.map((modele) => {
@@ -1015,7 +1141,7 @@ const CataloguePieces = () => {
                         key={modele}
                         type="button"
                         onClick={() => toggleModele(modele)}
-                        className={`rounded-2xl border p-4 text-left text-base font-semibold ${active ? "border-[#f59a00] bg-[#fff3df] text-[#a86a00]" : "border-[#e2e2e2] bg-white text-[#222]"}`}
+                        className={`rounded-2xl border p-4 text-left text-base font-semibold transition ${active ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}
                       >
                         {modele}
                       </button>
@@ -1029,10 +1155,10 @@ const CataloguePieces = () => {
 
         {showCategoriesModal && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
-            <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl">
+            <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-[#111]">Choisir • Catégories</h3>
-                <button type="button" onClick={() => setShowCategoriesModal(false)} className="text-3xl text-[#777]">×</button>
+                <h3 className="text-4xl font-black text-slate-900">Choisir • Catégories</h3>
+                <button type="button" onClick={() => setShowCategoriesModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {categories.map((categorie) => {
@@ -1043,10 +1169,10 @@ const CataloguePieces = () => {
                       key={categorie}
                       type="button"
                       onClick={() => toggleCategorie(categorie)}
-                      className={`rounded-2xl border p-3 text-center transition ${active ? "border-[#f59a00] bg-[#fff3df]" : "border-[#e2e2e2] bg-white"}`}
+                      className={`rounded-2xl border p-3 text-center transition ${active ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50"}`}
                     >
-                      <img src={categoryImage} alt={categorie} className="mb-2 h-24 w-full rounded-xl border border-[#edf0f2] object-cover" />
-                      <p className={`text-sm font-semibold ${active ? "text-[#a86a00]" : "text-[#222]"}`}>{categorie}</p>
+                      <img src={categoryImage} alt={categorie} className="mb-2 h-24 w-full rounded-xl border border-slate-100 object-cover" />
+                      <p className={`text-sm font-semibold ${active ? "text-blue-800" : "text-slate-700"}`}>{categorie}</p>
                     </button>
                   );
                 })}
@@ -1057,15 +1183,15 @@ const CataloguePieces = () => {
 
         {showConditionModal && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
-            <div className="w-full max-w-xl rounded-3xl bg-white p-5 shadow-2xl">
+            <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-[#111]">Choisir • Occasion/Neuf</h3>
-                <button type="button" onClick={() => setShowConditionModal(false)} className="text-3xl text-[#777]">x</button>
+                <h3 className="text-4xl font-black text-slate-900">Choisir • Occasion/Neuf</h3>
+                <button type="button" onClick={() => setShowConditionModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               <div className="grid grid-cols-3 gap-3">
-                <button type="button" onClick={() => setSelectedCondition("all")} className={`rounded-2xl border p-4 text-lg font-semibold ${selectedCondition === "all" ? "border-[#f59a00] bg-[#fff3df]" : "border-[#e2e2e2]"}`}>Tous</button>
-                <button type="button" onClick={() => setSelectedCondition("Occasion")} className={`rounded-2xl border p-4 text-lg font-semibold ${selectedCondition === "Occasion" ? "border-[#f59a00] bg-[#fff3df]" : "border-[#e2e2e2]"}`}>Occasion</button>
-                <button type="button" onClick={() => setSelectedCondition("Neuf")} className={`rounded-2xl border p-4 text-lg font-semibold ${selectedCondition === "Neuf" ? "border-[#f59a00] bg-[#fff3df]" : "border-[#e2e2e2]"}`}>Neuf</button>
+                <button type="button" onClick={() => setSelectedCondition("all")} className={`rounded-2xl border p-4 text-lg font-semibold transition ${selectedCondition === "all" ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}>Tous</button>
+                <button type="button" onClick={() => setSelectedCondition("Occasion")} className={`rounded-2xl border p-4 text-lg font-semibold transition ${selectedCondition === "Occasion" ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}>Occasion</button>
+                <button type="button" onClick={() => setSelectedCondition("Neuf")} className={`rounded-2xl border p-4 text-lg font-semibold transition ${selectedCondition === "Neuf" ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}>Neuf</button>
               </div>
             </div>
           </div>
@@ -1073,15 +1199,15 @@ const CataloguePieces = () => {
 
         {showZoneModal && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
-            <div className="w-full max-w-xl rounded-3xl bg-white p-5 shadow-2xl">
+            <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-[#111]">Choisir • Zone géographique</h3>
-                <button type="button" onClick={() => setShowZoneModal(false)} className="text-3xl text-[#777]">x</button>
+                <h3 className="text-4xl font-black text-slate-900">Choisir • Zone géographique</h3>
+                <button type="button" onClick={() => setShowZoneModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <button type="button" onClick={() => setSelectedZone("all")} className={`rounded-2xl border p-4 text-lg font-semibold ${selectedZone === "all" ? "border-[#f59a00] bg-[#fff3df]" : "border-[#e2e2e2]"}`}>Toutes</button>
+                <button type="button" onClick={() => setSelectedZone("all")} className={`rounded-2xl border p-4 text-lg font-semibold transition ${selectedZone === "all" ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}>Toutes</button>
                 {zoneFilters.map((zone) => (
-                  <button key={zone.value} type="button" onClick={() => setSelectedZone(zone.value)} className={`rounded-2xl border p-4 text-lg font-semibold ${selectedZone === zone.value ? "border-[#f59a00] bg-[#fff3df]" : "border-[#e2e2e2]"}`}>{zone.label}</button>
+                  <button key={zone.value} type="button" onClick={() => setSelectedZone(zone.value)} className={`rounded-2xl border p-4 text-lg font-semibold transition ${selectedZone === zone.value ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}>{zone.label}</button>
                 ))}
               </div>
             </div>
@@ -1089,41 +1215,41 @@ const CataloguePieces = () => {
         )}
 
         {showCreateModal && canManagePieces && (
-          <div className="fixed inset-0 z-50 bg-[#f6f2eb]">
-            <div className="mx-auto flex h-full w-full max-w-3xl flex-col bg-[#f6f2eb]">
-              <div className="sticky top-0 z-10 border-b border-[#d7d0c5] bg-[#f6f2eb]/95 px-4 pb-3 pt-4 backdrop-blur">
+          <div className="fixed inset-0 z-50 bg-[radial-gradient(circle_at_top_left,_rgba(244,158,95,0.14),_transparent_24%),linear-gradient(180deg,_#f7f2ea_0%,_#fffdf9_100%)]">
+            <div className="mx-auto flex h-full w-full max-w-3xl flex-col bg-transparent">
+              <div className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/90 px-4 pb-3 pt-4 backdrop-blur-xl">
                 <div className="flex items-center justify-between">
-                  <button type="button" onClick={() => setShowCreateModal(false)} className="text-4xl leading-none font-light text-[#f59a00]">‹</button>
-                  <h2 className="text-2xl font-medium text-[#111]">Ajouter une pièce</h2>
+                  <button type="button" onClick={closePieceForm} className="text-4xl leading-none font-light text-blue-700">‹</button>
+                  <h2 className="text-2xl font-medium text-slate-900">{editingPieceId ? "Modifier une pièce" : "Ajouter une pièce"}</h2>
                   <button
                     type="submit"
                     form="create-piece-form"
                     disabled={isCreating}
-                    className="rounded-full text-lg font-bold text-[#f59a00] disabled:opacity-60"
+                    className="rounded-full text-lg font-bold text-blue-700 disabled:opacity-60"
                   >
-                    {isCreating ? "..." : "Terminé"}
+                    {isCreating ? "..." : editingPieceId ? "Modifier" : "Terminé"}
                   </button>
                 </div>
               </div>
 
               <div className="flex-1 overflow-y-auto px-4 pb-8 pt-4">
-                {createError && <div className="mb-3 rounded-2xl border border-red-300 bg-red-50 p-3 text-sm text-red-700">{createError}</div>}
-                {createSuccess && <div className="mb-3 rounded-2xl border border-green-300 bg-green-50 p-3 text-sm text-green-700">{createSuccess}</div>}
+                {createError && <div className="mb-3 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{createError}</div>}
+                {createSuccess && <div className="mb-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{createSuccess}</div>}
 
-                <form id="create-piece-form" onSubmit={handleCreatePiece} className="space-y-6">
-                  <div className="rounded-3xl bg-white px-4 py-4 shadow-[0_8px_22px_rgba(0,0,0,0.05)]">
-                    <div className="mb-3 flex items-center justify-between text-sm font-semibold text-[#222]">
+                <form id="create-piece-form" onSubmit={handleSubmitPiece} className="space-y-6">
+                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <div className="mb-3 flex items-center justify-between text-sm font-semibold text-slate-700">
                       <span>Référence de la pièce</span>
-                      <span className="text-[#f59a00]">{newPiece.reference || "Auto / saisie manuelle"}</span>
+                      <span className="text-blue-700">{newPiece.reference || (editingPieceId ? "Référence conservée" : "Auto / saisie manuelle")}</span>
                     </div>
-                    <label className="mb-2 block text-sm font-semibold text-[#222]">Titre</label>
+                    <label className="mb-2 block text-sm font-semibold text-slate-700">Titre</label>
                     <input
                       type="text"
                       name="nom"
                       value={newPiece.nom}
                       onChange={handleCreateInput}
                       placeholder="Entrer le titre"
-                      className="w-full rounded-2xl border border-[#e3dfd6] bg-white px-4 py-4 text-base outline-none ring-0 placeholder:text-[#9a9a9a]"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-700 outline-none ring-0 placeholder:text-slate-400 focus:border-blue-300"
                       required
                     />
                     <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1133,7 +1259,7 @@ const CataloguePieces = () => {
                         value={newPiece.reference}
                         onChange={handleCreateInput}
                         placeholder="Référence de la pièce"
-                        className="rounded-2xl border border-[#e3dfd6] bg-white px-4 py-4 text-base outline-none placeholder:text-[#9a9a9a]"
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-300"
                         required
                       />
                       <input
@@ -1144,23 +1270,23 @@ const CataloguePieces = () => {
                         placeholder="0 DT"
                         min="0.01"
                         step="0.01"
-                        className="rounded-2xl border border-[#e3dfd6] bg-white px-4 py-4 text-base outline-none placeholder:text-[#9a9a9a]"
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-300"
                         required
                       />
                     </div>
                   </div>
 
-                  <div className="rounded-3xl bg-white px-4 py-4 shadow-[0_8px_22px_rgba(0,0,0,0.05)]">
+                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <div className="mb-3 flex items-center justify-between">
-                      <p className="text-lg font-semibold text-[#222]">Entrer nom pièce</p>
-                      <span className="text-xs text-[#8c8c8c]">Marque / Modèle / Catégorie</span>
+                      <p className="text-lg font-semibold text-slate-800">Entrer nom pièce</p>
+                      <span className="text-xs text-slate-500">Marque / Modèle / Catégorie</span>
                     </div>
                     <div className="grid grid-cols-1 gap-3">
                       <select
                         name="marque"
                         value={newPiece.marque || ""}
                         onChange={handleCreateInput}
-                        className="rounded-2xl border-0 border-b border-[#d8d2c7] bg-transparent px-1 py-3 text-base outline-none"
+                        className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-base text-slate-700 outline-none focus:border-blue-300"
                       >
                         <option value="">Marque</option>
                         {marques.map((marque) => (
@@ -1171,7 +1297,7 @@ const CataloguePieces = () => {
                         name="modele"
                         value={newPiece.modele || ""}
                         onChange={handleCreateInput}
-                        className="rounded-2xl border-0 border-b border-[#d8d2c7] bg-transparent px-1 py-3 text-base outline-none"
+                        className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-base text-slate-700 outline-none focus:border-blue-300"
                       >
                         <option value="">Modèle</option>
                         {(modelsByMarque[newPiece.marque] || []).map((modele) => (
@@ -1182,7 +1308,7 @@ const CataloguePieces = () => {
                         name="categorie"
                         value={newPiece.categorie || ""}
                         onChange={handleCreateInput}
-                        className="rounded-2xl border-0 border-b border-[#d8d2c7] bg-transparent px-1 py-3 text-base outline-none"
+                        className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-base text-slate-700 outline-none focus:border-blue-300"
                       >
                         <option value="">Catégorie</option>
                         {categories.map((categorie) => (
@@ -1192,65 +1318,65 @@ const CataloguePieces = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-3xl bg-white px-4 py-4 shadow-[0_8px_22px_rgba(0,0,0,0.05)]">
-                    <label className="mb-2 block text-lg font-semibold text-[#222]">Etat</label>
+                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <label className="mb-2 block text-lg font-semibold text-slate-800">Etat</label>
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setNewPiece((prev) => ({ ...prev, condition: "Neuf" }))}
-                        className={`rounded-2xl border px-4 py-4 text-base font-semibold transition ${newPiece.condition === "Neuf" ? "border-[#f59a00] bg-[#fff3df] text-[#a86a00]" : "border-[#e3dfd6] bg-white text-[#222]"}`}
+                        className={`rounded-2xl border px-4 py-4 text-base font-semibold transition ${newPiece.condition === "Neuf" ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}
                       >
                         Neuf
                       </button>
                       <button
                         type="button"
                         onClick={() => setNewPiece((prev) => ({ ...prev, condition: "Occasion" }))}
-                        className={`rounded-2xl border px-4 py-4 text-base font-semibold transition ${newPiece.condition === "Occasion" ? "border-[#f59a00] bg-[#fff3df] text-[#a86a00]" : "border-[#e3dfd6] bg-white text-[#222]"}`}
+                        className={`rounded-2xl border px-4 py-4 text-base font-semibold transition ${newPiece.condition === "Occasion" ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}
                       >
                         Occasion
                       </button>
                     </div>
                   </div>
 
-                  <div className="rounded-3xl bg-white px-4 py-4 shadow-[0_8px_22px_rgba(0,0,0,0.05)]">
-                    <label className="mb-2 block text-lg font-semibold text-[#222]">Description / Notes</label>
+                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <label className="mb-2 block text-lg font-semibold text-slate-800">Description / Notes</label>
                     <textarea
                       name="description"
                       value={newPiece.description}
                       onChange={handleCreateInput}
                       placeholder="Ajouter une description, des notes ou des précisions sur la pièce"
                       rows={5}
-                      className="w-full rounded-2xl border border-[#e3dfd6] bg-white px-4 py-4 text-base outline-none placeholder:text-[#9a9a9a]"
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-300"
                     />
                   </div>
 
-                  <div className="rounded-3xl bg-white px-4 py-4 shadow-[0_8px_22px_rgba(0,0,0,0.05)]">
-                    <label className="mb-2 block text-lg font-semibold text-[#222]">Ajouter des photos</label>
-                    <div className="rounded-2xl border border-dashed border-[#e3dfd6] bg-[#faf8f4] px-4 py-5">
+                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <label className="mb-2 block text-lg font-semibold text-slate-800">Ajouter des photos</label>
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-5">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleCreateFile}
-                        className="block w-full text-sm text-[#444] file:mr-4 file:rounded-full file:border-0 file:bg-[#f59a00] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                        className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
                       />
-                      <p className="mt-2 text-sm text-[#7b7b7b]">
+                      <p className="mt-2 text-sm text-slate-500">
                         {newPiece.photo_piece ? `Fichier choisi: ${newPiece.photo_piece.name}` : "Formats image acceptes: JPG, PNG, WEBP"}
                       </p>
                     </div>
                   </div>
 
-                  <div className="rounded-3xl bg-white px-4 py-4 shadow-[0_8px_22px_rgba(0,0,0,0.05)]">
-                    <label className="mb-2 block text-lg font-semibold text-[#222]">Lieu</label>
-                    <div className="flex items-center justify-between rounded-2xl border border-[#e3dfd6] px-4 py-4">
+                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <label className="mb-2 block text-lg font-semibold text-slate-800">Lieu</label>
+                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-4">
                       <div>
-                        <p className="text-base text-[#222]">Ajouter une localisation</p>
-                        <p className="text-sm text-[#868686]">(approximative)</p>
+                        <p className="text-base text-slate-800">Ajouter une localisation</p>
+                        <p className="text-sm text-slate-500">(approximative)</p>
                       </div>
                       <select
                         name="zone_geographique"
                         value={newPiece.zone_geographique || ""}
                         onChange={handleCreateInput}
-                        className="rounded-full border border-[#e3dfd6] bg-white px-3 py-2 text-sm font-semibold text-[#333]"
+                        className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
                       >
                         <option value="">Zone</option>
                         <option value="Nord">Nord</option>
@@ -1262,11 +1388,11 @@ const CataloguePieces = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-3xl bg-white px-4 py-4 shadow-[0_8px_22px_rgba(0,0,0,0.05)]">
+                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-lg font-semibold text-[#222]">Prix Fixe</p>
-                        <p className="text-sm text-[#8b8b8b]">Saisissez le tarif de vente</p>
+                        <p className="text-lg font-semibold text-slate-800">Prix Fixe</p>
+                        <p className="text-sm text-slate-500">Saisissez le tarif de vente</p>
                       </div>
                       <input
                         type="number"
@@ -1276,7 +1402,7 @@ const CataloguePieces = () => {
                         placeholder="Stock"
                         min="0"
                         step="1"
-                        className="w-24 rounded-2xl border border-[#e3dfd6] bg-white px-3 py-3 text-center text-base outline-none"
+                        className="w-24 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-base text-slate-700 outline-none focus:border-blue-300"
                       />
                     </div>
                   </div>
@@ -1288,17 +1414,17 @@ const CataloguePieces = () => {
 
         {selectedPiece && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-3">
-            <div className="max-h-[96vh] w-full max-w-6xl overflow-y-auto rounded-none bg-[#fbfaf6] shadow-2xl sm:rounded-3xl">
-              <div className="sticky top-0 z-10 border-b border-[#eadfcf] bg-[#fbfaf6]/95 px-4 pb-3 pt-4 backdrop-blur sm:px-6">
+            <div className="max-h-[96vh] w-full max-w-6xl overflow-y-auto rounded-none bg-[linear-gradient(180deg,#fffdf9_0%,#faf7f2_100%)] shadow-2xl sm:rounded-3xl">
+              <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 pb-3 pt-4 backdrop-blur-xl sm:px-6">
                 <div className="mb-3 flex items-center justify-between">
-                  <button type="button" onClick={() => setSelectedPiece(null)} className="text-4xl leading-none font-light text-[#f59a00]">‹</button>
-                  <h2 className="text-2xl font-medium text-[#121212]">Détails Pièce</h2>
+                  <button type="button" onClick={() => setSelectedPiece(null)} className="text-4xl leading-none font-light text-blue-700">‹</button>
+                  <h2 className="text-2xl font-medium text-slate-900">Détails Pièce</h2>
                   <div className="w-8" />
                 </div>
 
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-lg font-semibold text-[#1d1d1d]">{formatDate(selectedPiece.created_at)}</p>
-                  <a href="tel:+21621216460" className="rounded-full bg-[#f59a00] px-8 py-3 text-lg font-semibold text-white shadow-[0_10px_20px_rgba(245,154,0,0.22)]">
+                  <p className="text-lg font-semibold text-slate-700">{formatDate(selectedPiece.created_at)}</p>
+                  <a href="tel:+21621216460" className="rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-8 py-3 text-lg font-semibold text-white shadow-[0_10px_20px_rgba(30,64,175,0.22)]">
                     Appeler
                   </a>
                 </div>
@@ -1307,18 +1433,37 @@ const CataloguePieces = () => {
               <div className="grid gap-6 px-4 pb-8 pt-4 lg:grid-cols-[1.1fr_0.9fr] lg:px-6">
                 <div className="space-y-4">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <button type="button" onClick={handleOpenVendorStore} className="flex flex-1 items-center justify-center rounded-full bg-[#f59a00] px-5 py-4 text-lg font-semibold text-white shadow-[0_10px_18px_rgba(245,154,0,0.2)]">
+                    <button type="button" onClick={handleOpenVendorStore} className="flex flex-1 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-5 py-4 text-lg font-semibold text-white shadow-[0_10px_18px_rgba(30,64,175,0.18)]">
                       <span className="mr-3 text-2xl">🏪</span>
                       Voir magasin de vendeur
                       <span className="ml-3 text-xl">›</span>
                     </button>
-                    <button type="button" className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#f0dfc0] bg-white text-2xl shadow-[0_8px_16px_rgba(0,0,0,0.05)]" aria-label="Partager">
+                    <button type="button" className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-2xl text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)]" aria-label="Partager">
                       ⤴
                     </button>
                   </div>
 
-                  <div className="rounded-3xl border border-[#ece4d7] bg-white px-4 py-4 shadow-[0_10px_22px_rgba(0,0,0,0.04)]">
-                    <div className="space-y-4 text-[#161616]">
+                  {canManagePieces && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => openEditPieceModal(selectedPiece)}
+                        className="rounded-2xl border border-blue-200 bg-white px-4 py-3 text-base font-semibold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
+                      >
+                        Modifier la piece
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePiece(selectedPiece)}
+                        className="rounded-2xl border border-rose-200 bg-white px-4 py-3 text-base font-semibold text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:border-rose-300"
+                      >
+                        Supprimer la piece
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <div className="space-y-4 text-slate-900">
                       <div className="flex items-start gap-4">
                         <span className="mt-1 text-2xl">ⓘ</span>
                         <p className="text-2xl font-black tracking-wide">{selectedPiece.reference}</p>
@@ -1328,7 +1473,7 @@ const CataloguePieces = () => {
                         <span className="mt-1 text-2xl">🏷</span>
                         <div>
                           <p className="text-2xl font-black">{selectedPiece.nom}</p>
-                          <p className="text-base text-[#666]">{selectedPiece.description || "Pas de description"}</p>
+                          <p className="text-base text-slate-500">{selectedPiece.description || "Pas de description"}</p>
                         </div>
                       </div>
 
@@ -1336,7 +1481,7 @@ const CataloguePieces = () => {
                         <span className="mt-1 text-2xl">⚙</span>
                         <div className="space-y-1">
                           <p className="text-xl font-bold">{selectedPiece.categorie || "Pièce automobile"}</p>
-                          <p className="text-base text-[#666]">{selectedPiece.marque ? `${selectedPiece.marque}${selectedPiece.modele ? ` ${selectedPiece.modele}` : ""}` : "Marque non renseignée"}</p>
+                          <p className="text-base text-slate-500">{selectedPiece.marque ? `${selectedPiece.marque}${selectedPiece.modele ? ` ${selectedPiece.modele}` : ""}` : "Marque non renseignée"}</p>
                         </div>
                       </div>
 
@@ -1354,7 +1499,7 @@ const CataloguePieces = () => {
 
                   <div className="overflow-hidden rounded-[26px] border border-[#e8e0d1] bg-white shadow-[0_12px_24px_rgba(0,0,0,0.05)]">
                     <img
-                      src={selectedPiece.photo_url ? (selectedPiece.photo_url.startsWith("http") ? selectedPiece.photo_url : `${backendBaseUrl}${selectedPiece.photo_url}`) : "https://via.placeholder.com/1024x768?text=Piece"}
+                      src={selectedPiece.photo_url ? (selectedPiece.photo_url.startsWith("http") ? selectedPiece.photo_url : `${backendBaseUrl}${selectedPiece.photo_url}`) : getPieceImageFallback(selectedPiece)}
                       alt={selectedPiece.nom}
                       className="h-[420px] w-full object-cover"
                     />
@@ -1362,39 +1507,39 @@ const CataloguePieces = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-3xl border border-[#ece4d7] bg-white p-4">
-                    <div className="mb-4 rounded-2xl bg-[#fff8ef] px-4 py-3">
-                      <p className="text-sm font-bold uppercase tracking-wide text-[#a86a00]">Prix</p>
-                      <p className="text-3xl font-black text-[#f59a00]">{Number(selectedPiece.prix_unitaire).toFixed(2)} DT</p>
-                      <p className="mt-1 text-sm text-[#666]">Stock: {selectedPiece.stock}</p>
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3">
+                      <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Prix</p>
+                      <p className="text-3xl font-black text-blue-700">{Number(selectedPiece.prix_unitaire).toFixed(2)} DT</p>
+                      <p className="mt-1 text-sm text-slate-600">Stock: {selectedPiece.stock}</p>
                     </div>
 
-                    <div className="mb-4 rounded-2xl bg-[#fbfaf6] p-4">
-                      <p className="text-sm font-bold uppercase tracking-wide text-[#8a8a8a]">Lieu</p>
-                      <p className="mt-1 text-base font-semibold text-[#333]">Localisation approximative</p>
-                      <p className="mt-1 text-sm text-[#666]">Maps désactivée pour le moment</p>
+                    <div className="mb-4 rounded-2xl bg-slate-50 p-4">
+                      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Lieu</p>
+                      <p className="mt-1 text-base font-semibold text-slate-800">Localisation approximative</p>
+                      <p className="mt-1 text-sm text-slate-500">Maps désactivée pour le moment</p>
                     </div>
 
-                    <div className="rounded-2xl bg-[#fbfaf6] p-4">
-                      <p className="text-sm font-bold uppercase tracking-wide text-[#8a8a8a]">Magasin du vendeur</p>
-                      <p className="mt-1 text-lg font-black text-[#1c1c1c]">{vendorDisplayName}</p>
-                      <p className="text-sm text-[#5e5e5e]">Email: {vendorEmail}</p>
-                      <p className="text-sm text-[#5e5e5e]">Telephone: {vendorPhone}</p>
+                    <div className="rounded-2xl bg-slate-50 p-4">
+                      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Magasin du vendeur</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{vendorDisplayName}</p>
+                      <p className="text-sm text-slate-600">Email: {vendorEmail}</p>
+                      <p className="text-sm text-slate-600">Telephone: {vendorPhone}</p>
                     </div>
                   </div>
 
-                  <div className="rounded-3xl border border-[#ece4d7] bg-white p-4">
-                    <h3 className="mb-3 text-2xl font-black text-[#151515]">Véhicules Compatibles</h3>
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <h3 className="mb-3 text-2xl font-black text-slate-900">Véhicules Compatibles</h3>
                     <div className="space-y-3">
                       {getCompatibleVehiclesForPiece(selectedPiece).length > 0 ? (
                         getCompatibleVehiclesForPiece(selectedPiece).map((vehicle, index) => (
-                          <div key={`${vehicle}-${index}`} className="flex items-center gap-4 rounded-2xl bg-[#fbfaf6] px-3 py-3">
+                          <div key={`${vehicle}-${index}`} className="flex items-center gap-4 rounded-2xl bg-slate-50 px-3 py-3">
                             <span className="text-3xl">🚗</span>
-                            <p className="text-lg font-semibold text-[#1c1c1c]">{vehicle}</p>
+                            <p className="text-lg font-semibold text-slate-800">{vehicle}</p>
                           </div>
                         ))
                       ) : (
-                        <p className="text-[#666]">Aucun véhicule compatible renseigné.</p>
+                        <p className="text-slate-500">Aucun véhicule compatible renseigné.</p>
                       )}
                     </div>
                   </div>

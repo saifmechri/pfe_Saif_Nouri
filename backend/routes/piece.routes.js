@@ -9,11 +9,17 @@ const pieceController = require('../controllers/piece.controller');
 const router = express.Router();
 
 const createPieceValidation = [
-  body('nom').trim().notEmpty().withMessage('Le nom est obligatoire').isLength({ max: 255 }).withMessage('Le nom ne doit pas depasser 255 caracteres'),
-  body('reference').trim().notEmpty().withMessage('La reference est obligatoire').isLength({ max: 255 }).withMessage('La reference ne doit pas depasser 255 caracteres'),
+  body('nom').customSanitizer((value) => String(value || '').trim()).notEmpty().withMessage('Le nom est obligatoire').isLength({ max: 255 }).withMessage('Le nom ne doit pas depasser 255 caracteres'),
+  body('reference').customSanitizer((value) => String(value || '').trim()).notEmpty().withMessage('La reference est obligatoire').isLength({ max: 255 }).withMessage('La reference ne doit pas depasser 255 caracteres'),
   body('description').optional({ nullable: true }).isString().withMessage('La description doit etre une chaine de caracteres'),
-  body('prix_unitaire').notEmpty().withMessage('Le prix unitaire est obligatoire').isFloat({ gt: 0 }).withMessage('Le prix unitaire doit etre superieur a 0'),
-  body('stock').optional({ nullable: true }).isInt({ min: 0 }).withMessage('Le stock doit etre superieur ou egal a 0')
+  body('prix_unitaire').customSanitizer((value) => String(value || '').trim().replace(',', '.')).notEmpty().withMessage('Le prix unitaire est obligatoire').isFloat({ gt: 0 }).withMessage('Le prix unitaire doit etre superieur a 0'),
+  body('stock').optional({ nullable: true }).customSanitizer((value) => {
+    if (value === '' || value === null || value === undefined) {
+      return 0;
+    }
+
+    return value;
+  }).isInt({ min: 0 }).withMessage('Le stock doit etre superieur ou egal a 0')
 ];
 
 const updatePieceValidation = [
@@ -40,11 +46,42 @@ const getPieceValidation = [
 ];
 
 const listPiecesValidation = [
-  query('page').optional().isInt({ min: 1 }).withMessage('page doit etre un entier superieur ou egal a 1'),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit doit etre compris entre 1 et 100'),
-  query('search').optional().isString().trim(),
-  query('sortBy').optional().isIn(['nom', 'reference', 'prix_unitaire', 'created_at', 'updated_at']).withMessage('sortBy invalide'),
-  query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('sortOrder invalide')
+  query('page').optional().customSanitizer((value) => {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+  }),
+  query('limit').optional().customSanitizer((value) => {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isInteger(parsed)) {
+      return 10;
+    }
+
+    if (parsed < 1) {
+      return 1;
+    }
+
+    if (parsed > 100) {
+      return 100;
+    }
+
+    return parsed;
+  }),
+  query('search').optional().customSanitizer((value) => {
+    if (value === undefined || value === null) {
+      return '';
+    }
+
+    return String(value).trim();
+  }),
+  query('sortBy').optional().customSanitizer((value) => {
+    const allowedSortFields = new Set(['nom', 'reference', 'prix_unitaire', 'created_at', 'updated_at']);
+    const normalized = String(value || '').trim();
+    return allowedSortFields.has(normalized) ? normalized : 'created_at';
+  }),
+  query('sortOrder').optional().customSanitizer((value) => {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'asc' || normalized === 'desc' ? normalized : 'desc';
+  })
 ];
 
 const adjustStockValidation = [

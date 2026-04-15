@@ -5,9 +5,13 @@ export const getPieces = (params = {}) => {
 };
 
 export const createPiece = (formData) => {
-  return API.post("/pieces", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data"
-    }
-  });
+  return API.post("/pieces", formData);
+};
+
+export const updatePiece = (pieceId, pieceData) => {
+  return API.put(`/pieces/${pieceId}`, pieceData);
+};
+
+export const deletePiece = (pieceId) => {
+  return API.delete(`/pieces/${pieceId}`);
 };

@@ -6,6 +6,7 @@ const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isAuthenticated = Boolean(user);
 
   const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
@@ -54,22 +55,26 @@ const Navbar = () => {
 
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-3 text-sm font-semibold text-slate-600 md:flex">
-              {user && (
+              {isAuthenticated && (
                 <span className="rounded-full bg-slate-100 px-4 py-2">Bonjour, {user.prenom || user.name}</span>
               )}
               <span className="rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm">Plateforme de gestion automobile</span>
-              <Link
-                to="/register"
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400"
-              >
-                Créer un compte
-              </Link>
-              <Link
-                to="/login"
-                className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
-              >
-                Se connecter
-              </Link>
+              {!isAuthenticated && (
+                <>
+                  <Link
+                    to="/register"
+                    className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400"
+                  >
+                    Créer un compte
+                  </Link>
+                  <Link
+                    to="/login"
+                    className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800"
+                  >
+                    Se connecter
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -131,30 +136,55 @@ const Navbar = () => {
               Gerez vos vehicules, trouvez des pieces, reservez des garages facilement.
             </p>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <Link to="/register" className="vb-btn-primary px-6 py-3">
-                S'inscrire
-              </Link>
-              <Link to="/login" className="vb-btn-outline px-6 py-3 text-white/95 border-white/50 bg-white/10 hover:bg-white/20">
-                Voir la demo
-              </Link>
+              {!isAuthenticated ? (
+                <>
+                  <Link to="/register" className="vb-btn-primary px-6 py-3">
+                    S'inscrire
+                  </Link>
+                  <Link to="/login" className="vb-btn-outline px-6 py-3 text-white/95 border-white/50 bg-white/10 hover:bg-white/20">
+                    Voir la demo
+                  </Link>
+                </>
+              ) : (
+                <Link to="/dashboard" className="vb-btn-primary px-6 py-3">
+                  Aller au tableau de bord
+                </Link>
+              )}
             </div>
           </div>
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-2">
-          <Link
-            to="/register"
-            className="rounded-2xl border border-blue-200 bg-white px-6 py-4 text-center font-semibold text-blue-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
-          >
-            Créer un compte
-          </Link>
-          <Link
-            to="/login"
-            className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
-          >
-            Se connecter
-          </Link>
-        </section>
+        {!isAuthenticated ? (
+          <section className="grid gap-4 sm:grid-cols-2">
+            <Link
+              to="/register"
+              className="rounded-2xl border border-blue-200 bg-white px-6 py-4 text-center font-semibold text-blue-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
+            >
+              Créer un compte
+            </Link>
+            <Link
+              to="/login"
+              className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
+            >
+              Se connecter
+            </Link>
+          </section>
+        ) : (
+          <section className="grid gap-4 sm:grid-cols-2">
+            <Link
+              to="/dashboard"
+              className="rounded-2xl border border-blue-200 bg-white px-6 py-4 text-center font-semibold text-blue-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
+            >
+              Tableau de bord
+            </Link>
+            <Link
+              to="/dashboard"
+              className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
+            >
+              Accéder à l’espace
+            </Link>
+          </section>
+        )}
 
         <section className="vb-card p-6 sm:p-8">
           <h2 className="text-2xl font-extrabold text-[#1a2b4b]">Ecosysteme AutoBot</h2>
@@ -198,12 +228,22 @@ const Navbar = () => {
           <h2 className="text-3xl font-extrabold">Prêt a accelerer votre gestion automobile ?</h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-blue-100">Centralisez vehicules, interventions, stocks et recommandations dans une seule plateforme.</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/register" className="vb-btn-primary px-6 py-3 bg-white text-[#1d4ed8] hover:bg-blue-50">
-              Commencer maintenant
-            </Link>
-            <Link to="/login" className="vb-btn-outline px-6 py-3 border-white/40 bg-white/10 text-white hover:bg-white/20">
-              Se connecter
-            </Link>
+            {!isAuthenticated ? (
+              <>
+                <Link to="/register" className="vb-btn-primary px-6 py-3 bg-white text-[#1d4ed8] hover:bg-blue-50">
+                  Commencer maintenant
+                </Link>
+                <Link to="/login" className="vb-btn-outline px-6 py-3 border-white/40 bg-white/10 text-white hover:bg-white/20">
+                  Se connecter
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/dashboard" className="vb-btn-primary px-6 py-3 bg-white text-[#1d4ed8] hover:bg-blue-50">
+                  Aller au tableau de bord
+                </Link>
+              </>
+            )}
           </div>
         </section>
       </main>

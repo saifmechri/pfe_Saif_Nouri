@@ -2,8 +2,35 @@ const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
 const pieceService = require('../services/pieceService');
+const { logger } = require('../utils/logger');
 
 const createPiece = asyncHandler(async (req, res) => {
+  logger.info('POST /api/pieces payload received', {
+    contentType: req.headers['content-type'],
+    bodyKeys: Object.keys(req.body || {}),
+    bodyPreview: {
+      nom: req.body?.nom,
+      reference: req.body?.reference,
+      prix_unitaire: req.body?.prix_unitaire,
+      stock: req.body?.stock,
+      condition: req.body?.condition,
+      zone_geographique: req.body?.zone_geographique,
+      marque: req.body?.marque,
+      modele: req.body?.modele,
+      categorie: req.body?.categorie
+    },
+    hasFile: Boolean(req.file),
+    fileInfo: req.file
+      ? {
+          fieldname: req.file.fieldname,
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          filename: req.file.filename,
+          size: req.file.size
+        }
+      : null
+  });
+
   const payload = {
     ...(req.body || {}),
     user_id: req.user?.id || null

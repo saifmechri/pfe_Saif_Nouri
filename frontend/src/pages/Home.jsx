@@ -130,6 +130,14 @@ const Navbar = () => {
             <p className="mx-auto mt-4 max-w-3xl text-sm font-medium text-blue-100 sm:text-base lg:text-lg">
               Gerez vos vehicules, trouvez des pieces, reservez des garages facilement.
             </p>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+              <Link to="/register" className="vb-btn-primary px-6 py-3">
+                S'inscrire
+              </Link>
+              <Link to="/login" className="vb-btn-outline px-6 py-3 text-white/95 border-white/50 bg-white/10 hover:bg-white/20">
+                Voir la demo
+              </Link>
+            </div>
           </div>
         </section>
 
@@ -146,6 +154,57 @@ const Navbar = () => {
           >
             Se connecter
           </Link>
+        </section>
+
+        <section className="vb-card p-6 sm:p-8">
+          <h2 className="text-2xl font-extrabold text-[#1a2b4b]">Ecosysteme AutoBot</h2>
+          <p className="mt-2 text-sm text-[#617089]">Des parcours adaptes a chaque acteur automobile.</p>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            <article className="rounded-lg border border-blue-100 bg-blue-50/60 p-4">
+              <h3 className="text-lg font-bold text-[#1a2b4b]">Automobiliste</h3>
+              <p className="mt-2 text-sm text-[#476184]">Suivez vos interventions et recevez des recommandations dynamiques.</p>
+            </article>
+            <article className="rounded-lg border border-slate-200 bg-white p-4">
+              <h3 className="text-lg font-bold text-[#1a2b4b]">Garage</h3>
+              <p className="mt-2 text-sm text-[#476184]">Pilotez le planning atelier, les services et la relation client.</p>
+            </article>
+            <article className="rounded-lg border border-green-100 bg-green-50/70 p-4">
+              <h3 className="text-lg font-bold text-[#1a2b4b]">Vendeur</h3>
+              <p className="mt-2 text-sm text-[#476184]">Gerez catalogue, prix et stocks de pieces en temps reel.</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-4">
+          <div className="vb-card p-5">
+            <p className="text-sm text-[#617089]">Utilisateurs actifs</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">120+</p>
+          </div>
+          <div className="vb-card p-5">
+            <p className="text-sm text-[#617089]">Garages partenaires</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">15</p>
+          </div>
+          <div className="vb-card p-5">
+            <p className="text-sm text-[#617089]">Pieces catalogue</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">1000+</p>
+          </div>
+          <div className="vb-card p-5">
+            <p className="text-sm text-[#617089]">Interventions suivies</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">230+</p>
+          </div>
+        </section>
+
+        <section className="vb-card bg-[linear-gradient(135deg,#1a2b4b_0%,#1d4ed8_100%)] p-8 text-center text-white">
+          <h2 className="text-3xl font-extrabold">Prêt a accelerer votre gestion automobile ?</h2>
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-blue-100">Centralisez vehicules, interventions, stocks et recommandations dans une seule plateforme.</p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link to="/register" className="vb-btn-primary px-6 py-3 bg-white text-[#1d4ed8] hover:bg-blue-50">
+              Commencer maintenant
+            </Link>
+            <Link to="/login" className="vb-btn-outline px-6 py-3 border-white/40 bg-white/10 text-white hover:bg-white/20">
+              Se connecter
+            </Link>
+          </div>
         </section>
       </main>
     </div>

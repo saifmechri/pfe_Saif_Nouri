@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PlatformLayout from "../../components/PlatformLayout";
 
 const VendeurDashboard = () => {
   const [activeTab, setActiveTab] = useState("annonces");
+  const navigate = useNavigate();
 
   // Données fictives
   const annonces = [
@@ -16,53 +18,60 @@ const VendeurDashboard = () => {
 
   return (
     <PlatformLayout>
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-8 px-4">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">Espace Vendeur</h1>
+      <div className="min-h-screen bg-transparent">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <h1 className="mb-2 text-3xl font-extrabold text-[#1a2b4b]">Dashboard Vendeur</h1>
+          <p className="mb-6 text-sm text-[#617089]">Pilotez vos annonces, ventes et catalogue de pièces.</p>
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="vb-card p-4">
             <p className="text-sm text-gray-600">Annonces actives</p>
             <p className="text-2xl font-bold">{annonces.filter(a => a.status === "active").length}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="vb-card p-4">
             <p className="text-sm text-gray-600">En attente</p>
             <p className="text-2xl font-bold">{annonces.filter(a => a.status === "en_attente").length}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="vb-card p-4">
             <p className="text-sm text-gray-600">Ventes totales</p>
             <p className="text-2xl font-bold">{transactions.length}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="vb-card p-4">
             <p className="text-sm text-gray-600">Chiffre d'affaires</p>
             <p className="text-2xl font-bold">{transactions.reduce((acc, t) => acc + t.montant, 0)} €</p>
           </div>
         </div>
 
         {/* Onglets */}
-        <div className="flex space-x-4 border-b mb-6">
+        <div className="mb-6 flex flex-wrap items-center gap-3 border-b border-[#d5deec] pb-2">
           <button
             onClick={() => setActiveTab("annonces")}
-            className={`pb-2 px-4 font-medium ${activeTab === "annonces" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "annonces" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Mes annonces
           </button>
           <button
             onClick={() => setActiveTab("transactions")}
-            className={`pb-2 px-4 font-medium ${activeTab === "transactions" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "transactions" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Transactions
           </button>
           <button
             onClick={() => setActiveTab("messages")}
-            className={`pb-2 px-4 font-medium ${activeTab === "messages" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "messages" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Messages
           </button>
+          <button
+            onClick={() => navigate("/vendeur/catalogue")}
+            className="vb-btn-primary ml-auto px-4 py-2 text-sm"
+          >
+            Catalogue pièces
+          </button>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="vb-card p-6">
           {activeTab === "annonces" && (
             <div>
               <div className="flex justify-between items-center mb-4">

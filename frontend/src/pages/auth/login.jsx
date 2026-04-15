@@ -46,62 +46,78 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-6">Connexion</h2>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="min-h-screen bg-[linear-gradient(145deg,#eff3fb_0%,#f7f9fd_48%,#e8eef9_100%)] p-4 md:p-8">
+      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-6xl overflow-hidden rounded-lg border border-[#dbe2ec] bg-white shadow-[0_26px_60px_rgba(26,43,75,0.12)] md:min-h-[calc(100vh-4rem)] md:grid-cols-2">
+        <section className="hidden bg-[linear-gradient(155deg,#1a2b4b_0%,#1d4ed8_100%)] p-10 text-white md:flex md:flex-col md:justify-between">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
+            <p className="text-sm font-semibold uppercase tracking-[0.14em] text-blue-100">AutoBot</p>
+            <h1 className="mt-4 text-4xl font-extrabold leading-tight">Connectez-vous a votre plateforme automobile.</h1>
+            <p className="mt-5 max-w-md text-sm text-blue-100/95">Pilotez vehicules, interventions et recommandations dans une interface metier moderne.</p>
           </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              className="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
+          <div className="rounded-lg border border-white/25 bg-white/10 p-5 text-sm text-blue-50">
+            Design System Velocity Blue: precis, lisible, rapide.
           </div>
+        </section>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? "Chargement..." : "Se connecter"}
-          </button>
-        </form>
+        <section className="flex items-center justify-center p-6 md:p-10">
+          <div className="w-full max-w-md">
+            <h2 className="text-3xl font-extrabold text-[#1a2b4b]">Connexion</h2>
+            <p className="mt-2 text-sm text-[#617089]">Accedez a votre espace AutoBot.</p>
 
-        <p className="text-center mt-4 text-sm text-gray-600">
-          Pas encore de compte ?{" "}
-          <Link to="/register" className="text-blue-600 hover:underline">
-            Inscrivez-vous
-          </Link>
-        </p>
+            {error && (
+              <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              <div>
+                <label htmlFor="email" className="mb-1 block text-sm font-semibold text-[#1a2b4b]">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  className="vb-input w-full px-3 py-3"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className="mb-1 block text-sm font-semibold text-[#1a2b4b]">
+                  Mot de passe
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  className="vb-input w-full px-3 py-3"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="vb-btn-primary w-full px-4 py-3 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Connexion..." : "Se connecter"}
+              </button>
+            </form>
+
+            <p className="mt-5 text-sm text-[#617089]">
+              Pas encore de compte ?{" "}
+              <Link to="/register" className="font-semibold text-[#1d4ed8] hover:underline">
+                Inscrivez-vous
+              </Link>
+            </p>
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -125,4 +125,49 @@ router.get("/profile-complet", verifyToken, async (req, res) => {
   }
 });
 
+router.get("/profile-complet/:id", verifyToken, async (req, res) => {
+  try {
+    const userId = Number.parseInt(req.params.id, 10);
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Identifiant utilisateur invalide",
+        error: { code: 'INVALID_USER_ID' }
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.email, u.phone, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, r.name as role
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return sendApiResponse(res, {
+        statusCode: 404,
+        success: false,
+        message: "Utilisateur introuvable",
+        error: { code: 'USER_NOT_FOUND' }
+      });
+    }
+
+    return sendApiResponse(res, {
+      message: 'Profil vendeur récupéré avec succès',
+      data: { user: result.rows[0] },
+      extra: { user: result.rows[0] }
+    });
+  } catch (err) {
+    console.error(err);
+    return sendApiResponse(res, {
+      statusCode: 500,
+      success: false,
+      message: "Erreur serveur",
+      error: { code: 'INTERNAL_SERVER_ERROR' }
+    });
+  }
+});
+
 module.exports = router;

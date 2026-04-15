@@ -54,6 +54,7 @@ const buildSortClause = (sortBy, sortOrder) => {
 
 const mapPieceRow = (row) => ({
   id: row.id,
+  user_id: row.user_id === null || row.user_id === undefined ? null : Number(row.user_id),
   nom: row.nom,
   reference: row.reference,
   description: row.description,
@@ -154,6 +155,7 @@ const createStockMovement = async (client, payload) => {
 };
 
 const createPiece = async (payload) => {
+  const userId = payload.user_id ? Number.parseInt(payload.user_id, 10) : null;
   const nom = normalizeText(payload.nom);
   const reference = normalizeText(payload.reference);
   const description = normalizeText(payload.description);
@@ -178,10 +180,10 @@ const createPiece = async (payload) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO pieces (nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
-      [nom, reference, description, photoUrl, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie]
+      `INSERT INTO pieces (user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+      [userId, nom, reference, description, photoUrl, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie]
     );
 
     return mapPieceRow(result.rows[0]);
@@ -204,6 +206,7 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
   const query = `
     SELECT
       id,
+      user_id,
       nom,
       reference,
       description,
@@ -243,7 +246,7 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
 
 const getPieceById = async (id) => {
   const result = await pool.query(
-    `SELECT id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at
+    `SELECT id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at
      FROM pieces
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]
@@ -258,7 +261,7 @@ const getPieceById = async (id) => {
 
 const updatePiece = async (id, payload) => {
   const currentPiece = await pool.query(
-    `SELECT id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, deleted_at
+    `SELECT id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, deleted_at
      FROM pieces
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]
@@ -301,7 +304,7 @@ const updatePiece = async (id, payload) => {
              categorie = $11,
            updated_at = NOW()
          WHERE id = $12 AND deleted_at IS NULL
-         RETURNING id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
         [nextNom, nextReference, nextDescription, nextPhotoUrl, nextPrice, nextStock, nextCondition, nextZoneGeographique, nextMarque, nextModele, nextCategorie, id]
     );
 
@@ -366,7 +369,7 @@ const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
        SET stock = $1,
            updated_at = NOW()
        WHERE id = $2
-         RETURNING id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
       [stockAfter, id]
     );
 
@@ -409,7 +412,7 @@ const setPieceStock = async (id, payload = {}, actorUserId = null) => {
        SET stock = $1,
            updated_at = NOW()
        WHERE id = $2
-         RETURNING id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
       [nextStock, id]
     );
 

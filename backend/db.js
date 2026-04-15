@@ -104,6 +104,7 @@ const initDatabase = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS pieces (
       id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
       nom VARCHAR(255) NOT NULL,
       reference VARCHAR(255) UNIQUE NOT NULL,
       description TEXT,
@@ -203,6 +204,7 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS photo_url TEXT');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE SET NULL');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS condition VARCHAR(50) DEFAULT \'Neuf\'');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS zone_geographique VARCHAR(100)');
     await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS marque VARCHAR(100)');
@@ -310,6 +312,7 @@ const initDatabase = async () => {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_deleted_at ON pieces (deleted_at)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_created_at ON pieces (created_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_updated_at ON pieces (updated_at DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_user_id ON pieces (user_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_nom_trgm ON pieces USING GIN (nom gin_trgm_ops)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_reference_trgm ON pieces USING GIN (reference gin_trgm_ops)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_piece_id ON intervention_pieces (piece_id)');

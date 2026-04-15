@@ -5,7 +5,8 @@ const pieceService = require('../services/pieceService');
 
 const createPiece = asyncHandler(async (req, res) => {
   const payload = {
-    ...(req.body || {})
+    ...(req.body || {}),
+    user_id: req.user?.id || null
   };
 
   if (req.file) {

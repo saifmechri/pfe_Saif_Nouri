@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { createPiece, getPieces } from "../../services/pieces";
-import { getCompleteProfile, updateProfile } from "../../services/user";
+import { getCompleteProfile, getCompleteProfileById, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
 import { AuthContext } from "../../context/AuthContext";
 
@@ -42,16 +42,48 @@ const marques = [
 ].sort();
 
 const modelsByMarque = {
-  "Audi": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "E-tron", "Q2", "Q3", "Q4", "Q5", "Q7", "Q8", "RS"],
-  "BMW": ["1 Series", "2 Series", "3 Series", "4 Series", "5 Series", "6 Series", "7 Series", "8 Series", "i3", "i4", "i8", "M440i", "X1", "X2", "X3", "X4", "X5", "X6", "X7"],
-  "Ford": ["Fiesta", "Focus", "Fusion", "Kuga", "Mondeo", "Mustang", "Ranger", "S-Max", "Transit"],
-  "VW": ["Beetle", "Cabriolet", "Golf", "Jetta", "Passat", "Polo", "Tiguan", "Touareg", "Up"],
-  "Toyota": ["Auris", "Avensis", "Camry", "Carina", "Celica", "Corolla", "Hiace", "Highlander", "Landcruiser", "Prius", "RAV4", "Yaris"],
-  "Renault": ["Captur", "Clio", "Espace", "Fluence", "Kangoo", "Laguna", "Master", "Megane", "Scenic", "Symbol", "Twingo"],
-  "Peugeot": ["206", "207", "208", "301", "302", "307", "308", "405", "406", "407", "3008", "5008"],
-  "Mercedes": ["A-Class", "B-Class", "C-Class", "E-Class", "GLC", "GLE", "GLS", "S-Class"],
-  "Nissan": ["Almera", "Altima", "Datsun", "Juke", "Leaf", "Maxima", "Micra", "Pathfinder", "Qashqai", "Sentra", "Teana", "X-Trail"],
-  "Hyundai": ["Accent", "Elantra", "Getz", "i30", "i40", "Santa Fe", "Sonata", "Tucson", "Veloster", "Verna"]
+  "Audi": ["A1", "A3", "A4", "A5", "A6", "A7", "A8", "Q2", "Q3", "Q5", "Q7", "Q8", "e-tron"],
+  "BMW": ["Serie 1", "Serie 2", "Serie 3", "Serie 4", "Serie 5", "Serie 7", "X1", "X3", "X5", "X6", "X7", "i4", "iX"],
+  "BYD": ["Atto 3", "Dolphin", "Han", "Qin", "Seal", "Song Plus", "Tang", "Yuan Plus"],
+  "Changan": ["Alsvin", "CS15", "CS35", "CS55", "CS75", "Eado", "Hunter", "UNI-T"],
+  "Chery": ["Arrizo 5", "Arrizo 8", "Tiggo 2", "Tiggo 3", "Tiggo 4", "Tiggo 7", "Tiggo 8"],
+  "Chevrolet": ["Aveo", "Camaro", "Captiva", "Cruze", "Malibu", "Spark", "Tahoe", "Trailblazer"],
+  "Citroën": ["C1", "C3", "C4", "C5", "C-Elysee", "Berlingo", "Jumpy", "Jumper"],
+  "Cupra": ["Ateca", "Born", "Formentor", "Leon", "Tavascan", "Terramar"],
+  "Daewoo": ["Cielo", "Espero", "Kalos", "Lanos", "Leganza", "Matiz", "Nubira"],
+  "Dacia": ["Duster", "Jogger", "Lodgy", "Logan", "Sandero", "Spring"],
+  "DFM": ["AX3", "AX4", "AX7", "Glory 330", "Glory 500", "Rich 6", "S50"],
+  "FAW": ["Bestune B30", "Bestune T33", "Bestune T77", "Oley", "V2", "V5", "X40"],
+  "Fiat": ["500", "500X", "Doblo", "Ducato", "Egea", "Panda", "Punto", "Tipo"],
+  "Ford": ["EcoSport", "Fiesta", "Focus", "Kuga", "Mondeo", "Mustang", "Ranger", "Transit"],
+  "Foton": ["Aumark", "Gratour", "Sauvana", "Toano", "Tunland", "View", "View CS2"],
+  "Geely": ["Atlas", "Coolray", "Emgrand", "GC6", "Geometry C", "Monjaro", "Tugella"],
+  "Great Wall": ["C30", "C50", "Florid", "H3", "H5", "Poer", "Wingle 5", "Wingle 7"],
+  "Haval": ["Dargo", "H2", "H6", "H7", "H9", "Jolion", "M6"],
+  "Honda": ["Accord", "BR-V", "CR-V", "Civic", "City", "Fit", "HR-V", "Pilot"],
+  "Hyundai": ["Accent", "Creta", "Elantra", "i10", "i20", "i30", "Santa Fe", "Sonata", "Tucson"],
+  "Isuzu": ["D-Max", "MU-X", "NPR", "NQR", "Trooper", "VehiCROSS"],
+  "JAC": ["J4", "J5", "JS2", "JS3", "JS4", "JS6", "T6", "T8"],
+  "Jeep": ["Cherokee", "Compass", "Gladiator", "Grand Cherokee", "Liberty", "Renegade", "Wrangler"],
+  "Kia": ["Carens", "Carnival", "Ceed", "Cerato", "Picanto", "Rio", "Sorento", "Sportage"],
+  "Lada": ["Granta", "Kalina", "Niva", "Priora", "Samara", "Vesta", "XRAY"],
+  "Land Rover": ["Defender", "Discovery", "Discovery Sport", "Freelander", "Range Rover", "Range Rover Evoque", "Range Rover Sport", "Range Rover Velar"],
+  "MG": ["MG3", "MG4", "MG5", "MG6", "HS", "Marvel R", "RX5", "ZS"],
+  "Mitsubishi": ["ASX", "Eclipse Cross", "L200", "Lancer", "Montero", "Outlander", "Pajero"],
+  "Nissan": ["Almera", "Altima", "Juke", "Leaf", "Micra", "Navara", "Pathfinder", "Qashqai", "Sentra", "X-Trail"],
+  "Peugeot": ["2008", "206", "207", "208", "3008", "301", "307", "308", "405", "408", "5008", "Partner"],
+  "Renault": ["Captur", "Clio", "Express", "Kadjar", "Kangoo", "Koleos", "Master", "Megane", "Symbol", "Talisman", "Twingo"],
+  "Rolls-Royce": ["Cullinan", "Dawn", "Ghost", "Phantom", "Spectre", "Wraith"],
+  "Seat": ["Alhambra", "Arona", "Ateca", "Ibiza", "Leon", "Mii", "Toledo"],
+  "Skoda": ["Fabia", "Kamiq", "Karoq", "Kodiaq", "Octavia", "Rapid", "Scala", "Superb"],
+  "Suzuki": ["Alto", "Baleno", "Celerio", "Dzire", "Ertiga", "Jimny", "Swift", "Vitara"],
+  "Tesla": ["Model 3", "Model S", "Model X", "Model Y", "Cybertruck", "Roadster"],
+  "Toyota": ["Auris", "Avensis", "C-HR", "Camry", "Corolla", "Fortuner", "Hilux", "Land Cruiser", "Prius", "RAV4", "Yaris"],
+  "Volkswagen": ["Amarok", "Arteon", "Beetle", "Golf", "Jetta", "Passat", "Polo", "T-Cross", "T-Roc", "Tiguan", "Touareg"],
+  "Volvo": ["C40", "S60", "S90", "V40", "V60", "V90", "XC40", "XC60", "XC90"],
+  "Wuling": ["Almaz", "Confero", "Cortez", "Formo", "Hongguang", "Victory", "Yangguang"],
+  "Xpeng": ["G3", "G6", "G9", "P5", "P7", "X9"],
+  "Zotye": ["T300", "T500", "T600", "Z100", "Z300", "Z500"]
 };
 
 const categories = [
@@ -165,13 +197,35 @@ const brandLogoDomains = {
 };
 
 const getBrandLogoCandidates = (marque) => {
+  const slug = slugifyLogoName(marque);
+  const normalized = marque
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  const fileBaseCandidates = Array.from(new Set([
+    slug,
+    slug.replace(/-/g, ""),
+    normalized,
+    normalized.toLowerCase(),
+    normalized.replace(/\s+/g, "-"),
+    normalized.replace(/\s+/g, "_"),
+    normalized.replace(/[\s-]+/g, ""),
+    marque,
+    marque.toLowerCase()
+  ])).filter(Boolean);
+
+  const extensions = ["png", "jpg", "jpeg", "webp", "svg", "PNG", "JPG", "JPEG", "WEBP", "SVG"];
+  const localCandidates = fileBaseCandidates.flatMap((base) =>
+    extensions.map((ext) => `/logos/marques/${encodeURIComponent(base)}.${ext}`)
+  );
+
   const domain = brandLogoDomains[marque];
   if (!domain) {
-    return [];
+    return localCandidates;
   }
 
   const encodedDomain = encodeURIComponent(domain);
-  return [`https://logo.clearbit.com/${encodedDomain}`];
+  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`];
 };
 
 const buildSvgDataUrl = ({ top = "#f8fafc", bottom = "#ffffff", title = "", subtitle = "", accent = "#1e293b" }) => {
@@ -301,7 +355,10 @@ const CataloguePieces = () => {
   const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("pieces");
   const [profileLoading, setProfileLoading] = useState(false);
-  const [vendorProfile, setVendorProfile] = useState(null);
+  const [myProfile, setMyProfile] = useState(null);
+  const [storeProfile, setStoreProfile] = useState(null);
+  const [storeOwnerId, setStoreOwnerId] = useState(null);
+  const [isStoreView, setIsStoreView] = useState(false);
   const [presentationForm, setPresentationForm] = useState({
     store_name: "",
     store_address: "",
@@ -360,6 +417,7 @@ const CataloguePieces = () => {
   }, []);
 
   const canManagePieces = user?.role === "vendeur" || user?.role === "admin";
+  const canSeeStoreTabs = isStoreView || user?.role === "vendeur" || user?.role === "admin" || user?.role === "garage";
 
   useEffect(() => {
     let isMounted = true;
@@ -370,7 +428,7 @@ const CataloguePieces = () => {
         const res = await getCompleteProfile();
         const profile = res.data?.data?.user || res.data?.user || null;
         if (isMounted) {
-          setVendorProfile(profile);
+          setMyProfile(profile);
           setPresentationForm({
             store_name: profile?.store_name || "",
             store_address: profile?.store_address || "",
@@ -382,7 +440,7 @@ const CataloguePieces = () => {
         }
       } catch (_err) {
         if (isMounted) {
-          setVendorProfile(null);
+          setMyProfile(null);
         }
       } finally {
         if (isMounted) {
@@ -445,6 +503,12 @@ const CataloguePieces = () => {
     fetchPieces();
   }, [page, appliedFilters]);
 
+  useEffect(() => {
+    if (!canSeeStoreTabs && activeTab !== "pieces") {
+      setActiveTab("pieces");
+    }
+  }, [canSeeStoreTabs, activeTab]);
+
   const visibleItems = useMemo(() => {
     let filtered = items;
 
@@ -468,6 +532,10 @@ const CataloguePieces = () => {
       filtered = filtered.filter((item) => item.zone_geographique === selectedZone);
     }
 
+    if (isStoreView && storeOwnerId) {
+      filtered = filtered.filter((item) => Number(item.user_id) === Number(storeOwnerId));
+    }
+
     if (appliedFilters.stockFilter === "in_stock") {
       filtered = filtered.filter((item) => Number(item.stock) > 0);
     } else if (appliedFilters.stockFilter === "out_of_stock") {
@@ -475,7 +543,7 @@ const CataloguePieces = () => {
     }
 
     return filtered;
-  }, [items, appliedFilters.stockFilter, selectedMarques, selectedModeles, selectedCategories, selectedCondition, selectedZone]);
+  }, [items, appliedFilters.stockFilter, selectedMarques, selectedModeles, selectedCategories, selectedCondition, selectedZone, isStoreView, storeOwnerId]);
 
   const availableModeles = useMemo(() => {
     if (selectedMarques.length === 0) return [];
@@ -491,25 +559,26 @@ const CataloguePieces = () => {
   }, [visibleItems, backendBaseUrl]);
 
   const presentationSummary = useMemo(() => {
-    const allItems = Array.isArray(items) ? items : [];
+    const allItems = isStoreView ? visibleItems : (Array.isArray(items) ? items : []);
     const inStock = allItems.filter((piece) => Number(piece.stock) > 0).length;
     const outOfStock = allItems.filter((piece) => Number(piece.stock) <= 0).length;
 
     return {
-      totalPieces: pagination.totalItems || allItems.length,
+      totalPieces: isStoreView ? allItems.length : (pagination.totalItems || allItems.length),
       inStock,
       outOfStock
     };
-  }, [items, pagination.totalItems]);
+  }, [items, visibleItems, pagination.totalItems, isStoreView]);
 
-  const vendorDisplayName = vendorProfile?.name || user?.name || "Vendeur";
-  const vendorPhone = vendorProfile?.phone || "Non renseigne";
-  const vendorEmail = vendorProfile?.email || user?.email || "Non renseigne";
-  const vendorRole = vendorProfile?.role || user?.role || "professionnel";
-  const storeDisplayName = vendorProfile?.store_name || vendorDisplayName;
-  const storeAddress = vendorProfile?.store_address || "Adresse non renseignee";
-  const storeDescription = vendorProfile?.store_description || "Specialiste en pieces de rechange automobiles";
-  const storeHours = splitLines(vendorProfile?.store_hours, [
+  const activeProfile = isStoreView ? storeProfile : myProfile;
+  const vendorDisplayName = activeProfile?.name || (isStoreView ? "Vendeur" : (user?.name || "Vendeur"));
+  const vendorPhone = activeProfile?.phone || "Non renseigne";
+  const vendorEmail = activeProfile?.email || (isStoreView ? "Non renseigne" : (user?.email || "Non renseigne"));
+  const vendorRole = activeProfile?.role || (isStoreView ? "vendeur" : (user?.role || "professionnel"));
+  const storeDisplayName = activeProfile?.store_name || vendorDisplayName;
+  const storeAddress = activeProfile?.store_address || "Adresse non renseignee";
+  const storeDescription = activeProfile?.store_description || "Specialiste en pieces de rechange automobiles";
+  const storeHours = splitLines(activeProfile?.store_hours, [
     "Lundi: 08:00 - 17:00",
     "Mardi: 08:00 - 17:00",
     "Mercredi: 08:00 - 17:00",
@@ -518,8 +587,8 @@ const CataloguePieces = () => {
     "Samedi: 08:00 - 13:00",
     "Dimanche: Ferme"
   ]);
-  const storeSpecialties = splitLines(vendorProfile?.store_specialties, presentationSpecialites);
-  const storeServices = splitLines(vendorProfile?.store_services, presentationServices);
+  const storeSpecialties = splitLines(activeProfile?.store_specialties, presentationSpecialites);
+  const storeServices = splitLines(activeProfile?.store_services, presentationServices);
 
   const handlePresentationChange = (event) => {
     const { name, value } = event.target;
@@ -549,7 +618,7 @@ const CataloguePieces = () => {
 
       const refreshed = await getCompleteProfile();
       const profile = refreshed.data?.data?.user || refreshed.data?.user || null;
-      setVendorProfile(profile);
+      setMyProfile(profile);
     } catch (err) {
       setPresentationError(err.response?.data?.message || "Erreur lors de l'enregistrement de la presentation");
     } finally {
@@ -674,9 +743,47 @@ const CataloguePieces = () => {
     }
   };
 
-  const handleOpenVendorStore = () => {
+  const handleOpenVendorStore = async () => {
+    const ownerIdCandidates = [
+      selectedPiece?.user_id,
+      selectedPiece?.vendeur_id,
+      selectedPiece?.vendor_id,
+      selectedPiece?.seller_id,
+      selectedPiece?.owner_id
+    ];
+
+    const ownerId = ownerIdCandidates
+      .map((value) => Number.parseInt(value, 10))
+      .find((value) => Number.isFinite(value) && value > 0);
+
     setSelectedPiece(null);
+    setIsStoreView(true);
+    setStoreOwnerId(ownerId || null);
     setActiveTab("presentation");
+
+    if (ownerId) {
+      setProfileLoading(true);
+      try {
+        const res = await getCompleteProfileById(ownerId);
+        const profile = res.data?.data?.user || res.data?.user || null;
+        setStoreProfile(profile);
+      } catch (_error) {
+        setStoreProfile(null);
+      } finally {
+        setProfileLoading(false);
+      }
+    } else {
+      setStoreProfile(null);
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleExitVendorStore = () => {
+    setIsStoreView(false);
+    setStoreOwnerId(null);
+    setStoreProfile(null);
+    setActiveTab("pieces");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -686,28 +793,41 @@ const CataloguePieces = () => {
         <div className="mx-auto max-w-6xl px-4 pb-28 pt-6">
           <div className="mb-4 text-center">
             <h1 className="text-3xl font-black text-[#111111]">Magasin du Vendeur</h1>
+            {isStoreView && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleExitVendorStore}
+                  className="rounded-full border border-[#d8d8d8] bg-white px-4 py-2 text-sm font-semibold text-[#2d2d2d]"
+                >
+                  Quitter magasin vendeur
+                </button>
+              </div>
+            )}
           </div>
 
-          <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[#ececec] bg-white p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab("pieces")}
-              className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
-                activeTab === "pieces" ? "bg-[#fff3e0] text-[#f29a00]" : "text-[#a0a0a0]"
-              }`}
-            >
-              Pieces Vendeur
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("presentation")}
-              className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
-                activeTab === "presentation" ? "bg-[#fff3e0] text-[#f29a00]" : "text-[#a0a0a0]"
-              }`}
-            >
-              Presentation
-            </button>
-          </div>
+          {canSeeStoreTabs && (
+            <div className="mb-6 grid grid-cols-2 rounded-2xl border border-[#ececec] bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("pieces")}
+                className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
+                  activeTab === "pieces" ? "bg-[#fff3e0] text-[#f29a00]" : "text-[#a0a0a0]"
+                }`}
+              >
+                Pieces Vendeur
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("presentation")}
+                className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
+                  activeTab === "presentation" ? "bg-[#fff3e0] text-[#f29a00]" : "text-[#a0a0a0]"
+                }`}
+              >
+                Presentation
+              </button>
+            </div>
+          )}
 
           {activeTab === "pieces" && (
             <>
@@ -841,7 +961,7 @@ const CataloguePieces = () => {
 
           {activeTab === "presentation" && (
             <div className="space-y-5">
-              {canManagePieces && (
+              {canManagePieces && !isStoreView && (
                 <form onSubmit={handlePresentationSave} className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <h3 className="text-2xl font-black text-[#141414]">Editer la presentation</h3>
@@ -946,7 +1066,7 @@ const CataloguePieces = () => {
           )}
         </div>
 
-        {activeTab === "pieces" && canManagePieces && (
+        {activeTab === "pieces" && canManagePieces && !isStoreView && (
           <button
             type="button"
             onClick={() => setShowCreateModal(true)}
@@ -966,7 +1086,8 @@ const CataloguePieces = () => {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                 {marques.map((marque) => {
                   const active = selectedMarques.includes(marque);
-                  const [logoUrl] = getBrandLogoCandidates(marque);
+                  const logoCandidates = getBrandLogoCandidates(marque);
+                  const logoUrl = logoCandidates[0] || "";
                   const fallbackImage = buildMarqueImage(marque);
                   return (
                     <button
@@ -982,7 +1103,15 @@ const CataloguePieces = () => {
                           loading="lazy"
                           decoding="async"
                           className="h-full w-full object-contain"
+                          data-logo-index="0"
                           onError={(event) => {
+                            const currentIndex = Number.parseInt(event.currentTarget.dataset.logoIndex || "0", 10);
+                            const nextIndex = currentIndex + 1;
+                            if (nextIndex < logoCandidates.length) {
+                              event.currentTarget.dataset.logoIndex = String(nextIndex);
+                              event.currentTarget.src = logoCandidates[nextIndex];
+                              return;
+                            }
                             event.currentTarget.onerror = null;
                             event.currentTarget.src = fallbackImage;
                           }}

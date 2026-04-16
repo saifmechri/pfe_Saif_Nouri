@@ -383,6 +383,16 @@ const formatDate = (value) => {
   return date.toLocaleDateString("fr-FR");
 };
 
+const normalizeOfferGroupKey = (piece) => {
+  const reference = String(piece?.reference || "").trim().toLowerCase();
+  if (reference) {
+    return `ref:${reference}`;
+  }
+
+  const nom = String(piece?.nom || "").trim().toLowerCase();
+  return nom ? `nom:${nom}` : `piece:${piece?.id || "unknown"}`;
+};
+
 const CataloguePieces = () => {
   const { user } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("pieces");
@@ -431,6 +441,7 @@ const CataloguePieces = () => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [selectedCondition, setSelectedCondition] = useState("all");
   const [selectedZone, setSelectedZone] = useState("all");
+  const [catalogScope, setCatalogScope] = useState(() => ((user?.role === "vendeur" || user?.role === "admin") ? "private" : "public"));
 
   const backendBaseUrl = useMemo(() => {
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -530,6 +541,12 @@ const CataloguePieces = () => {
     }
   }, [canSeeStoreTabs, activeTab]);
 
+  useEffect(() => {
+    if (!canManagePieces) {
+      setCatalogScope("public");
+    }
+  }, [canManagePieces]);
+
   const visibleItems = useMemo(() => {
     let filtered = items;
 
@@ -566,6 +583,73 @@ const CataloguePieces = () => {
     return filtered;
   }, [items, appliedFilters.stockFilter, selectedMarques, selectedModeles, selectedCategories, selectedCondition, selectedZone, isStoreView, storeOwnerId]);
 
+  const ownSellerId = Number(user?.id || 0);
+  const isPublicMarketplace = !isStoreView && catalogScope === "public";
+
+  const scopedItems = useMemo(() => {
+    if (isStoreView) {
+      return visibleItems;
+    }
+
+    if (canManagePieces && catalogScope === "private") {
+      return visibleItems.filter((item) => Number(item.user_id) === ownSellerId);
+    }
+
+    return visibleItems;
+  }, [visibleItems, isStoreView, canManagePieces, catalogScope, ownSellerId]);
+
+  const marketplaceGroups = useMemo(() => {
+    if (!isPublicMarketplace) {
+      return [];
+    }
+
+    const grouped = new Map();
+
+    scopedItems.forEach((piece) => {
+      const key = normalizeOfferGroupKey(piece);
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.offers.push(piece);
+        return;
+      }
+
+      grouped.set(key, {
+        key,
+        label: piece.reference || piece.nom || "Pièce",
+        nom: piece.nom || "Pièce",
+        reference: piece.reference || null,
+        marque: piece.marque || null,
+        modele: piece.modele || null,
+        categorie: piece.categorie || null,
+        imagePiece: piece,
+        offers: [piece]
+      });
+    });
+
+    return Array.from(grouped.values())
+      .map((group) => {
+        const offers = [...group.offers].sort((a, b) => {
+          const priceA = Number(a.prix_unitaire);
+          const priceB = Number(b.prix_unitaire);
+          if (priceA === priceB) {
+            return Number(b.stock || 0) - Number(a.stock || 0);
+          }
+          return priceA - priceB;
+        });
+
+        const totalStock = offers.reduce((acc, offer) => acc + Number(offer.stock || 0), 0);
+
+        return {
+          ...group,
+          offers,
+          cheapestOffer: offers[0] || null,
+          offerCount: offers.length,
+          totalStock
+        };
+      })
+      .sort((a, b) => Number(a.cheapestOffer?.prix_unitaire || Number.POSITIVE_INFINITY) - Number(b.cheapestOffer?.prix_unitaire || Number.POSITIVE_INFINITY));
+  }, [scopedItems, isPublicMarketplace]);
+
   const availableModeles = useMemo(() => {
     if (selectedMarques.length === 0) return [];
     const merged = selectedMarques.flatMap((marque) => modelsByMarque[marque] || []);
@@ -573,23 +657,31 @@ const CataloguePieces = () => {
   }, [selectedMarques]);
 
   const previewImages = useMemo(() => {
-    return visibleItems
+    return scopedItems
       .filter((piece) => piece.photo_url)
       .slice(0, 6)
       .map((piece) => (piece.photo_url.startsWith("http") ? piece.photo_url : `${backendBaseUrl}${piece.photo_url}`));
-  }, [visibleItems, backendBaseUrl]);
+  }, [scopedItems, backendBaseUrl]);
 
   const presentationSummary = useMemo(() => {
-    const allItems = isStoreView ? visibleItems : (Array.isArray(items) ? items : []);
+    const allItems = isStoreView ? scopedItems : scopedItems;
     const inStock = allItems.filter((piece) => Number(piece.stock) > 0).length;
     const outOfStock = allItems.filter((piece) => Number(piece.stock) <= 0).length;
 
     return {
-      totalPieces: isStoreView ? allItems.length : (pagination.totalItems || allItems.length),
+      totalPieces: allItems.length,
       inStock,
       outOfStock
     };
-  }, [items, visibleItems, pagination.totalItems, isStoreView]);
+  }, [scopedItems, isStoreView]);
+
+  const canEditSelectedPiece = Boolean(
+    selectedPiece
+    && canManagePieces
+    && !isStoreView
+    && catalogScope === "private"
+    && Number(selectedPiece.user_id) === ownSellerId
+  );
 
   const activeProfile = isStoreView ? storeProfile : myProfile;
   const vendorDisplayName = activeProfile?.name || (isStoreView ? "Vendeur" : (user?.name || "Vendeur"));
@@ -699,6 +791,7 @@ const CataloguePieces = () => {
 
   const canGoPrev = (pagination.page || page) > 1;
   const canGoNext = (pagination.page || page) < (pagination.totalPages || 0);
+  const displayedCount = isPublicMarketplace ? marketplaceGroups.length : scopedItems.length;
 
   const handleCreateInput = (event) => {
     const { name, value } = event.target;
@@ -957,6 +1050,25 @@ const CataloguePieces = () => {
 
           {activeTab === "pieces" && (
             <>
+              {canManagePieces && !isStoreView && (
+                <div className="mb-4 inline-flex rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setCatalogScope("private")}
+                    className={`rounded-xl px-4 py-2 text-sm font-bold transition ${catalogScope === "private" ? "bg-blue-600 text-white" : "text-slate-600 hover:text-slate-900"}`}
+                  >
+                    Mon espace vendeur
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCatalogScope("public")}
+                    className={`rounded-xl px-4 py-2 text-sm font-bold transition ${catalogScope === "public" ? "bg-blue-600 text-white" : "text-slate-600 hover:text-slate-900"}`}
+                  >
+                    Marketplace public
+                  </button>
+                </div>
+              )}
+
               <div className="mb-4 flex gap-2">
                 <div className="flex flex-1 items-center rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-[0_10px_20px_rgba(15,23,42,0.05)] focus-within:border-blue-300">
                   <span className="mr-2 text-lg text-slate-500">🔍</span>
@@ -1007,59 +1119,102 @@ const CataloguePieces = () => {
 
               {loading ? (
                 <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-[0_16px_30px_rgba(15,23,42,0.06)]">Chargement du catalogue...</div>
-              ) : visibleItems.length === 0 ? (
+              ) : displayedCount === 0 ? (
                 <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-[0_16px_30px_rgba(15,23,42,0.06)]">Aucune piece trouvee avec ces filtres.</div>
               ) : (
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-                  {visibleItems.map((piece) => {
-                    const imageSrc = piece.photo_url
-                      ? piece.photo_url.startsWith("http")
-                        ? piece.photo_url
-                        : `${backendBaseUrl}${piece.photo_url}`
-                      : getPieceImageFallback(piece);
+                  {isPublicMarketplace
+                    ? marketplaceGroups.map((group) => {
+                      const cheapest = group.cheapestOffer;
+                      const imageSrc = cheapest?.photo_url
+                        ? (cheapest.photo_url.startsWith("http") ? cheapest.photo_url : `${backendBaseUrl}${cheapest.photo_url}`)
+                        : getPieceImageFallback(group.imagePiece);
 
-                    return (
-                      <article key={piece.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.12)]">
-                        <button type="button" className="w-full" onClick={() => setSelectedPiece(piece)}>
-                          <img src={imageSrc} alt={piece.nom} className="h-52 w-full object-cover" />
-                        </button>
+                      return (
+                        <article key={group.key} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.12)]">
+                          <button
+                            type="button"
+                            className="w-full"
+                            onClick={() => setSelectedPiece({ ...cheapest, offers: group.offers, offer_group_key: group.key })}
+                          >
+                            <img src={imageSrc} alt={group.nom} className="h-52 w-full object-cover" />
+                          </button>
 
-                        <div className="p-4">
-                          <p className="line-clamp-2 text-lg font-extrabold uppercase tracking-wide text-blue-700">{piece.nom}</p>
-                          <p className="mt-1 line-clamp-2 text-2xl font-black text-slate-900">{piece.description || "Piece automobile"}</p>
-                          <p className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-bold text-slate-600">Ref: {piece.reference}</p>
+                          <div className="p-4">
+                            <p className="line-clamp-2 text-lg font-extrabold uppercase tracking-wide text-blue-700">{group.nom}</p>
+                            <p className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-bold text-slate-600">Ref: {group.reference || "Sans reference"}</p>
 
-                          <div className="mt-3 flex items-center justify-between">
-                            <p className="text-3xl font-black text-blue-700">{Number(piece.prix_unitaire).toFixed(2)} DT</p>
-                            <div className="flex items-center gap-3 text-2xl text-slate-400">
-                              <button type="button" aria-label="Favori">♡</button>
-                              <button type="button" aria-label="Partager">↗</button>
+                            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2">
+                              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Offre la moins chère</p>
+                              <p className="text-3xl font-black text-amber-700">{Number(cheapest?.prix_unitaire || 0).toFixed(2)} DT</p>
+                              <p className="text-sm text-slate-600">Vendeur: {cheapest?.seller_store_name || cheapest?.seller_name || "Vendeur"}</p>
                             </div>
-                          </div>
 
-                          <div className="mt-3 flex items-center justify-between">
-                            <span className={`rounded-full px-3 py-1 text-xs font-bold ${Number(piece.stock) > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                              {Number(piece.stock) > 0 ? `${piece.stock} en stock` : "Rupture"}
-                            </span>
+                            <div className="mt-3 flex items-center justify-between">
+                              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{group.offerCount} offre(s)</span>
+                              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">Stock total: {group.totalStock}</span>
+                            </div>
+
                             <button
                               type="button"
-                              onClick={() => setSelectedPiece(piece)}
-                              className="rounded-xl border border-blue-200 bg-white px-3 py-1 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
+                              onClick={() => setSelectedPiece({ ...cheapest, offers: group.offers, offer_group_key: group.key })}
+                              className="mt-3 w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
                             >
-                              Details
+                              Comparer les vendeurs
                             </button>
                           </div>
-                        </div>
-                      </article>
-                    );
-                  })}
+                        </article>
+                      );
+                    })
+                    : scopedItems.map((piece) => {
+                      const imageSrc = piece.photo_url
+                        ? piece.photo_url.startsWith("http")
+                          ? piece.photo_url
+                          : `${backendBaseUrl}${piece.photo_url}`
+                        : getPieceImageFallback(piece);
+
+                      return (
+                        <article key={piece.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.12)]">
+                          <button type="button" className="w-full" onClick={() => setSelectedPiece(piece)}>
+                            <img src={imageSrc} alt={piece.nom} className="h-52 w-full object-cover" />
+                          </button>
+
+                          <div className="p-4">
+                            <p className="line-clamp-2 text-lg font-extrabold uppercase tracking-wide text-blue-700">{piece.nom}</p>
+                            <p className="mt-1 line-clamp-2 text-2xl font-black text-slate-900">{piece.description || "Piece automobile"}</p>
+                            <p className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-bold text-slate-600">Ref: {piece.reference}</p>
+
+                            <div className="mt-3 flex items-center justify-between">
+                              <p className="text-3xl font-black text-blue-700">{Number(piece.prix_unitaire).toFixed(2)} DT</p>
+                              <div className="flex items-center gap-3 text-2xl text-slate-400">
+                                <button type="button" aria-label="Favori">♡</button>
+                                <button type="button" aria-label="Partager">↗</button>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 flex items-center justify-between">
+                              <span className={`rounded-full px-3 py-1 text-xs font-bold ${Number(piece.stock) > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                                {Number(piece.stock) > 0 ? `${piece.stock} en stock` : "Rupture"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPiece(piece)}
+                                className="rounded-xl border border-blue-200 bg-white px-3 py-1 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
+                              >
+                                Details
+                              </button>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
                 </div>
               )}
 
               <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_16px_30px_rgba(15,23,42,0.06)]">
                 <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
                   <p className="text-sm text-slate-600">
-                    Total: <span className="font-bold text-slate-900">{pagination.totalItems || 0}</span>
+                    Total affiché: <span className="font-bold text-slate-900">{displayedCount}</span>
                   </p>
                   <div className="flex items-center gap-2">
                     <button
@@ -1192,7 +1347,7 @@ const CataloguePieces = () => {
           )}
         </div>
 
-        {activeTab === "pieces" && canManagePieces && !isStoreView && (
+        {activeTab === "pieces" && canManagePieces && !isStoreView && !isPublicMarketplace && (
           <button
             type="button"
             onClick={openCreatePieceModal}
@@ -1572,7 +1727,7 @@ const CataloguePieces = () => {
                     </button>
                   </div>
 
-                  {canManagePieces && (
+                  {canEditSelectedPiece && (
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
@@ -1651,11 +1806,41 @@ const CataloguePieces = () => {
 
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Magasin du vendeur</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">{vendorDisplayName}</p>
-                      <p className="text-sm text-slate-600">Email: {vendorEmail}</p>
-                      <p className="text-sm text-slate-600">Telephone: {vendorPhone}</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{selectedPiece.seller_store_name || selectedPiece.seller_name || vendorDisplayName}</p>
+                      <p className="text-sm text-slate-600">Email: {selectedPiece.seller_email || vendorEmail}</p>
+                      <p className="text-sm text-slate-600">Telephone: {selectedPiece.seller_phone || vendorPhone}</p>
                     </div>
                   </div>
+
+                  {Array.isArray(selectedPiece.offers) && selectedPiece.offers.length > 1 && (
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                      <h3 className="mb-3 text-2xl font-black text-slate-900">Comparaison des offres</h3>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full text-left text-sm">
+                          <thead>
+                            <tr className="border-b border-slate-200 text-slate-500">
+                              <th className="px-2 py-2">Vendeur</th>
+                              <th className="px-2 py-2">Prix</th>
+                              <th className="px-2 py-2">Stock</th>
+                              <th className="px-2 py-2">Zone</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...selectedPiece.offers]
+                              .sort((a, b) => Number(a.prix_unitaire) - Number(b.prix_unitaire))
+                              .map((offer, index) => (
+                                <tr key={offer.id || `${offer.reference}-${index}`} className={`border-b border-slate-100 ${index === 0 ? "bg-emerald-50" : ""}`}>
+                                  <td className="px-2 py-2 font-semibold text-slate-800">{offer.seller_store_name || offer.seller_name || "Vendeur"}</td>
+                                  <td className="px-2 py-2 font-black text-blue-700">{Number(offer.prix_unitaire).toFixed(2)} DT {index === 0 ? "(moins cher)" : ""}</td>
+                                  <td className="px-2 py-2 text-slate-700">{offer.stock}</td>
+                                  <td className="px-2 py-2 text-slate-700">{offer.zone_geographique || "-"}</td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <h3 className="mb-3 text-2xl font-black text-slate-900">Véhicules Compatibles</h3>

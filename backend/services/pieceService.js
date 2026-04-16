@@ -40,7 +40,7 @@ const buildSearchClause = (search) => {
 
   const searchParam = `%${normalizedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
   return {
-    sql: ' AND (nom ILIKE $1 OR reference ILIKE $1)',
+    sql: ' AND (p.nom ILIKE $1 OR p.reference ILIKE $1)',
     params: [searchParam]
   };
 };
@@ -49,12 +49,24 @@ const buildSortClause = (sortBy, sortOrder) => {
   const normalizedSortBy = ALLOWED_SORT_FIELDS.has(sortBy) ? sortBy : 'created_at';
   const normalizedSortOrder = ALLOWED_SORT_ORDERS.has(String(sortOrder).toLowerCase()) ? String(sortOrder).toUpperCase() : 'DESC';
 
-  return `${normalizedSortBy} ${normalizedSortOrder}`;
+  const fieldMap = {
+    nom: 'p.nom',
+    reference: 'p.reference',
+    prix_unitaire: 'p.prix_unitaire',
+    created_at: 'p.created_at',
+    updated_at: 'p.updated_at'
+  };
+
+  return `${fieldMap[normalizedSortBy] || 'p.created_at'} ${normalizedSortOrder}`;
 };
 
 const mapPieceRow = (row) => ({
   id: row.id,
   user_id: row.user_id === null || row.user_id === undefined ? null : Number(row.user_id),
+  seller_name: row.seller_name || null,
+  seller_store_name: row.seller_store_name || null,
+  seller_phone: row.seller_phone || null,
+  seller_role: row.seller_role || null,
   nom: row.nom,
   reference: row.reference,
   description: row.description,
@@ -189,7 +201,7 @@ const createPiece = async (payload) => {
     return mapPieceRow(result.rows[0]);
   } catch (error) {
     if (error.code === '23505') {
-      throw new AppError('Cette reference de piece existe deja', 400, 'PIECE_REFERENCE_ALREADY_EXISTS');
+      throw new AppError('Cette reference existe deja dans votre espace vendeur', 400, 'PIECE_REFERENCE_ALREADY_EXISTS');
     }
 
     throw error;
@@ -205,25 +217,31 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
 
   const query = `
     SELECT
-      id,
-      user_id,
-      nom,
-      reference,
-      description,
-      photo_url,
-      prix_unitaire,
-      stock,
-      condition,
-      zone_geographique,
-        marque,
-        modele,
-        categorie,
-      created_at,
-      updated_at,
-      deleted_at,
+      p.id,
+      p.user_id,
+      p.nom,
+      p.reference,
+      p.description,
+      p.photo_url,
+      p.prix_unitaire,
+      p.stock,
+      p.condition,
+      p.zone_geographique,
+      p.marque,
+      p.modele,
+      p.categorie,
+      p.created_at,
+      p.updated_at,
+      p.deleted_at,
+      u.name AS seller_name,
+      u.store_name AS seller_store_name,
+      u.phone AS seller_phone,
+      r.name AS seller_role,
       COUNT(*) OVER() AS total_count
-    FROM pieces
-    WHERE deleted_at IS NULL${searchClause.sql}
+    FROM pieces p
+    LEFT JOIN users u ON u.id = p.user_id
+    LEFT JOIN roles r ON r.id = u.role_id
+    WHERE p.deleted_at IS NULL${searchClause.sql}
     ORDER BY ${orderByClause}
     LIMIT $${searchClause.params.length + 1}
     OFFSET $${searchClause.params.length + 2}
@@ -246,9 +264,12 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
 
 const getPieceById = async (id) => {
   const result = await pool.query(
-    `SELECT id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at
-     FROM pieces
-     WHERE id = $1 AND deleted_at IS NULL`,
+    `SELECT p.id, p.user_id, p.nom, p.reference, p.description, p.photo_url, p.prix_unitaire, p.stock, p.condition, p.zone_geographique, p.marque, p.modele, p.categorie, p.created_at, p.updated_at, p.deleted_at,
+            u.name AS seller_name, u.store_name AS seller_store_name, u.phone AS seller_phone, r.name AS seller_role
+     FROM pieces p
+     LEFT JOIN users u ON u.id = p.user_id
+     LEFT JOIN roles r ON r.id = u.role_id
+     WHERE p.id = $1 AND p.deleted_at IS NULL`,
     [id]
   );
 
@@ -311,7 +332,7 @@ const updatePiece = async (id, payload) => {
     return mapPieceRow(result.rows[0]);
   } catch (error) {
     if (error.code === '23505') {
-      throw new AppError('Cette reference de piece existe deja', 400, 'PIECE_REFERENCE_ALREADY_EXISTS');
+      throw new AppError('Cette reference existe deja dans votre espace vendeur', 400, 'PIECE_REFERENCE_ALREADY_EXISTS');
     }
 
     throw error;

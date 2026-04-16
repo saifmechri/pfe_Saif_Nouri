@@ -228,6 +228,27 @@ const initDatabase = async () => {
 
   await pool.query('UPDATE garages SET is_open = COALESCE(is_open, true) WHERE is_open IS NULL');
 
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'pieces_reference_key'
+      ) THEN
+        EXECUTE 'ALTER TABLE pieces DROP CONSTRAINT pieces_reference_key';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1
+        FROM pg_indexes
+        WHERE schemaname = 'public' AND indexname = 'pieces_reference_key'
+      ) THEN
+        EXECUTE 'DROP INDEX public.pieces_reference_key';
+      END IF;
+    END $$;
+  `);
+
   await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
 
   await pool.query(`
@@ -313,6 +334,7 @@ const initDatabase = async () => {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_created_at ON pieces (created_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_updated_at ON pieces (updated_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_user_id ON pieces (user_id)');
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS ux_pieces_user_reference_active ON pieces (user_id, reference) WHERE deleted_at IS NULL');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_nom_trgm ON pieces USING GIN (nom gin_trgm_ops)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_pieces_reference_trgm ON pieces USING GIN (reference gin_trgm_ops)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_piece_id ON intervention_pieces (piece_id)');

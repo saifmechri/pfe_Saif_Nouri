@@ -1,5 +1,13 @@
 import API from './api';
 
+export const getCompleteProfile = () => {
+  return API.get('/auth/profile-complet');
+};
+
+export const getCompleteProfileById = (userId) => {
+  return API.get(`/auth/profile-complet/${userId}`);
+};
+
 // Mettre à jour le profil
 export const updateProfile = (userData) => {
   return API.put('/auth/profile', userData);

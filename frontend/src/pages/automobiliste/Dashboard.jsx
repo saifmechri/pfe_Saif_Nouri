@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect } from "react";
 import {
   getVehicules,
   createVehicule,
@@ -9,12 +9,10 @@ import {
   getPieces
 } from "../../services/vehicule";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
 import PlatformLayout from "../../components/PlatformLayout";
 
 const AutomobilisteDashboard = () => {
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState("vehicules");
 
   // États pour les véhicules
@@ -372,42 +370,45 @@ const AutomobilisteDashboard = () => {
 
   return (
     <PlatformLayout>
-      <div className="min-h-screen bg-gray-100">
-        <div className="max-w-7xl mx-auto py-8 px-4">
+      <div className="min-h-screen bg-transparent">
+        <div className="mx-auto max-w-7xl px-4 py-8">
           <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
-            <h1 className="text-3xl font-bold text-gray-800">Tableau de bord Automobiliste</h1>
+            <div>
+              <h1 className="text-3xl font-extrabold text-[#1a2b4b]">Tableau de bord Automobiliste</h1>
+              <p className="mt-1 text-sm text-[#617089]">Suivez vos véhicules, rendez-vous et historique d'interventions.</p>
+            </div>
           </div>
 
           {/* Onglets */}
-          <div className="flex flex-wrap items-center gap-2 border-b mb-6 pb-1">
+          <div className="mb-6 flex flex-wrap items-center gap-3 border-b border-[#d5deec] pb-2">
             <button
               onClick={() => setActiveTab("vehicules")}
-              className={`pb-2 px-4 font-medium ${activeTab === "vehicules" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+              className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "vehicules" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
             >
               Mes véhicules
             </button>
             <button
               onClick={() => setActiveTab("rendezvous")}
-              className={`pb-2 px-4 font-medium ${activeTab === "rendezvous" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+              className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "rendezvous" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
             >
               Rendez-vous
             </button>
             <button
               onClick={() => setActiveTab("historique")}
-              className={`pb-2 px-4 font-medium ${activeTab === "historique" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+              className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "historique" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
             >
               Historique
             </button>
             <button
               onClick={() => navigate("/automobiliste/recommandations")}
-              className="ml-auto px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+              className="vb-btn-primary ml-auto px-4 py-2 text-sm"
             >
               Recommandations dynamiques
             </button>
           </div>
 
         {/* Contenu des onglets */}
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="vb-card p-6">
           {activeTab === "vehicules" && (
             <div>
               <div className="flex justify-between items-center mb-4">
@@ -415,7 +416,7 @@ const AutomobilisteDashboard = () => {
                 <button 
                   onClick={handleAddClick}
                   disabled={loading}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="vb-btn-primary px-4 py-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   + Ajouter un véhicule
                 </button>
@@ -431,7 +432,7 @@ const AutomobilisteDashboard = () => {
                 </div>
               )}
               {showForm && (
-                <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-6">
+                <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-6">
                   <h3 className="text-lg font-semibold mb-4">
                     {editingId ? "Modifier le véhicule" : "Ajouter un nouveau véhicule"}
                   </h3>
@@ -443,7 +444,7 @@ const AutomobilisteDashboard = () => {
                       value={formData.modele_voiture}
                       onChange={handleInputChange}
                       required
-                      className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                      className="vb-input px-3 py-2"
                     />
                     <input
                       type="text"
@@ -452,7 +453,7 @@ const AutomobilisteDashboard = () => {
                       value={formData.matricule_voiture}
                       onChange={handleInputChange}
                       required
-                      className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                      className="vb-input px-3 py-2"
                     />
                     <input
                       type="number"
@@ -461,7 +462,7 @@ const AutomobilisteDashboard = () => {
                       value={formData.kilometrage_voiture}
                       onChange={handleInputChange}
                       min="0"
-                      className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                      className="vb-input px-3 py-2"
                     />
                     <input
                       type="file"
@@ -470,7 +471,7 @@ const AutomobilisteDashboard = () => {
                       capture="environment"
                       onChange={handlePhotoChange}
                       aria-label="Ajouter photo voiture"
-                      className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 md:col-span-2"
+                      className="vb-input px-3 py-2 md:col-span-2"
                     />
                     {selectedPhotoPreview && (
                       <div className="md:col-span-2">
@@ -485,7 +486,7 @@ const AutomobilisteDashboard = () => {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="flex-1 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                        className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {loading ? "Chargement..." : (editingId ? "Modifier" : "Ajouter")}
                       </button>
@@ -493,7 +494,7 @@ const AutomobilisteDashboard = () => {
                         type="button"
                         onClick={resetForm}
                         disabled={loading}
-                        className="flex-1 bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-500 disabled:bg-gray-400"
+                        className="vb-btn-outline flex-1 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         Annuler
                       </button>
@@ -508,7 +509,7 @@ const AutomobilisteDashboard = () => {
               ) : (
               <div className="grid gap-4 md:grid-cols-2">
                 {vehicules.map((v) => (
-                  <div key={v.id} className="border p-4 rounded-lg shadow-sm hover:shadow-md transition">
+                  <div key={v.id} className="vb-card p-4 transition hover:shadow-md">
                     {v.photo_voiture && (
                       <img 
                         src={v.photo_voiture.startsWith("http") ? v.photo_voiture : `${import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "")}${v.photo_voiture}`} 

@@ -6,6 +6,7 @@ import Register from "../pages/auth/Register";
 import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
 import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
+import CataloguePieces from "../pages/vendeur/CataloguePieces";
 
 // Import des pages spécifiques aux rôles
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
@@ -86,6 +87,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["vendeur"]}>
               <VendeurDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendeur/catalogue"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
+              <CataloguePieces />
             </ProtectedRoute>
           }
         />

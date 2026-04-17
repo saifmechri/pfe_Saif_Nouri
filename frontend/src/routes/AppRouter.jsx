@@ -7,6 +7,7 @@ import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
 import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
 import CataloguePieces from "../pages/vendeur/CataloguePieces";
+import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
 
 // Import des pages spécifiques aux rôles
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
@@ -95,6 +96,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
               <CataloguePieces />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendeur/comparaison"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
+              <ComparaisonPrix />
             </ProtectedRoute>
           }
         />

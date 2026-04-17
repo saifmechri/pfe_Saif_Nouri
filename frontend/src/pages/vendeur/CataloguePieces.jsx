@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from "react";
-import { createPiece, deletePiece, getPieces, updatePiece } from "../../services/pieces";
+import { useNavigate } from "react-router-dom";
+import { comparePieceAcrossVendors, createPiece, deletePiece, getPieces, updatePiece } from "../../services/pieces";
 import { getCompleteProfile, getCompleteProfileById, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
 import { AuthContext } from "../../context/AuthContext";
@@ -395,6 +396,7 @@ const normalizeOfferGroupKey = (piece) => {
 
 const CataloguePieces = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("pieces");
   const [profileLoading, setProfileLoading] = useState(false);
   const [myProfile, setMyProfile] = useState(null);
@@ -423,6 +425,10 @@ const CataloguePieces = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 12, totalItems: 0, totalPages: 0 });
 
   const [selectedPiece, setSelectedPiece] = useState(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+  const [comparisonError, setComparisonError] = useState("");
+  const [comparisonData, setComparisonData] = useState(null);
+  const [showComparisonModal, setShowComparisonModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingPieceId, setEditingPieceId] = useState(null);
   const [createError, setCreateError] = useState("");
@@ -442,6 +448,7 @@ const CataloguePieces = () => {
   const [selectedCondition, setSelectedCondition] = useState("all");
   const [selectedZone, setSelectedZone] = useState("all");
   const [catalogScope, setCatalogScope] = useState(() => ((user?.role === "vendeur" || user?.role === "admin") ? "private" : "public"));
+  const [marketplaceSortBy, setMarketplaceSortBy] = useState("min_price");
 
   const backendBaseUrl = useMemo(() => {
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -647,8 +654,22 @@ const CataloguePieces = () => {
           totalStock
         };
       })
-      .sort((a, b) => Number(a.cheapestOffer?.prix_unitaire || Number.POSITIVE_INFINITY) - Number(b.cheapestOffer?.prix_unitaire || Number.POSITIVE_INFINITY));
-  }, [scopedItems, isPublicMarketplace]);
+      .sort((a, b) => {
+        if (marketplaceSortBy === "offers_count") {
+          return Number(b.offerCount || 0) - Number(a.offerCount || 0);
+        }
+
+        if (marketplaceSortBy === "stock_total") {
+          return Number(b.totalStock || 0) - Number(a.totalStock || 0);
+        }
+
+        if (marketplaceSortBy === "name") {
+          return String(a.nom || "").localeCompare(String(b.nom || ""), "fr", { sensitivity: "base" });
+        }
+
+        return Number(a.cheapestOffer?.prix_unitaire || Number.POSITIVE_INFINITY) - Number(b.cheapestOffer?.prix_unitaire || Number.POSITIVE_INFINITY);
+      });
+  }, [scopedItems, isPublicMarketplace, marketplaceSortBy]);
 
   const availableModeles = useMemo(() => {
     if (selectedMarques.length === 0) return [];
@@ -682,6 +703,54 @@ const CataloguePieces = () => {
     && catalogScope === "private"
     && Number(selectedPiece.user_id) === ownSellerId
   );
+
+  const comparisonOffers = comparisonData?.offres || comparisonData?.offers || [];
+  const comparisonSummary = comparisonData?.summary || {};
+
+  const openComparisonView = async (piece) => {
+    const targetPiece = piece || selectedPiece;
+    const pieceId = targetPiece?.id;
+    const name = targetPiece?.reference || targetPiece?.nom;
+
+    if (!pieceId && !name) {
+      setComparisonError("Aucune pièce cible disponible pour comparaison.");
+      setShowComparisonModal(true);
+      return;
+    }
+
+    setComparisonLoading(true);
+    setComparisonError("");
+    setComparisonData(null);
+    setShowComparisonModal(true);
+
+    try {
+      const res = await comparePieceAcrossVendors({
+        pieceId,
+        name,
+        includeOutOfStock: false
+      });
+
+      setComparisonData(res.data?.data || res.data || null);
+    } catch (err) {
+      setComparisonError(err.response?.data?.message || "Erreur lors du chargement de la comparaison multi-vendeurs.");
+    } finally {
+      setComparisonLoading(false);
+    }
+  };
+
+  const openComparisonPage = (piece) => {
+    const targetPiece = piece || selectedPiece;
+    if (!targetPiece) {
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (targetPiece.reference || targetPiece.nom) {
+      params.set("name", String(targetPiece.reference || targetPiece.nom));
+    }
+
+    navigate(`/vendeur/comparaison?${params.toString()}`);
+  };
 
   const activeProfile = isStoreView ? storeProfile : myProfile;
   const vendorDisplayName = activeProfile?.name || (isStoreView ? "Vendeur" : (user?.name || "Vendeur"));
@@ -1069,6 +1138,23 @@ const CataloguePieces = () => {
                 </div>
               )}
 
+              {isPublicMarketplace && (
+                <div className="mb-4 flex items-center gap-2">
+                  <label htmlFor="marketplace-sort" className="text-sm font-semibold text-slate-700">Tri marketplace:</label>
+                  <select
+                    id="marketplace-sort"
+                    value={marketplaceSortBy}
+                    onChange={(event) => setMarketplaceSortBy(event.target.value)}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+                  >
+                    <option value="min_price">Prix minimum</option>
+                    <option value="offers_count">Nombre d'offres</option>
+                    <option value="stock_total">Stock total</option>
+                    <option value="name">Nom produit</option>
+                  </select>
+                </div>
+              )}
+
               <div className="mb-4 flex gap-2">
                 <div className="flex flex-1 items-center rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-[0_10px_20px_rgba(15,23,42,0.05)] focus-within:border-blue-300">
                   <span className="mr-2 text-lg text-slate-500">🔍</span>
@@ -1135,7 +1221,7 @@ const CataloguePieces = () => {
                           <button
                             type="button"
                             className="w-full"
-                            onClick={() => setSelectedPiece({ ...cheapest, offers: group.offers, offer_group_key: group.key })}
+                            onClick={() => openComparisonView(cheapest)}
                           >
                             <img src={imageSrc} alt={group.nom} className="h-52 w-full object-cover" />
                           </button>
@@ -1157,10 +1243,17 @@ const CataloguePieces = () => {
 
                             <button
                               type="button"
-                              onClick={() => setSelectedPiece({ ...cheapest, offers: group.offers, offer_group_key: group.key })}
+                              onClick={() => openComparisonView(cheapest)}
                               className="mt-3 w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
                             >
                               Comparer les vendeurs
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openComparisonPage(cheapest)}
+                              className="mt-2 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
+                            >
+                              Ouvrir page complète
                             </button>
                           </div>
                         </article>
@@ -1722,6 +1815,20 @@ const CataloguePieces = () => {
                       Voir magasin de vendeur
                       <span className="ml-3 text-xl">›</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => openComparisonView(selectedPiece)}
+                      className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 shadow-sm"
+                    >
+                      Comparer prix
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openComparisonPage(selectedPiece)}
+                      className="rounded-full border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-700 shadow-sm"
+                    >
+                      Page comparaison
+                    </button>
                     <button type="button" className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-2xl text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)]" aria-label="Partager">
                       ⤴
                     </button>
@@ -1863,6 +1970,73 @@ const CataloguePieces = () => {
           </div>
         )}
       </div>
+
+      {showComparisonModal && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-3 sm:items-center">
+          <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900">Vue comparative dynamique</h3>
+                <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps réel via l'API backend.</p>
+              </div>
+              <button type="button" onClick={() => setShowComparisonModal(false)} className="text-3xl text-slate-500">×</button>
+            </div>
+
+            {comparisonLoading ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-slate-600">Chargement de la comparaison...</div>
+            ) : comparisonError ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">{comparisonError}</div>
+            ) : comparisonData ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Vendeurs</p>
+                    <p className="mt-1 text-3xl font-black text-slate-900">{comparisonSummary.vendeurs_count ?? comparisonOffers.length ?? 0}</p>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Prix minimum</p>
+                    <p className="mt-1 text-3xl font-black text-emerald-700">{Number(comparisonSummary.prix_min || comparisonData.best_offer?.prix_unitaire || 0).toFixed(2)} DT</p>
+                  </div>
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Économie max</p>
+                    <p className="mt-1 text-3xl font-black text-amber-700">{Number(comparisonSummary.economie_max || 0).toFixed(2)} DT</p>
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <h4 className="mb-3 text-lg font-black text-slate-900">{comparisonData.piece?.nom || comparisonData.best_offer?.nom || "Pièce"}</h4>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-slate-500">
+                          <th className="px-2 py-2">Vendeur</th>
+                          <th className="px-2 py-2">Prix</th>
+                          <th className="px-2 py-2">Stock</th>
+                          <th className="px-2 py-2">Zone</th>
+                          <th className="px-2 py-2">Téléphone</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {comparisonOffers.map((offer, index) => (
+                          <tr key={offer.id || `${offer.vendeur_id}-${index}`} className={`border-b border-slate-100 ${index === 0 ? "bg-emerald-50" : ""}`}>
+                            <td className="px-2 py-2 font-semibold text-slate-800">{offer.vendeur_magasin || offer.vendeur_nom || offer.seller_store_name || offer.seller_name || "Vendeur"}</td>
+                            <td className="px-2 py-2 font-black text-slate-900">{Number(offer.prix_unitaire || offer.price || 0).toFixed(2)} DT {index === 0 ? "(prix minimum)" : ""}</td>
+                            <td className="px-2 py-2 text-slate-700">{offer.stock ?? "-"}</td>
+                            <td className="px-2 py-2 text-slate-700">{offer.zone_geographique || "-"}</td>
+                            <td className="px-2 py-2 text-slate-700">{offer.vendeur_telephone || offer.seller_phone || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-slate-600">Aucune donnée de comparaison disponible.</div>
+            )}
+          </div>
+        </div>
+      )}
     </PlatformLayout>
   );
 };

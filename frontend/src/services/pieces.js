@@ -15,3 +15,7 @@ export const updatePiece = (pieceId, pieceData) => {
 export const deletePiece = (pieceId) => {
   return API.delete(`/pieces/${pieceId}`);
 };
+
+export const comparePieceAcrossVendors = (params = {}) => {
+  return API.get("/pieces/compare/vendors", { params });
+};

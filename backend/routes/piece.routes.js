@@ -84,6 +84,28 @@ const listPiecesValidation = [
   })
 ];
 
+const comparePiecesValidation = [
+  query('pieceId').optional().isInt({ min: 1 }).withMessage('pieceId doit etre un entier superieur a 0'),
+  query('name').optional().customSanitizer((value) => {
+    if (value === undefined || value === null) {
+      return undefined;
+    }
+
+    return String(value).trim();
+  }).isLength({ min: 1, max: 255 }).withMessage('name doit contenir entre 1 et 255 caracteres'),
+  query().custom((_, { req }) => {
+    const pieceId = req.query.pieceId;
+    const name = typeof req.query.name === 'string' ? req.query.name.trim() : '';
+
+    if ((pieceId === undefined || String(pieceId).trim() === '') && name.length === 0) {
+      throw new Error('Vous devez fournir pieceId ou name');
+    }
+
+    return true;
+  }),
+  query('includeOutOfStock').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeOutOfStock invalide')
+];
+
 const adjustStockValidation = [
   param('id').isInt({ min: 1 }).withMessage('Identifiant de piece invalide'),
   body('quantity_change').notEmpty().withMessage('quantity_change est obligatoire').isInt({ min: -1000000, max: 1000000 }).withMessage('quantity_change doit etre un entier'),
@@ -111,6 +133,7 @@ const stockMovementsValidation = [
 ];
 
 router.get('/', listPiecesValidation, validateRequest, pieceController.getAllPieces);
+router.get('/compare/vendors', comparePiecesValidation, validateRequest, pieceController.comparePieceAcrossVendors);
 router.get('/:id', getPieceValidation, validateRequest, pieceController.getPieceById);
 router.get('/:id/stock/movements', verifyToken, isVendeurOrAdmin, stockMovementsValidation, validateRequest, pieceController.getPieceStockMovements);
 

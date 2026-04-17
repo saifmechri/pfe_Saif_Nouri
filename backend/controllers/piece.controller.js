@@ -78,6 +78,24 @@ const getPieceById = asyncHandler(async (req, res) => {
   });
 });
 
+const comparePieceAcrossVendors = asyncHandler(async (req, res) => {
+  const pieceId = req.query.pieceId;
+  const name = req.query.name;
+  const includeOutOfStock = ['true', '1', 'yes', 'on']
+    .includes(String(req.query.includeOutOfStock || '').toLowerCase());
+
+  const comparison = await pieceService.comparePieceAcrossVendors({
+    pieceId,
+    name,
+    includeOutOfStock
+  });
+
+  return sendApiResponse(res, {
+    message: 'Comparaison multi-vendeurs recuperee avec succes',
+    data: comparison
+  });
+});
+
 const updatePiece = asyncHandler(async (req, res) => {
   const pieceId = Number.parseInt(req.params.id, 10);
   if (!Number.isFinite(pieceId) || pieceId <= 0) {
@@ -155,6 +173,7 @@ module.exports = {
   createPiece,
   getAllPieces,
   getPieceById,
+  comparePieceAcrossVendors,
   updatePiece,
   deletePiece,
   adjustPieceStock,

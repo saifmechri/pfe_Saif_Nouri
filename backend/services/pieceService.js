@@ -14,6 +14,15 @@ const normalizeText = (value) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const parsePositiveInteger = (value, fieldName) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new AppError(`${fieldName} doit etre un entier superieur a 0`, 400, 'INVALID_INTEGER');
+  }
+
+  return parsed;
+};
+
 const parsePositiveNumber = (value, fieldName) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
@@ -280,6 +289,128 @@ const getPieceById = async (id) => {
   return mapPieceRow(result.rows[0]);
 };
 
+const mapVendorOfferRow = (row) => ({
+  piece_id: Number(row.piece_id),
+  nom: row.nom,
+  reference: row.reference,
+  prix_unitaire: Number(row.prix_unitaire),
+  stock: Number(row.stock),
+  condition: row.condition || 'Neuf',
+  zone_geographique: row.zone_geographique || null,
+  marque: row.marque || null,
+  modele: row.modele || null,
+  categorie: row.categorie || null,
+  photo_url: row.photo_url || null,
+  vendeur: {
+    id: Number(row.vendeur_id),
+    nom: row.vendeur_nom || null,
+    magasin: row.vendeur_magasin || null,
+    telephone: row.vendeur_telephone || null,
+    email: row.vendeur_email || null,
+    latitude: row.vendeur_latitude === null ? null : Number(row.vendeur_latitude),
+    longitude: row.vendeur_longitude === null ? null : Number(row.vendeur_longitude)
+  }
+});
+
+const comparePieceAcrossVendors = async ({ pieceId, name, includeOutOfStock = false } = {}) => {
+  const hasPieceId = pieceId !== undefined && pieceId !== null && String(pieceId).trim() !== '';
+  const normalizedName = normalizeText(name);
+
+  if (!hasPieceId && !normalizedName) {
+    throw new AppError('Vous devez fournir pieceId ou name', 400, 'MISSING_SEARCH_CRITERIA');
+  }
+
+  let targetPiece = null;
+  if (hasPieceId) {
+    const safePieceId = parsePositiveInteger(pieceId, 'pieceId');
+    const targetResult = await pool.query(
+      `SELECT id, nom, reference
+       FROM pieces
+       WHERE id = $1 AND deleted_at IS NULL`,
+      [safePieceId]
+    );
+
+    if (targetResult.rows.length === 0) {
+      throw new AppError('Piece de reference non trouvee', 404, 'PIECE_NOT_FOUND');
+    }
+
+    targetPiece = targetResult.rows[0];
+  }
+
+  const whereClauses = ['p.deleted_at IS NULL', "r.name = 'vendeur'"];
+  const params = [];
+
+  if (!includeOutOfStock) {
+    whereClauses.push('p.stock > 0');
+  }
+
+  if (targetPiece && targetPiece.reference) {
+    params.push(String(targetPiece.reference).trim());
+    whereClauses.push(`LOWER(p.reference) = LOWER($${params.length})`);
+  } else {
+    const likeSearch = `%${normalizedName.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+    params.push(likeSearch);
+    whereClauses.push(`(p.nom ILIKE $${params.length} OR p.reference ILIKE $${params.length})`);
+  }
+
+  const offersResult = await pool.query(
+    `SELECT
+      p.id AS piece_id,
+      p.nom,
+      p.reference,
+      p.prix_unitaire,
+      p.stock,
+      p.condition,
+      p.zone_geographique,
+      p.marque,
+      p.modele,
+      p.categorie,
+      p.photo_url,
+      u.id AS vendeur_id,
+      u.name AS vendeur_nom,
+      u.store_name AS vendeur_magasin,
+      u.phone AS vendeur_telephone,
+      u.email AS vendeur_email,
+      u.latitude AS vendeur_latitude,
+      u.longitude AS vendeur_longitude
+     FROM pieces p
+     INNER JOIN users u ON u.id = p.user_id
+     INNER JOIN roles r ON r.id = u.role_id
+     WHERE ${whereClauses.join(' AND ')}
+     ORDER BY p.prix_unitaire ASC, p.stock DESC, p.id ASC`,
+    params
+  );
+
+  const offers = offersResult.rows.map(mapVendorOfferRow);
+  if (offers.length === 0) {
+    throw new AppError('Aucune offre vendeur trouvee pour cette piece', 404, 'NO_VENDOR_OFFERS_FOUND');
+  }
+
+  const minPrice = offers[0].prix_unitaire;
+  const maxPrice = offers[offers.length - 1].prix_unitaire;
+
+  return {
+    searched_with: {
+      pieceId: hasPieceId ? Number(pieceId) : null,
+      name: normalizedName || null
+    },
+    piece: {
+      nom: offers[0].nom,
+      reference: offers[0].reference,
+      marque: offers[0].marque,
+      modele: offers[0].modele,
+      categorie: offers[0].categorie
+    },
+    summary: {
+      vendeurs_count: offers.length,
+      prix_min: minPrice,
+      prix_max: maxPrice,
+      economie_max: Number((maxPrice - minPrice).toFixed(2))
+    },
+    offres: offers
+  };
+};
+
 const updatePiece = async (id, payload) => {
   const currentPiece = await pool.query(
     `SELECT id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, deleted_at
@@ -497,6 +628,7 @@ module.exports = {
   createPiece,
   getPieces,
   getPieceById,
+  comparePieceAcrossVendors,
   updatePiece,
   deletePiece,
   adjustPieceStock,

@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const { Pool } = require('pg');
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -30,9 +32,35 @@ const poolOptions = {
   keepAliveInitialDelayMillis: 10000
 };
 
+const getPasswordFromDatabaseUrl = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return parsed.password || null;
+  } catch {
+    return null;
+  }
+};
+
+const databaseUrlPassword = getPasswordFromDatabaseUrl(DATABASE_URL);
+const explicitPassword = process.env.DB_PASSWORD;
+const hasStringPassword = typeof explicitPassword === 'string' && explicitPassword.length > 0;
+
+if (DATABASE_URL && !databaseUrlPassword && !hasStringPassword) {
+  throw new Error(
+    'Configuration PostgreSQL invalide: mot de passe manquant. Ajoutez le mot de passe dans DATABASE_URL (URL-encodé) ou définissez DB_PASSWORD.'
+  );
+}
+
+const passwordOverride = hasStringPassword ? explicitPassword : undefined;
+
 const pool = DATABASE_URL
   ? new Pool({
       connectionString: DATABASE_URL,
+      password: passwordOverride,
       ...poolOptions
     })
   : new Pool({

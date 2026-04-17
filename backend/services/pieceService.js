@@ -312,6 +312,25 @@ const mapVendorOfferRow = (row) => ({
   }
 });
 
+const buildBestOfferSummary = (offers) => {
+  if (!Array.isArray(offers) || offers.length === 0) {
+    return null;
+  }
+
+  const bestOffer = offers[0];
+  return {
+    prix_minimum: bestOffer.prix_unitaire,
+    meilleur_vendeur: {
+      id: bestOffer.vendeur.id,
+      nom: bestOffer.vendeur.nom,
+      magasin: bestOffer.vendeur.magasin,
+      telephone: bestOffer.vendeur.telephone,
+      email: bestOffer.vendeur.email
+    },
+    meilleure_offre: bestOffer
+  };
+};
+
 const comparePieceAcrossVendors = async ({ pieceId, name, includeOutOfStock = false } = {}) => {
   const hasPieceId = pieceId !== undefined && pieceId !== null && String(pieceId).trim() !== '';
   const normalizedName = normalizeText(name);
@@ -388,6 +407,8 @@ const comparePieceAcrossVendors = async ({ pieceId, name, includeOutOfStock = fa
 
   const minPrice = offers[0].prix_unitaire;
   const maxPrice = offers[offers.length - 1].prix_unitaire;
+  const bestOfferSummary = buildBestOfferSummary(offers);
+  const availablePrices = offers.map((offer) => offer.prix_unitaire);
 
   return {
     searched_with: {
@@ -407,6 +428,8 @@ const comparePieceAcrossVendors = async ({ pieceId, name, includeOutOfStock = fa
       prix_max: maxPrice,
       economie_max: Number((maxPrice - minPrice).toFixed(2))
     },
+    best_offer: bestOfferSummary,
+    available_prices: availablePrices,
     offres: offers
   };
 };

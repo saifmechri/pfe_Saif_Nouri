@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { sendApiResponse } = require("../utils/apiResponse");
 
-const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
+const SECRET = process.env.JWT_SECRET || "dtttrrzggfb_HJdfvdfs_gfbgfs55_4ffgbè44";
 
 const isValidBcryptHash = (value) => {
   return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);

@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { pool } = require("../db");
 
-const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
+const SECRET = process.env.JWT_SECRET || "dtttrrzggfb_HJdfvdfs_gfbgfs55_4ffgbè44";
 const { AppError } = require("../utils/appError");
 const { logger } = require("../utils/logger");
 const isTransientDbError = (error) => {

@@ -4,6 +4,7 @@ const { verifyToken } = require('../middlwares/authMiddleware');
 const { checkRole } = require('../middlwares/roleMiddleware');
 const { validateRequest } = require('../middlewares/validateRequest');
 const garageController = require('../controllers/garage.controller');
+const garageServiceController = require('../controllers/garageService.controller');
 
 const router = express.Router();
 
@@ -52,12 +53,55 @@ const updateGarageValidation = [
   body('is_open').optional().isBoolean().withMessage('is_open doit etre booleen')
 ];
 
+const serviceIdValidation = [
+  param('serviceId').isInt({ min: 1 }).withMessage('Identifiant service invalide')
+];
+
+const listGarageServicesValidation = [
+  ...garageIdValidation,
+  query('includeInactive').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeInactive invalide')
+];
+
+const createGarageServiceValidation = [
+  ...garageIdValidation,
+  body('name').trim().notEmpty().withMessage('Le nom du service est obligatoire').isLength({ max: 255 }).withMessage('Le nom du service ne doit pas depasser 255 caracteres'),
+  body('description').optional({ nullable: true }).isString().withMessage('La description doit etre une chaine de caracteres'),
+  body('base_price').optional({ nullable: true }).isFloat({ min: 0 }).withMessage('base_price doit etre superieur ou egal a 0'),
+  body('duration_minutes').optional({ nullable: true }).isInt({ min: 1, max: 10080 }).withMessage('duration_minutes doit etre compris entre 1 et 10080'),
+  body('is_active').optional().isBoolean().withMessage('is_active doit etre booleen')
+];
+
+const updateGarageServiceValidation = [
+  ...garageIdValidation,
+  ...serviceIdValidation,
+  body().custom((_, { req }) => {
+    const allowedFields = ['name', 'description', 'base_price', 'duration_minutes', 'is_active'];
+    const hasAtLeastOneField = allowedFields.some((field) => req.body[field] !== undefined);
+
+    if (!hasAtLeastOneField) {
+      throw new Error('Au moins un champ doit etre fourni');
+    }
+
+    return true;
+  }),
+  body('name').optional().trim().isLength({ min: 1, max: 255 }).withMessage('Le nom du service doit contenir entre 1 et 255 caracteres'),
+  body('description').optional({ nullable: true }).isString().withMessage('La description doit etre une chaine de caracteres'),
+  body('base_price').optional({ nullable: true }).isFloat({ min: 0 }).withMessage('base_price doit etre superieur ou egal a 0'),
+  body('duration_minutes').optional({ nullable: true }).isInt({ min: 1, max: 10080 }).withMessage('duration_minutes doit etre compris entre 1 et 10080'),
+  body('is_active').optional().isBoolean().withMessage('is_active doit etre booleen')
+];
+
 router.get('/', listGaragesValidation, validateRequest, garageController.listGarages);
 router.get('/me', verifyToken, checkRole('garage', 'admin'), garageController.getMyGarage);
+router.get('/me/services', verifyToken, checkRole('garage', 'admin'), garageServiceController.listMyGarageServices);
 router.get('/:id', garageIdValidation, validateRequest, garageController.getGarageById);
+router.get('/:id/services', listGarageServicesValidation, validateRequest, garageServiceController.listGarageServices);
 
 router.post('/', verifyToken, checkRole('garage', 'admin'), createGarageValidation, validateRequest, garageController.createGarage);
+router.post('/:id/services', verifyToken, checkRole('garage', 'admin'), createGarageServiceValidation, validateRequest, garageServiceController.createGarageService);
 router.put('/:id', verifyToken, checkRole('garage', 'admin'), updateGarageValidation, validateRequest, garageController.updateGarage);
+router.put('/:id/services/:serviceId', verifyToken, checkRole('garage', 'admin'), updateGarageServiceValidation, validateRequest, garageServiceController.updateGarageService);
 router.delete('/:id', verifyToken, checkRole('garage', 'admin'), garageIdValidation, validateRequest, garageController.deleteGarage);
+router.delete('/:id/services/:serviceId', verifyToken, checkRole('garage', 'admin'), [...garageIdValidation, ...serviceIdValidation], validateRequest, garageServiceController.deleteGarageService);
 
 module.exports = router;

@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const { Pool } = require('pg');
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -30,9 +32,35 @@ const poolOptions = {
   keepAliveInitialDelayMillis: 10000
 };
 
+const getPasswordFromDatabaseUrl = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = new URL(value);
+    return parsed.password || null;
+  } catch {
+    return null;
+  }
+};
+
+const databaseUrlPassword = getPasswordFromDatabaseUrl(DATABASE_URL);
+const explicitPassword = process.env.DB_PASSWORD;
+const hasStringPassword = typeof explicitPassword === 'string' && explicitPassword.length > 0;
+
+if (DATABASE_URL && !databaseUrlPassword && !hasStringPassword) {
+  throw new Error(
+    'Configuration PostgreSQL invalide: mot de passe manquant. Ajoutez le mot de passe dans DATABASE_URL (URL-encodé) ou définissez DB_PASSWORD.'
+  );
+}
+
+const passwordOverride = hasStringPassword ? explicitPassword : undefined;
+
 const pool = DATABASE_URL
   ? new Pool({
       connectionString: DATABASE_URL,
+      password: passwordOverride,
       ...poolOptions
     })
   : new Pool({
@@ -230,22 +258,41 @@ const initDatabase = async () => {
 
   await pool.query(`
     DO $$
+    DECLARE
+      constraint_record RECORD;
+      index_record RECORD;
     BEGIN
+      FOR constraint_record IN
+        SELECT c.conname AS constraint_name
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+        WHERE t.relname = 'pieces'
+          AND c.contype = 'u'
+        GROUP BY c.conname
+        HAVING COUNT(*) = 1 AND MAX(a.attname) = 'reference'
+      LOOP
+        EXECUTE format('ALTER TABLE pieces DROP CONSTRAINT IF EXISTS %I', constraint_record.constraint_name);
+      END LOOP;
+
       IF EXISTS (
         SELECT 1
         FROM pg_constraint
         WHERE conname = 'pieces_reference_key'
       ) THEN
-        EXECUTE 'ALTER TABLE pieces DROP CONSTRAINT pieces_reference_key';
+        EXECUTE 'ALTER TABLE pieces DROP CONSTRAINT IF EXISTS pieces_reference_key';
       END IF;
 
-      IF EXISTS (
-        SELECT 1
+      FOR index_record IN
+        SELECT indexname
         FROM pg_indexes
-        WHERE schemaname = 'public' AND indexname = 'pieces_reference_key'
-      ) THEN
-        EXECUTE 'DROP INDEX public.pieces_reference_key';
-      END IF;
+        WHERE schemaname = 'public'
+          AND tablename = 'pieces'
+          AND indexdef ILIKE '%UNIQUE%'
+          AND indexdef ILIKE '%(reference)%'
+      LOOP
+        EXECUTE format('DROP INDEX IF EXISTS public.%I', index_record.indexname);
+      END LOOP;
     END $$;
   `);
 

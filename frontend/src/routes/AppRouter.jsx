@@ -1,9 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useContext } from "react";
 import Home from "../pages/Home"; // situé directement dans pages/
 import Login from "../pages/auth/login";
 import Register from "../pages/auth/Register";
 import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
+import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
+import CataloguePieces from "../pages/vendeur/CataloguePieces";
+import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
 
 // Import des pages spécifiques aux rôles
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
@@ -13,9 +17,12 @@ import AdminDashboard from "../pages/admin/Dashboard";                   // exem
 
 import ProtectedRoute from "../components/ProtectedRoute";
 import RoleBasedRedirect from "../components/RoleBasedRedirect";
+import { AuthContext } from "../context/AuthContext";
 
 
 const AppRouter = () => {
+  const { user } = useContext(AuthContext);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -36,6 +43,14 @@ const AppRouter = () => {
         />
 
         {/* Tableaux de bord protégés par rôle */}
+        <Route
+          path="/automobiliste/recommandations"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
+              <AutomobilisteRecommendations />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/automobiliste/*"
           element={
@@ -73,6 +88,22 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["vendeur"]}>
               <VendeurDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendeur/catalogue"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
+              <CataloguePieces />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendeur/comparaison"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
+              <ComparaisonPrix />
             </ProtectedRoute>
           }
         />

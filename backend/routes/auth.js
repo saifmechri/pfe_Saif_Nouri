@@ -1,23 +1,23 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../db");
+const { pool } = require("../db");
+const { sendApiResponse } = require("../utils/apiResponse");
 
 const { register, login } = require("../controllers/authController");
 const { updateProfile, deleteProfile, changePassword } = require("../controllers/profileController");
 const { verifyToken } = require("../middlwares/authMiddleware");
-const { isAdmin, isProfessional, checkRole, isGarage, isVendeur, isAutomobiliste } = require("../middlwares/roleMiddleware");
+const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste } = require("../middlwares/roleMiddleware");
 
+// Authentification (public)
 router.post("/register", register);
 router.post("/login", login);
 
 // Route protégée - nécessite un token JWT valide
 router.get("/profile", verifyToken, (req, res) => {
-  res.json({
-    id: req.user.id,
-    name: req.user.name,
-    email: req.user.email,
-    role: req.user.role,
-    created_at: req.user.created_at
+  return sendApiResponse(res, {
+    message: 'Profil récupéré avec succès',
+    data: { user: req.user },
+    extra: { ...req.user, user: req.user }
   });
 });
 
@@ -47,45 +47,55 @@ router.get("/admin/users", verifyToken, isAdmin, async (req, res) => {
        JOIN roles r ON u.role_id = r.id 
        ORDER BY u.created_at DESC`
     );
-    res.json({ users: users.rows });
+    return sendApiResponse(res, {
+      message: 'Utilisateurs récupérés avec succès',
+      data: { users: users.rows },
+      extra: { users: users.rows }
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+    return sendApiResponse(res, {
+      statusCode: 500,
+      success: false,
+      message: "Erreur serveur",
+      error: { code: 'INTERNAL_SERVER_ERROR' }
+    });
   }
 });
 
 // Route accessible aux garages et vendeurs
 router.get("/professional/dashboard", verifyToken, isProfessional, (req, res) => {
-  res.json({ 
-    message: `Bienvenue sur le dashboard professionnel`,
-    role: req.userRole,
-    user: req.user
+  return sendApiResponse(res, {
+    message: 'Bienvenue sur le dashboard professionnel',
+    data: { role: req.userRole, user: req.user },
+    extra: { role: req.userRole, user: req.user }
   });
 });
 
 // Route accessible SEULEMENT aux automobilistes
 router.get("/automobiliste/mes-vehicules", verifyToken, isAutomobiliste, (req, res) => {
-  res.json({ 
-    message: "Liste de vos véhicules",
-    userId: req.user.id
+  return sendApiResponse(res, {
+    message: 'Liste de vos véhicules',
+    data: { userId: req.user.id },
+    extra: { userId: req.user.id }
   });
 });
 
 // Route accessible SEULEMENT aux garages
 router.get("/garage/mes-services", verifyToken, isGarage, (req, res) => {
-  res.json({ 
-    message: "Liste de vos services",
-    garageId: req.user.id,
-    role: req.userRole
+  return sendApiResponse(res, {
+    message: 'Liste de vos services',
+    data: { garageId: req.user.id, role: req.userRole },
+    extra: { garageId: req.user.id, role: req.userRole }
   });
 });
 
 // Route accessible SEULEMENT aux vendeurs
 router.get("/vendeur/mes-annonces", verifyToken, isVendeur, (req, res) => {
-  res.json({ 
-    message: "Liste de vos annonces de véhicules",
-    vendeurId: req.user.id,
-    role: req.userRole
+  return sendApiResponse(res, {
+    message: 'Liste de vos annonces de véhicules',
+    data: { vendeurId: req.user.id, role: req.userRole },
+    extra: { vendeurId: req.user.id, role: req.userRole }
   });
 });
 
@@ -93,16 +103,70 @@ router.get("/vendeur/mes-annonces", verifyToken, isVendeur, (req, res) => {
 router.get("/profile-complet", verifyToken, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT u.id, u.name, u.email, u.phone, r.name as role 
+      `SELECT u.id, u.name, u.email, u.phone, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, r.name as role 
        FROM users u 
        JOIN roles r ON u.role_id = r.id 
        WHERE u.id = $1`,
       [req.user.id]
     );
-    res.json({ user: result.rows[0] });
+    return sendApiResponse(res, {
+      message: 'Profil complet récupéré avec succès',
+      data: { user: result.rows[0] },
+      extra: { user: result.rows[0] }
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Erreur serveur" });
+    return sendApiResponse(res, {
+      statusCode: 500,
+      success: false,
+      message: "Erreur serveur",
+      error: { code: 'INTERNAL_SERVER_ERROR' }
+    });
+  }
+});
+
+router.get("/profile-complet/:id", verifyToken, async (req, res) => {
+  try {
+    const userId = Number.parseInt(req.params.id, 10);
+    if (!Number.isFinite(userId) || userId <= 0) {
+      return sendApiResponse(res, {
+        statusCode: 400,
+        success: false,
+        message: "Identifiant utilisateur invalide",
+        error: { code: 'INVALID_USER_ID' }
+      });
+    }
+
+    const result = await pool.query(
+      `SELECT u.id, u.name, u.email, u.phone, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, r.name as role
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.id = $1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return sendApiResponse(res, {
+        statusCode: 404,
+        success: false,
+        message: "Utilisateur introuvable",
+        error: { code: 'USER_NOT_FOUND' }
+      });
+    }
+
+    return sendApiResponse(res, {
+      message: 'Profil vendeur récupéré avec succès',
+      data: { user: result.rows[0] },
+      extra: { user: result.rows[0] }
+    });
+  } catch (err) {
+    console.error(err);
+    return sendApiResponse(res, {
+      statusCode: 500,
+      success: false,
+      message: "Erreur serveur",
+      error: { code: 'INTERNAL_SERVER_ERROR' }
+    });
   }
 });
 

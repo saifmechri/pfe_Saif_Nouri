@@ -1,1 +1,74 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
 @import "tailwindcss";
+
+:root {
+	--vb-bg: #f3f5f9;
+	--vb-surface: #ffffff;
+	--vb-text: #12223d;
+	--vb-muted: #617089;
+	--vb-structure: #1a2b4b;
+	--vb-primary: #1d4ed8;
+	--vb-primary-strong: #173ea9;
+	--vb-success: #16a34a;
+	--vb-danger: #dc2626;
+	--vb-warning: #f59e0b;
+	--vb-radius: 8px;
+}
+
+body {
+	margin: 0;
+	font-family: "Inter", sans-serif;
+	color: var(--vb-text);
+	background: var(--vb-bg);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: "Manrope", sans-serif;
+	letter-spacing: -0.02em;
+}
+
+.vb-card {
+	border-radius: var(--vb-radius);
+	background: var(--vb-surface);
+	border: 1px solid #dbe2ec;
+	box-shadow: 0 10px 28px rgba(24, 43, 75, 0.06);
+}
+
+.vb-btn-primary {
+	border-radius: var(--vb-radius);
+	background: var(--vb-primary);
+	color: #fff;
+	font-weight: 600;
+	transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.vb-btn-primary:hover {
+	background: var(--vb-primary-strong);
+	transform: translateY(-1px);
+}
+
+.vb-btn-outline {
+	border-radius: var(--vb-radius);
+	border: 1px solid #c9d5ea;
+	background: #fff;
+	color: var(--vb-structure);
+	font-weight: 600;
+}
+
+.vb-input {
+	border: 1px solid #cfd9ea;
+	border-radius: var(--vb-radius);
+	background: #fff;
+	color: var(--vb-text);
+}
+
+.vb-input:focus {
+	outline: none;
+	border-color: var(--vb-primary);
+	box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}

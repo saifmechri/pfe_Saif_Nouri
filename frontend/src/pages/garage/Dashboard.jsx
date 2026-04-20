@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PlatformLayout from "../../components/PlatformLayout";
 
 const GarageDashboard = () => {
   const [activeTab, setActiveTab] = useState("aujourdhui");
@@ -15,13 +16,15 @@ const GarageDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Espace Garage</h1>
+    <PlatformLayout>
+      <div className="min-h-screen bg-transparent">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <h1 className="mb-2 text-3xl font-extrabold text-[#1a2b4b]">Dashboard Garage</h1>
+          <p className="mb-6 text-sm text-[#617089]">Suivez votre planning atelier et la performance de vos services.</p>
 
         {/* Statistiques rapides */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow flex items-center">
+          <div className="vb-card flex items-center p-4">
             <div className="bg-blue-100 p-3 rounded-full mr-4">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             </div>
@@ -30,7 +33,7 @@ const GarageDashboard = () => {
               <p className="text-2xl font-bold">{rendezVousAujourdhui.length}</p>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow flex items-center">
+          <div className="vb-card flex items-center p-4">
             <div className="bg-green-100 p-3 rounded-full mr-4">
               <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </div>
@@ -39,7 +42,7 @@ const GarageDashboard = () => {
               <p className="text-2xl font-bold">{services.length}</p>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow flex items-center">
+          <div className="vb-card flex items-center p-4">
             <div className="bg-yellow-100 p-3 rounded-full mr-4">
               <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             </div>
@@ -51,28 +54,28 @@ const GarageDashboard = () => {
         </div>
 
         {/* Onglets */}
-        <div className="flex space-x-4 border-b mb-6">
+        <div className="mb-6 flex flex-wrap gap-3 border-b border-[#d5deec] pb-2">
           <button
             onClick={() => setActiveTab("aujourdhui")}
-            className={`pb-2 px-4 font-medium ${activeTab === "aujourdhui" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "aujourdhui" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Aujourd'hui
           </button>
           <button
             onClick={() => setActiveTab("services")}
-            className={`pb-2 px-4 font-medium ${activeTab === "services" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "services" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Services
           </button>
           <button
             onClick={() => setActiveTab("clients")}
-            className={`pb-2 px-4 font-medium ${activeTab === "clients" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "clients" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Clients
           </button>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="vb-card p-6">
           {activeTab === "aujourdhui" && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Rendez-vous du jour</h2>
@@ -134,8 +137,9 @@ const GarageDashboard = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </PlatformLayout>
   );
 };
 

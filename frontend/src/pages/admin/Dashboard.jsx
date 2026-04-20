@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PlatformLayout from "../../components/PlatformLayout";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("utilisateurs");
@@ -18,59 +19,61 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Administration</h1>
+    <PlatformLayout>
+      <div className="min-h-screen bg-transparent">
+        <div className="mx-auto max-w-7xl px-4 py-8">
+          <h1 className="mb-2 text-3xl font-extrabold text-[#1a2b4b]">Administration</h1>
+          <p className="mb-6 text-sm text-[#617089]">Vision globale de la plateforme, moderations et pilotage metier.</p>
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="vb-card p-4">
             <p className="text-sm text-gray-600">Utilisateurs</p>
             <p className="text-2xl font-bold">{stats.utilisateurs}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="vb-card p-4">
             <p className="text-sm text-gray-600">Garages</p>
             <p className="text-2xl font-bold">{stats.garages}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="vb-card p-4">
             <p className="text-sm text-gray-600">Annonces</p>
             <p className="text-2xl font-bold">{stats.annonces}</p>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow">
+          <div className="vb-card p-4">
             <p className="text-sm text-gray-600">Rendez-vous</p>
             <p className="text-2xl font-bold">{stats.rendezVous}</p>
           </div>
         </div>
 
         {/* Onglets */}
-        <div className="flex space-x-4 border-b mb-6">
+        <div className="mb-6 flex flex-wrap gap-3 border-b border-[#d5deec] pb-2">
           <button
             onClick={() => setActiveTab("utilisateurs")}
-            className={`pb-2 px-4 font-medium ${activeTab === "utilisateurs" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "utilisateurs" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Utilisateurs
           </button>
           <button
             onClick={() => setActiveTab("garages")}
-            className={`pb-2 px-4 font-medium ${activeTab === "garages" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "garages" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Garages
           </button>
           <button
             onClick={() => setActiveTab("annonces")}
-            className={`pb-2 px-4 font-medium ${activeTab === "annonces" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "annonces" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Annonces
           </button>
           <button
             onClick={() => setActiveTab("parametres")}
-            className={`pb-2 px-4 font-medium ${activeTab === "parametres" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
+            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "parametres" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Paramètres
           </button>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
+        <div className="vb-card p-6">
           {activeTab === "utilisateurs" && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Gestion des utilisateurs</h2>
@@ -123,8 +126,9 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </PlatformLayout>
   );
 };
 

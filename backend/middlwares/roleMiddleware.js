@@ -1,4 +1,5 @@
-const pool = require("../db");
+const { pool } = require("../db");
+const { AppError } = require("../utils/appError");
 
 /**
  * Middleware de vérification de rôle utilisateur
@@ -17,57 +18,20 @@ const pool = require("../db");
 const checkRole = (...allowedRoles) => {
   return async (req, res, next) => {
     try {
-      // req.user.id est défini par le middleware verifyToken
-      const userId = req.user.id;
-      
-      // Log de la tentative d'accès (en mode développement)
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[ROLE CHECK] User ${userId} - Rôles requis: [${allowedRoles.join(', ')}]`);
+      const userRole = req.user?.role;
+
+      if (!userRole) {
+        throw new AppError('Utilisateur sans role defini', 403, 'ROLE_NOT_DEFINED');
       }
-      
-      // Récupérer le rôle de l'utilisateur depuis la BDD
-      const result = await pool.query(
-        `SELECT r.name 
-         FROM users u 
-         JOIN roles r ON u.role_id = r.id 
-         WHERE u.id = $1`,
-        [userId]
-      );
-      
-      // Si l'utilisateur n'existe pas ou n'a pas de rôle
-      if (result.rows.length === 0) {
-        console.warn(`[ROLE CHECK] ⚠️ User ${userId} sans rôle défini`);
-        return res.status(403).json({ 
-          message: "Utilisateur sans rôle défini" 
-        });
-      }
-      
-      const userRole = result.rows[0].name;
-      
-      // Vérifier si le rôle de l'utilisateur est dans la liste autorisée
+
       if (!allowedRoles.includes(userRole)) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[ROLE CHECK] ❌ ACCÈS REFUSÉ - Rôle actuel: ${userRole}`);
-        }
-        return res.status(403).json({ 
-          message: "Accès refusé : permissions insuffisantes",
-          required: allowedRoles,
-          current: userRole
-        });
+        throw new AppError('Acces refuse : permissions insuffisantes', 403, 'FORBIDDEN_ROLE');
       }
-      
-      // Log de succès (en mode développement)
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[ROLE CHECK] ✅ ACCÈS AUTORISÉ - Rôle: ${userRole}`);
-      }
-      
-      // Ajouter le rôle à l'objet req pour l'utiliser dans les routes
+
       req.userRole = userRole;
       next();
-      
     } catch (err) {
-      console.error("[ROLE CHECK] Erreur vérification rôle:", err);
-      res.status(500).json({ message: "Erreur serveur" });
+      next(err);
     }
   };
 };
@@ -101,6 +65,7 @@ const isGarage = checkRole('garage');
  * @type {Function}
  */
 const isVendeur = checkRole('vendeur');
+const isVendeurOrAdmin = checkRole('vendeur', 'admin');
 
 /**
  * Fonction helper pour vérifier si un utilisateur a un rôle spécifique
@@ -139,5 +104,6 @@ module.exports = {
   isAutomobiliste,
   isGarage,
   isVendeur,
+  isVendeurOrAdmin,
   hasRole
 };

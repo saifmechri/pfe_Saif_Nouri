@@ -1,10 +1,11 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
 const { verifyToken } = require('../middlwares/authMiddleware');
-const { checkRole } = require('../middlwares/roleMiddleware');
+const { checkRole, isAutomobiliste } = require('../middlwares/roleMiddleware');
 const { validateRequest } = require('../middlewares/validateRequest');
 const garageController = require('../controllers/garage.controller');
 const garageServiceController = require('../controllers/garageService.controller');
+const garageReviewController = require('../controllers/garageReview.controller');
 
 const router = express.Router();
 
@@ -91,17 +92,57 @@ const updateGarageServiceValidation = [
   body('is_active').optional().isBoolean().withMessage('is_active doit etre booleen')
 ];
 
+const reviewIdValidation = [
+  param('reviewId').isInt({ min: 1 }).withMessage('Identifiant avis invalide')
+];
+
+const listGarageReviewsValidation = [
+  ...garageIdValidation,
+  query('page').optional().isInt({ min: 1 }).withMessage('page doit etre un entier superieur ou egal a 1'),
+  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit doit etre compris entre 1 et 100'),
+  query('includeHidden').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeHidden invalide')
+];
+
+const createGarageReviewValidation = [
+  ...garageIdValidation,
+  body('rating').notEmpty().withMessage('Le rating est obligatoire').isFloat({ min: 1, max: 5 }).withMessage('rating doit etre compris entre 1 et 5'),
+  body('comment').optional({ nullable: true }).isString().withMessage('Le commentaire doit etre une chaine de caracteres')
+];
+
+const updateGarageReviewValidation = [
+  ...garageIdValidation,
+  ...reviewIdValidation,
+  body().custom((_, { req }) => {
+    const allowedFields = ['rating', 'comment', 'is_published'];
+    const hasAtLeastOneField = allowedFields.some((field) => req.body[field] !== undefined);
+
+    if (!hasAtLeastOneField) {
+      throw new Error('Au moins un champ doit etre fourni');
+    }
+
+    return true;
+  }),
+  body('rating').optional().isFloat({ min: 1, max: 5 }).withMessage('rating doit etre compris entre 1 et 5'),
+  body('comment').optional({ nullable: true }).isString().withMessage('Le commentaire doit etre une chaine de caracteres'),
+  body('is_published').optional().isBoolean().withMessage('is_published doit etre booleen')
+];
+
 router.get('/', listGaragesValidation, validateRequest, garageController.listGarages);
 router.get('/me', verifyToken, checkRole('garage', 'admin'), garageController.getMyGarage);
 router.get('/me/services', verifyToken, checkRole('garage', 'admin'), garageServiceController.listMyGarageServices);
+router.get('/me/reviews', verifyToken, checkRole('garage', 'admin'), garageReviewController.listMyGarageReviews);
 router.get('/:id', garageIdValidation, validateRequest, garageController.getGarageById);
 router.get('/:id/services', listGarageServicesValidation, validateRequest, garageServiceController.listGarageServices);
+router.get('/:id/reviews', listGarageReviewsValidation, validateRequest, garageReviewController.listGarageReviews);
 
 router.post('/', verifyToken, checkRole('garage', 'admin'), createGarageValidation, validateRequest, garageController.createGarage);
 router.post('/:id/services', verifyToken, checkRole('garage', 'admin'), createGarageServiceValidation, validateRequest, garageServiceController.createGarageService);
+router.post('/:id/reviews', verifyToken, isAutomobiliste, createGarageReviewValidation, validateRequest, garageReviewController.createGarageReview);
 router.put('/:id', verifyToken, checkRole('garage', 'admin'), updateGarageValidation, validateRequest, garageController.updateGarage);
 router.put('/:id/services/:serviceId', verifyToken, checkRole('garage', 'admin'), updateGarageServiceValidation, validateRequest, garageServiceController.updateGarageService);
+router.put('/:id/reviews/:reviewId', verifyToken, updateGarageReviewValidation, validateRequest, garageReviewController.updateGarageReview);
 router.delete('/:id', verifyToken, checkRole('garage', 'admin'), garageIdValidation, validateRequest, garageController.deleteGarage);
 router.delete('/:id/services/:serviceId', verifyToken, checkRole('garage', 'admin'), [...garageIdValidation, ...serviceIdValidation], validateRequest, garageServiceController.deleteGarageService);
+router.delete('/:id/reviews/:reviewId', verifyToken, reviewIdValidation, [...garageIdValidation, ...reviewIdValidation], validateRequest, garageReviewController.deleteGarageReview);
 
 module.exports = router;

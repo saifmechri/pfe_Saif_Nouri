@@ -36,6 +36,11 @@ const PlatformLayout = ({ children }) => {
 
   if (user?.role === "automobiliste") {
     navItems.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
+    navItems.push({ label: "Garages", to: "/automobiliste/garages" });
+  }
+
+  if (user?.role === "garage") {
+    navItems.push({ label: "Gestion garage", to: "/garage" });
   }
 
   return (

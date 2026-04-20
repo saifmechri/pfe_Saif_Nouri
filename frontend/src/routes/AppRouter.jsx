@@ -6,6 +6,7 @@ import Register from "../pages/auth/Register";
 import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
 import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
+import GaragesPage from "../pages/automobiliste/Garages";
 import CataloguePieces from "../pages/vendeur/CataloguePieces";
 import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
 
@@ -48,6 +49,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["automobiliste"]}>
               <AutomobilisteRecommendations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/automobiliste/garages"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
+              <GaragesPage />
             </ProtectedRoute>
           }
         />

@@ -193,6 +193,7 @@ const initDatabase = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS garages (
       id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
       name VARCHAR(255) NOT NULL,
       adresse VARCHAR(255),
       telephone VARCHAR(50),
@@ -243,6 +244,7 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE intervention_pieces ADD COLUMN IF NOT EXISTS piece_id BIGINT');
 
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS is_open BOOLEAN DEFAULT true');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE SET NULL');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
 
@@ -363,6 +365,22 @@ const initDatabase = async () => {
 
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'garages' AND column_name = 'createdAt'
+      ) THEN
+        EXECUTE 'ALTER TABLE garages ALTER COLUMN "createdAt" SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE garages SET "createdAt" = COALESCE("createdAt", CURRENT_TIMESTAMP)';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'garages' AND column_name = 'updatedAt'
+      ) THEN
+        EXECUTE 'ALTER TABLE garages ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP';
+        EXECUTE 'UPDATE garages SET "updatedAt" = COALESCE("updatedAt", CURRENT_TIMESTAMP)';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
         WHERE table_name = 'pieces' AND column_name = 'createdAt'
       ) THEN
         EXECUTE 'UPDATE pieces SET created_at = COALESCE(created_at, "createdAt")';
@@ -388,6 +406,8 @@ const initDatabase = async () => {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_intervention_id ON intervention_pieces (intervention_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_piece_stock_movements_piece_id ON piece_stock_movements (piece_id, created_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_piece_stock_movements_user_id ON piece_stock_movements (user_id, created_at DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_garages_user_id ON garages (user_id)');
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS ux_garages_user_id_unique ON garages (user_id) WHERE user_id IS NOT NULL');
 };
 
 module.exports = {

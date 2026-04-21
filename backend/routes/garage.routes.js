@@ -25,7 +25,12 @@ const listGaragesValidation = [
   query('page').optional().isInt({ min: 1 }).withMessage('page doit etre un entier superieur ou egal a 1'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit doit etre compris entre 1 et 100'),
   query('search').optional().isString().withMessage('search doit etre une chaine de caracteres'),
-  query('includeClosed').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeClosed invalide')
+  query('includeClosed').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeClosed invalide'),
+  query('userLat').optional().isFloat({ min: -90, max: 90 }).withMessage('userLat doit etre comprise entre -90 et 90'),
+  query('userLon').optional().isFloat({ min: -180, max: 180 }).withMessage('userLon doit etre comprise entre -180 et 180'),
+  query('radiusKm').optional().isFloat({ gt: 0 }).withMessage('radiusKm doit etre superieur a 0'),
+  query('sortBy').optional().isIn(['distance', 'created_at']).withMessage('sortBy invalide'),
+  query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('sortOrder invalide')
 ];
 
 const garageIdValidation = [

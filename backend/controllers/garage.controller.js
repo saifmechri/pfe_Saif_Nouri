@@ -2,6 +2,7 @@ const { pool } = require('../db');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
+const { haversine } = require('../utils/algorithms');
 
 const mapGarageRow = (row) => ({
   id: Number(row.id),
@@ -35,6 +36,32 @@ const parseNullableNumber = (value, fieldName) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
     throw new AppError(`${fieldName} invalide`, 400, 'INVALID_NUMERIC_VALUE');
+  }
+
+  return parsed;
+};
+
+const parseOptionalCoordinate = (value, fieldName) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new AppError(`${fieldName} invalide`, 400, 'INVALID_COORDINATE');
+  }
+
+  return parsed;
+};
+
+const parseOptionalPositiveNumber = (value, fieldName) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new AppError(`${fieldName} doit etre superieur a 0`, 400, 'INVALID_NUMERIC_VALUE');
   }
 
   return parsed;
@@ -159,11 +186,31 @@ const createGarage = asyncHandler(async (req, res) => {
 });
 
 const listGarages = asyncHandler(async (req, res) => {
+  // Pagination standard (utilisee aussi apres filtrage geo).
   const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
   const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 10));
   const offset = (page - 1) * limit;
   const search = normalizeOptionalString(req.query.search);
   const includeClosed = ['true', '1', 'yes', 'on'].includes(String(req.query.includeClosed || '').toLowerCase());
+
+  // Parametres geographiques pour activer la distance Haversine.
+  const userLat = parseOptionalCoordinate(req.query.userLat, 'userLat');
+  const userLon = parseOptionalCoordinate(req.query.userLon, 'userLon');
+  const radiusKm = parseOptionalPositiveNumber(req.query.radiusKm, 'radiusKm');
+  const sortBy = String(req.query.sortBy || '').toLowerCase();
+  const sortOrder = String(req.query.sortOrder || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc';
+
+  // On impose une paire complete: latitude + longitude.
+  if ((userLat === null) !== (userLon === null)) {
+    throw new AppError('userLat et userLon doivent etre fournis ensemble', 400, 'MISSING_COORDINATE_PAIR');
+  }
+
+  const useDistance = userLat !== null && userLon !== null;
+
+  // Tri distance ou rayon impossible sans position utilisateur.
+  if ((sortBy === 'distance' || radiusKm !== null) && !useDistance) {
+    throw new AppError('userLat et userLon sont obligatoires pour distance/radiusKm', 400, 'COORDINATES_REQUIRED');
+  }
 
   const whereClauses = [];
   const params = [];
@@ -180,31 +227,110 @@ const listGarages = asyncHandler(async (req, res) => {
 
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-  params.push(limit);
-  params.push(offset);
+  // Si geo activee: on charge d abord le jeu complet, puis on applique
+  // calcul distance/filtrage/tri en memoire avant la pagination finale.
+  // Sinon: pagination SQL classique pour performance.
+  const needsGeoPostProcessing = useDistance || radiusKm !== null || sortBy === 'distance';
 
-  const result = await pool.query(
-    `SELECT g.id, g.user_id, g.name, g.adresse, g.telephone, g.email, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at,
-            COUNT(*) OVER() AS total_count
-     FROM garages g
-     ${whereSql}
-     ORDER BY g.created_at DESC
-     LIMIT $${params.length - 1}
-     OFFSET $${params.length}`,
-    params
-  );
+  let rows = [];
+  if (needsGeoPostProcessing) {
+    const result = await pool.query(
+      `SELECT g.id, g.user_id, g.name, g.adresse, g.telephone, g.email, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at
+       FROM garages g
+       ${whereSql}
+       ORDER BY g.created_at DESC`,
+      params
+    );
 
-  const totalItems = result.rows.length > 0 ? Number(result.rows[0].total_count) : 0;
+    rows = result.rows;
+  } else {
+    params.push(limit);
+    params.push(offset);
+
+    const result = await pool.query(
+      `SELECT g.id, g.user_id, g.name, g.adresse, g.telephone, g.email, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at,
+              COUNT(*) OVER() AS total_count
+       FROM garages g
+       ${whereSql}
+       ORDER BY g.created_at DESC
+       LIMIT $${params.length - 1}
+       OFFSET $${params.length}`,
+      params
+    );
+
+    rows = result.rows;
+  }
+
+  const mappedItems = rows.map((row) => {
+    const mapped = mapGarageRow(row);
+
+    // Pas de distance si coords utilisateur absentes ou coords garage manquantes.
+    if (!useDistance || mapped.latitude === null || mapped.longitude === null) {
+      return {
+        ...mapped,
+        distance_km: null
+      };
+    }
+
+    // Distance (km) via formule Haversine.
+    return {
+      ...mapped,
+      distance_km: haversine(userLat, userLon, mapped.latitude, mapped.longitude)
+    };
+  });
+
+  let filteredItems = mappedItems;
+  // Filtre de proximite uniquement si radiusKm est fourni.
+  if (radiusKm !== null) {
+    filteredItems = mappedItems.filter((item) => item.distance_km !== null && item.distance_km <= radiusKm);
+  }
+
+  // Tri geographique avec fallback (distance null a la fin).
+  if (sortBy === 'distance' && useDistance) {
+    filteredItems = filteredItems.sort((a, b) => {
+      if (a.distance_km === null && b.distance_km === null) {
+        return 0;
+      }
+
+      if (a.distance_km === null) {
+        return 1;
+      }
+
+      if (b.distance_km === null) {
+        return -1;
+      }
+
+      return sortOrder === 'desc'
+        ? b.distance_km - a.distance_km
+        : a.distance_km - b.distance_km;
+    });
+  }
+
+  const totalItems = needsGeoPostProcessing
+    ? filteredItems.length
+    : (rows.length > 0 ? Number(rows[0].total_count) : 0);
+
+  // Pagination appliquee apres traitements geo pour un resultat coherent.
+  const paginatedItems = needsGeoPostProcessing
+    ? filteredItems.slice(offset, offset + limit)
+    : filteredItems;
 
   return sendApiResponse(res, {
     message: 'Liste des garages recuperee avec succes',
     data: {
-      items: result.rows.map(mapGarageRow),
+      items: paginatedItems,
       pagination: {
         page,
         limit,
         totalItems,
         totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / limit)
+      },
+      filters: {
+        userLat,
+        userLon,
+        radiusKm,
+        sortBy: sortBy || null,
+        sortOrder: sortBy === 'distance' ? sortOrder : null
       }
     }
   });

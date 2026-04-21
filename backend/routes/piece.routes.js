@@ -103,7 +103,12 @@ const comparePiecesValidation = [
 
     return true;
   }),
-  query('includeOutOfStock').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeOutOfStock invalide')
+  query('includeOutOfStock').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeOutOfStock invalide'),
+  query('userLat').optional().isFloat({ min: -90, max: 90 }).withMessage('userLat doit etre comprise entre -90 et 90'),
+  query('userLon').optional().isFloat({ min: -180, max: 180 }).withMessage('userLon doit etre comprise entre -180 et 180'),
+  query('radiusKm').optional().isFloat({ gt: 0 }).withMessage('radiusKm doit etre superieur a 0'),
+  query('sortBy').optional().isIn(['price', 'distance']).withMessage('sortBy invalide'),
+  query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('sortOrder invalide')
 ];
 
 const adjustStockValidation = [

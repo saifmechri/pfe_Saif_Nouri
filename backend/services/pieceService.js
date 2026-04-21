@@ -1,5 +1,6 @@
 const { pool } = require('../db');
 const { AppError } = require('../utils/appError');
+const { haversine } = require('../utils/algorithms');
 
 const ALLOWED_SORT_FIELDS = new Set(['nom', 'reference', 'prix_unitaire', 'created_at', 'updated_at']);
 const ALLOWED_SORT_ORDERS = new Set(['asc', 'desc']);
@@ -36,6 +37,32 @@ const parseNonNegativeInteger = (value, fieldName) => {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
     throw new AppError(`${fieldName} doit être un entier positif ou nul`, 400, 'INVALID_STOCK');
+  }
+
+  return parsed;
+};
+
+const parseOptionalCoordinate = (value, fieldName, min, max) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    throw new AppError(`${fieldName} invalide`, 400, 'INVALID_COORDINATE');
+  }
+
+  return parsed;
+};
+
+const parseOptionalPositiveNumber = (value, fieldName) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new AppError(`${fieldName} doit etre superieur a 0`, 400, 'INVALID_NUMERIC_VALUE');
   }
 
   return parsed;
@@ -317,7 +344,15 @@ const buildBestOfferSummary = (offers) => {
     return null;
   }
 
-  const bestOffer = offers[0];
+  const offersSortedByPrice = [...offers].sort((a, b) => {
+    if (a.prix_unitaire !== b.prix_unitaire) {
+      return a.prix_unitaire - b.prix_unitaire;
+    }
+
+    return b.stock - a.stock;
+  });
+
+  const bestOffer = offersSortedByPrice[0];
   return {
     prix_minimum: bestOffer.prix_unitaire,
     meilleur_vendeur: {
@@ -331,9 +366,38 @@ const buildBestOfferSummary = (offers) => {
   };
 };
 
-const comparePieceAcrossVendors = async ({ pieceId, name, includeOutOfStock = false } = {}) => {
+const comparePieceAcrossVendors = async ({
+  pieceId,
+  name,
+  includeOutOfStock = false,
+  userLat,
+  userLon,
+  radiusKm,
+  sortBy = 'price',
+  sortOrder = 'asc'
+} = {}) => {
+  // Validation et normalisation des entrees principales.
   const hasPieceId = pieceId !== undefined && pieceId !== null && String(pieceId).trim() !== '';
   const normalizedName = normalizeText(name);
+
+  // Coordonnees utilisateur + options geo (rayon / tri distance).
+  const parsedUserLat = parseOptionalCoordinate(userLat, 'userLat', -90, 90);
+  const parsedUserLon = parseOptionalCoordinate(userLon, 'userLon', -180, 180);
+  const parsedRadiusKm = parseOptionalPositiveNumber(radiusKm, 'radiusKm');
+  const normalizedSortBy = String(sortBy || 'price').toLowerCase() === 'distance' ? 'distance' : 'price';
+  const normalizedSortOrder = String(sortOrder || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc';
+
+  // Evite les requetes ambiguës: on exige toujours une paire complete.
+  if ((parsedUserLat === null) !== (parsedUserLon === null)) {
+    throw new AppError('userLat et userLon doivent etre fournis ensemble', 400, 'MISSING_COORDINATE_PAIR');
+  }
+
+  const hasUserCoordinates = parsedUserLat !== null && parsedUserLon !== null;
+
+  // Toute logique geo depend de la position utilisateur.
+  if ((parsedRadiusKm !== null || normalizedSortBy === 'distance') && !hasUserCoordinates) {
+    throw new AppError('userLat et userLon sont obligatoires pour distance/radiusKm', 400, 'COORDINATES_REQUIRED');
+  }
 
   if (!hasPieceId && !normalizedName) {
     throw new AppError('Vous devez fournir pieceId ou name', 400, 'MISSING_SEARCH_CRITERIA');
@@ -400,20 +464,76 @@ const comparePieceAcrossVendors = async ({ pieceId, name, includeOutOfStock = fa
     params
   );
 
-  const offers = offersResult.rows.map(mapVendorOfferRow);
+  // Ajout de distance_km pour chaque offre vendeur.
+  let offers = offersResult.rows.map((row) => {
+    const offer = mapVendorOfferRow(row);
+
+    // Distance indisponible si coords manquantes cote vendeur.
+    if (!hasUserCoordinates || offer.vendeur.latitude === null || offer.vendeur.longitude === null) {
+      return {
+        ...offer,
+        distance_km: null
+      };
+    }
+
+    // Calcul Haversine (km) entre utilisateur et vendeur.
+    return {
+      ...offer,
+      distance_km: haversine(parsedUserLat, parsedUserLon, offer.vendeur.latitude, offer.vendeur.longitude)
+    };
+  });
+
+  // Si rayon fourni: ne garder que les offres dans le perimetre.
+  if (parsedRadiusKm !== null) {
+    offers = offers.filter((offer) => offer.distance_km !== null && offer.distance_km <= parsedRadiusKm);
+  }
+
+  // Tri principal: distance ou prix.
+  if (normalizedSortBy === 'distance') {
+    offers = offers.sort((a, b) => {
+      if (a.distance_km === null && b.distance_km === null) {
+        return 0;
+      }
+
+      if (a.distance_km === null) {
+        return 1;
+      }
+
+      if (b.distance_km === null) {
+        return -1;
+      }
+
+      if (a.distance_km !== b.distance_km) {
+        return normalizedSortOrder === 'desc'
+          ? b.distance_km - a.distance_km
+          : a.distance_km - b.distance_km;
+      }
+
+      return a.prix_unitaire - b.prix_unitaire;
+    });
+  } else if (normalizedSortOrder === 'desc') {
+    offers = offers.sort((a, b) => b.prix_unitaire - a.prix_unitaire);
+  }
+
   if (offers.length === 0) {
     throw new AppError('Aucune offre vendeur trouvee pour cette piece', 404, 'NO_VENDOR_OFFERS_FOUND');
   }
 
-  const minPrice = offers[0].prix_unitaire;
-  const maxPrice = offers[offers.length - 1].prix_unitaire;
+  // Le best_offer reste toujours "meilleur prix" pour eviter la confusion
+  // quand l utilisateur choisit un tri distance.
+  const prices = offers.map((offer) => offer.prix_unitaire);
+  const minPrice = Math.min(...prices);
+  const maxPrice = Math.max(...prices);
   const bestOfferSummary = buildBestOfferSummary(offers);
-  const availablePrices = offers.map((offer) => offer.prix_unitaire);
+  const availablePrices = [...prices].sort((a, b) => a - b);
 
   return {
     searched_with: {
       pieceId: hasPieceId ? Number(pieceId) : null,
-      name: normalizedName || null
+      name: normalizedName || null,
+      userLat: parsedUserLat,
+      userLon: parsedUserLon,
+      radiusKm: parsedRadiusKm
     },
     piece: {
       nom: offers[0].nom,
@@ -427,6 +547,10 @@ const comparePieceAcrossVendors = async ({ pieceId, name, includeOutOfStock = fa
       prix_min: minPrice,
       prix_max: maxPrice,
       economie_max: Number((maxPrice - minPrice).toFixed(2))
+    },
+    sorting: {
+      sortBy: normalizedSortBy,
+      sortOrder: normalizedSortOrder
     },
     best_offer: bestOfferSummary,
     available_prices: availablePrices,

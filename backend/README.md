@@ -192,7 +192,7 @@ Le calcul utilise la formule Haversine dans `utils/algorithms.js`.
 Cette fonctionnalite suit la separation standard du projet:
 
 1. Route
-- Valide les query params (`userLat`, `userLon`, `radiusKm`, `sortBy`, `sortOrder`).
+- Valide les query params (`userLat`, `userLon`, `radiusKm`, `minRating`, `maxRating`, `serviceIds`, `services`, `serviceMatch`, `sortBy`, `sortOrder`).
 - Rejette les formats invalides avant d arriver au controller/service.
 
 2. Controller (garages)
@@ -240,12 +240,17 @@ Pipeline interne:
 - `userLat` dans [-90, 90]
 - `userLon` dans [-180, 180]
 - `radiusKm > 0`
+- `minRating` et `maxRating` dans [0, 5]
+- `serviceIds` en CSV numerique (ex: `1,5,9`)
+- `services` en CSV de noms (ex: `vidange,diagnostic`)
+- `serviceMatch` parmi `any|all`
 - `sortBy` parmi `distance|created_at`
 - `sortOrder` parmi `asc|desc`
 
 2. Regles de coherence
 - Si `userLat` est fourni, `userLon` doit exister aussi (et inversement).
 - Si `sortBy=distance` ou `radiusKm` est fourni, coords utilisateur obligatoires.
+- Si `minRating` et `maxRating` existent, `minRating <= maxRating`.
 
 3. Strategie SQL/pagination
 - Sans geo: pagination SQL classique (`LIMIT/OFFSET`) pour performance.
@@ -255,7 +260,15 @@ Pipeline interne:
   - tri distance
   - pagination finale en memoire
 
-4. Sortie JSON
+4. Filtre services/rating
+- Le rating est filtre directement sur `garages.rating`.
+- Le filtre services s appuie sur `garage_services`.
+- `serviceMatch=any`: le garage doit matcher au moins un service demande.
+- `serviceMatch=all`: le garage doit matcher tous les services demandes.
+- Par defaut, le backend ne considere que les services actifs (`is_active = true`).
+- `includeInactiveServices=true` inclut aussi les services inactifs.
+
+5. Sortie JSON
 - Chaque garage contient `distance_km` (ou `null` si coords indisponibles).
 - Bloc `filters` retourne les parametres geo appliques.
 
@@ -284,11 +297,27 @@ Exemple reponse simplifiee:
       "userLat": 36.8065,
       "userLon": 10.1815,
       "radiusKm": 10,
+      "minRating": 4,
+      "maxRating": 5,
+      "serviceIds": [1, 3],
+      "services": ["vidange", "diagnostic"],
+      "serviceMatch": "any",
+      "includeInactiveServices": false,
       "sortBy": "distance",
       "sortOrder": "asc"
     }
   }
 }
+```
+
+Exemples requetes backend combinees:
+
+```bash
+# Distance + rating + services (match any)
+GET /api/garages?userLat=36.8065&userLon=10.1815&radiusKm=15&minRating=4&services=vidange,diagnostic&serviceMatch=any&sortBy=distance&sortOrder=asc
+
+# Rating intervalle + services par IDs (match all)
+GET /api/garages?minRating=3.5&maxRating=5&serviceIds=1,5,9&serviceMatch=all
 ```
 
 ### B) Vendeurs de pieces - endpoint GET /api/pieces/compare/vendors
@@ -361,6 +390,9 @@ Exemple reponse simplifiee:
 Garages:
 - `MISSING_COORDINATE_PAIR` (400): un seul des 2 champs `userLat/userLon` envoye.
 - `COORDINATES_REQUIRED` (400): tri distance/rayon sans coords utilisateur.
+- `INVALID_RATING_FILTER` (400): `minRating` ou `maxRating` hors [0, 5].
+- `INVALID_RATING_RANGE` (400): `minRating > maxRating`.
+- `INVALID_LIST_FILTER` (400): liste services invalide (`serviceIds`/`services`).
 
 Vendeurs:
 - `MISSING_SEARCH_CRITERIA` (400): ni `pieceId` ni `name`.

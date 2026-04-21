@@ -67,6 +67,46 @@ const parseOptionalPositiveNumber = (value, fieldName) => {
   return parsed;
 };
 
+const parseOptionalIntegerList = (value, fieldName) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const rawItems = String(value)
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  if (rawItems.length === 0) {
+    throw new AppError(`${fieldName} invalide`, 400, 'INVALID_LIST_FILTER');
+  }
+
+  const parsedItems = rawItems.map((item) => Number.parseInt(item, 10));
+  const hasInvalidItem = parsedItems.some((item) => !Number.isInteger(item) || item <= 0);
+  if (hasInvalidItem) {
+    throw new AppError(`${fieldName} invalide`, 400, 'INVALID_LIST_FILTER');
+  }
+
+  return [...new Set(parsedItems)];
+};
+
+const parseOptionalStringList = (value, fieldName) => {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const normalizedItems = String(value)
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter((item) => item.length > 0);
+
+  if (normalizedItems.length === 0) {
+    throw new AppError(`${fieldName} invalide`, 400, 'INVALID_LIST_FILTER');
+  }
+
+  return [...new Set(normalizedItems)];
+};
+
 const resolveOwnerUserId = (req, providedUserId) => {
   const role = req.user?.role;
   const currentUserId = Number(req.user?.id);
@@ -192,6 +232,12 @@ const listGarages = asyncHandler(async (req, res) => {
   const offset = (page - 1) * limit;
   const search = normalizeOptionalString(req.query.search);
   const includeClosed = ['true', '1', 'yes', 'on'].includes(String(req.query.includeClosed || '').toLowerCase());
+  const includeInactiveServices = ['true', '1', 'yes', 'on'].includes(String(req.query.includeInactiveServices || '').toLowerCase());
+  const minRating = parseNullableNumber(req.query.minRating, 'minRating');
+  const maxRating = parseNullableNumber(req.query.maxRating, 'maxRating');
+  const serviceIds = parseOptionalIntegerList(req.query.serviceIds, 'serviceIds');
+  const serviceNames = parseOptionalStringList(req.query.services, 'services');
+  const serviceMatch = String(req.query.serviceMatch || 'any').toLowerCase() === 'all' ? 'all' : 'any';
 
   // Parametres geographiques pour activer la distance Haversine.
   const userLat = parseOptionalCoordinate(req.query.userLat, 'userLat');
@@ -212,6 +258,18 @@ const listGarages = asyncHandler(async (req, res) => {
     throw new AppError('userLat et userLon sont obligatoires pour distance/radiusKm', 400, 'COORDINATES_REQUIRED');
   }
 
+  if (minRating !== null && (minRating < 0 || minRating > 5)) {
+    throw new AppError('minRating doit etre compris entre 0 et 5', 400, 'INVALID_RATING_FILTER');
+  }
+
+  if (maxRating !== null && (maxRating < 0 || maxRating > 5)) {
+    throw new AppError('maxRating doit etre compris entre 0 et 5', 400, 'INVALID_RATING_FILTER');
+  }
+
+  if (minRating !== null && maxRating !== null && minRating > maxRating) {
+    throw new AppError('minRating doit etre inferieur ou egal a maxRating', 400, 'INVALID_RATING_RANGE');
+  }
+
   const whereClauses = [];
   const params = [];
 
@@ -223,6 +281,72 @@ const listGarages = asyncHandler(async (req, res) => {
     params.push(`%${search}%`);
     const p = `$${params.length}`;
     whereClauses.push(`(g.name ILIKE ${p} OR g.adresse ILIKE ${p} OR g.email ILIKE ${p})`);
+  }
+
+  if (minRating !== null) {
+    params.push(minRating);
+    whereClauses.push(`g.rating >= $${params.length}`);
+  }
+
+  if (maxRating !== null) {
+    params.push(maxRating);
+    whereClauses.push(`g.rating <= $${params.length}`);
+  }
+
+  const serviceActiveClause = includeInactiveServices ? '' : 'AND gs.is_active = true';
+
+  if (serviceIds && serviceIds.length > 0) {
+    params.push(serviceIds);
+    const idsParam = `$${params.length}`;
+
+    if (serviceMatch === 'all') {
+      params.push(serviceIds.length);
+      const countParam = `$${params.length}`;
+      whereClauses.push(
+        `(SELECT COUNT(DISTINCT gs.id)
+          FROM garage_services gs
+          WHERE gs.garage_id = g.id
+            ${serviceActiveClause}
+            AND gs.id = ANY(${idsParam}::bigint[])) = ${countParam}`
+      );
+    } else {
+      whereClauses.push(
+        `EXISTS (
+          SELECT 1
+          FROM garage_services gs
+          WHERE gs.garage_id = g.id
+            ${serviceActiveClause}
+            AND gs.id = ANY(${idsParam}::bigint[])
+        )`
+      );
+    }
+  }
+
+  if (serviceNames && serviceNames.length > 0) {
+    params.push(serviceNames);
+    const namesParam = `$${params.length}`;
+
+    if (serviceMatch === 'all') {
+      params.push(serviceNames.length);
+      const countParam = `$${params.length}`;
+      whereClauses.push(
+        `(SELECT COUNT(DISTINCT LOWER(gs.name))
+          FROM garage_services gs
+          WHERE gs.garage_id = g.id
+            ${serviceActiveClause}
+            AND LOWER(gs.name) = ANY(${namesParam}::text[])) = ${countParam}`
+      );
+    } else {
+      whereClauses.push(
+        `EXISTS (
+          SELECT 1
+          FROM garage_services gs
+          WHERE gs.garage_id = g.id
+            ${serviceActiveClause}
+            AND LOWER(gs.name) = ANY(${namesParam}::text[])
+        )`
+      );
+    }
   }
 
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -329,6 +453,12 @@ const listGarages = asyncHandler(async (req, res) => {
         userLat,
         userLon,
         radiusKm,
+        minRating,
+        maxRating,
+        serviceIds,
+        services: serviceNames,
+        serviceMatch,
+        includeInactiveServices,
         sortBy: sortBy || null,
         sortOrder: sortBy === 'distance' ? sortOrder : null
       }

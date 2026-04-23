@@ -214,9 +214,93 @@ const normalizeForSlug = (value) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+const getMarqueInitials = (brand) =>
+  String(brand || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
+
+const brandLogoDomains = {
+  Audi: "audi.com",
+  BMW: "bmw.com",
+  BYD: "byd.com",
+  Changan: "changan.com",
+  Chery: "cheryinternational.com",
+  Chevrolet: "chevrolet.com",
+  Citroen: "citroen.com",
+  Cupra: "cupraofficial.com",
+  Daewoo: "daewoo.com",
+  Dacia: "dacia.com",
+  DFM: "dfmc.com.cn",
+  FAW: "faw.com",
+  Fiat: "fiat.com",
+  Ford: "ford.com",
+  Foton: "foton-global.com",
+  Geely: "geely.com",
+  "Great Wall": "gwm-global.com",
+  Haval: "haval.com",
+  Honda: "honda.com",
+  Hyundai: "hyundai.com",
+  Isuzu: "isuzu.com",
+  JAC: "jac.com.cn",
+  Jeep: "jeep.com",
+  Kia: "kia.com",
+  Lada: "lada.ru",
+  "Land Rover": "landrover.com",
+  Lexus: "lexus.com",
+  Mahindra: "mahindra.com",
+  Mazda: "mazda.com",
+  Mercedes: "mercedes-benz.com",
+  MG: "mgmotor.eu",
+  Mitsubishi: "mitsubishi-motors.com",
+  Nissan: "nissan-global.com",
+  Opel: "opel.com",
+  Peugeot: "peugeot.com",
+  Porsche: "porsche.com",
+  Renault: "renault.com",
+  Seat: "seat.com",
+  Skoda: "skoda-auto.com",
+  SsangYong: "kg-mobility.com",
+  Suzuki: "suzuki.com",
+  Tesla: "tesla.com",
+  Toyota: "toyota.com",
+  Volkswagen: "volkswagen.com",
+  Volvo: "volvocars.com"
+};
+
+const buildSvgDataUrl = ({ top = "#f8fafc", bottom = "#ffffff", title = "", subtitle = "", accent = "#1e293b" }) => {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='220' viewBox='0 0 320 220'>
+    <defs>
+      <linearGradient id='g' x1='0' y1='0' x2='0' y2='1'>
+        <stop offset='0%' stop-color='${top}'/>
+        <stop offset='100%' stop-color='${bottom}'/>
+      </linearGradient>
+    </defs>
+    <rect width='320' height='220' rx='22' fill='url(#g)'/>
+    <rect x='24' y='26' width='272' height='116' rx='18' fill='rgba(255,255,255,0.74)'/>
+    <circle cx='64' cy='84' r='22' fill='${accent}' opacity='0.14'/>
+    <circle cx='254' cy='84' r='18' fill='${accent}' opacity='0.12'/>
+    <text x='160' y='98' text-anchor='middle' font-family='Segoe UI, Arial' font-size='40' font-weight='700' fill='${accent}'>${title}</text>
+    <text x='160' y='178' text-anchor='middle' font-family='Segoe UI, Arial' font-size='22' font-weight='600' fill='#1f2937'>${subtitle}</text>
+  </svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 const buildMarqueImage = (brand) => {
-  const slug = normalizeForSlug(brand);
-  return `https://placehold.co/240x120/f8fafc/334155?text=${encodeURIComponent(slug.toUpperCase() || "LOGO")}`;
+  const initials = getMarqueInitials(brand);
+  const palette = ["#e0f2fe", "#e0e7ff", "#ffe4e6", "#fef3c7"][garageBrands.indexOf(brand) % 4];
+
+  return buildSvgDataUrl({
+    top: palette,
+    bottom: "#ffffff",
+    title: initials,
+    subtitle: brand,
+    accent: "#0f172a"
+  });
 };
 
 const brandDomainMap = {
@@ -257,13 +341,33 @@ const brandDomainMap = {
 };
 
 const getBrandLogoCandidates = (brand) => {
-  const normalized = normalizeForSlug(brand);
-  const domain = brandDomainMap[brand] || `${normalized}.com`;
-  return [
-    `https://logo.clearbit.com/${domain}`,
-    `https://img.logo.dev/${domain}?token=pk_4f18f95f2d9f4a89a9bb3520f5f4c2f1`,
-    buildMarqueImage(brand)
-  ];
+  const slug = normalizeForSlug(brand);
+  const normalized = String(brand || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const fileBaseCandidates = Array.from(new Set([
+    slug,
+    slug.replace(/-/g, ""),
+    normalized,
+    normalized.toLowerCase(),
+    normalized.replace(/\s+/g, "-"),
+    normalized.replace(/\s+/g, "_"),
+    normalized.replace(/[\s-]+/g, ""),
+    brand,
+    String(brand || "").toLowerCase()
+  ])).filter(Boolean);
+
+  const extensions = ["png", "jpg", "jpeg", "webp", "svg", "PNG", "JPG", "JPEG", "WEBP", "SVG"];
+  const localCandidates = fileBaseCandidates.flatMap((base) =>
+    extensions.map((ext) => `/logos/marques/${encodeURIComponent(base)}.${ext}`)
+  );
+
+  const domain = brandLogoDomains[brand];
+  if (!domain) {
+    return [...localCandidates, buildMarqueImage(brand)];
+  }
+
+  const encodedDomain = encodeURIComponent(domain);
+  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`, buildMarqueImage(brand)];
 };
 
 const splitBySeparators = (value) =>

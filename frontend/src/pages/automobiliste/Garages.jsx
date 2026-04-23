@@ -19,6 +19,102 @@ const fallbackCenter = { lat: 35.8256, lng: 10.6369 };
 // API endpoint for fetching filter options
 const FILTER_OPTIONS_ENDPOINT = "http://localhost:3000/api/garages/filter-options";
 
+const garageBrandsCatalog = [
+  "Audi", "BMW", "BYD", "Changan", "Chery", "Chevrolet", "Citroen", "Cupra",
+  "Daewoo", "Dacia", "DFM", "FAW", "Fiat", "Ford", "Foton", "Geely", "Great Wall",
+  "Haval", "Honda", "Hyundai", "Isuzu", "JAC", "Jeep", "Kia", "Lada", "Land Rover",
+  "Lexus", "Mahindra", "Mazda", "Mercedes", "MG", "Mitsubishi", "Nissan", "Opel",
+  "Peugeot", "Porsche", "Renault", "Seat", "Skoda", "SsangYong", "Suzuki", "Tesla",
+  "Toyota", "Volkswagen", "Volvo"
+].sort((a, b) => a.localeCompare(b));
+
+const garageSpecialtyCatalog = [
+  "Mécanique générale",
+  "Tôlerie et Peinture",
+  "Électricité auto",
+  "Services pneumatiques",
+  "Diagnostic auto",
+  "Services rapides",
+  "Vitrage auto",
+  "Climatisation auto",
+  "Clé et multimédia",
+  "Sellerie auto",
+  "Maintenance Calculateurs",
+  "Tourneur",
+  "Spécialiste crémaillère",
+  "Spécialiste radiateur",
+  "Spécialiste injection",
+  "Échappement / catalyseur",
+  "Optiques auto",
+  "Spécialiste boîtes de vitesses",
+  "Conversions véhicules",
+  "Tuning auto",
+  "Station lavage",
+  "Vente pièces auto neuves",
+  "Vente pièces détachées d’occasion",
+  "Vente accessoires",
+  "Station service",
+  "Expert automobile",
+  "Auto-école",
+  "Centre contrôle technique",
+  "Concessionnaire auto neuf",
+  "Concessionnaire auto occasion",
+  "Remorquage et dépannage",
+  "Leasing",
+  "Vente de motos & Pièces détachées",
+  "Entretien & réparation Moto",
+  "Personnalisation & préparation Moto"
+];
+
+const garageServicesCatalog = [
+  "Réparation moteur", "Entretien mécanique", "Remplacement moteur", "Spécialiste camion",
+  "Débosselage et carrosserie", "Peinture au four", "Lustrage et polissage", "Peinture jantes",
+  "Diagnostic électrique", "Alternateur / Démarreur", "Batterie", "Câblage et fusibles",
+  "Montage et équilibrage", "Parallélisme / Géométrie", "Réparation crevaison", "Gonflage azote",
+  "Passage à la valise", "Lecture/Effacement défauts", "Programmation calculateurs", "Test de composants",
+  "Vidange et filtres", "Freinage (Plaquettes/Disques)", "Amortisseurs", "Révision saisonnière",
+  "Remplacement pare-brise", "Réparation d'impact", "Vitres teintées / Film solaire", "Rénovation optiques",
+  "Recharge climatisation", "Détection de fuites", "Remplacement compresseur", "Traitement antibactérien",
+  "Double de clé / Programmation", "Installation autoradio / Écrans", "Caméra de recul", "Alarmes",
+  "Sellerie intérieure", "Réparation sièges", "Rénovation cuir", "Housses sur mesure",
+  "Diagnostic ECU", "Reprogrammation", "Réparation ECU", "Codage modules",
+  "Usinage pièces", "Fabrication sur mesure", "Rectification", "Ajustement",
+  "Réparation crémaillère", "Remplacement crémaillère", "Réglage direction", "Diagnostic direction",
+  "Réparation radiateur", "Nettoyage circuit", "Remplacement radiateur", "Purge système",
+  "Nettoyage injecteurs", "Test injecteurs", "Remplacement injecteurs", "Codage injecteurs",
+  "Réparation ligne échappement", "Remplacement catalyseur", "Soudure échappement", "Diagnostic pollution",
+  "Rénovation phares", "Remplacement optiques", "Polissage optiques", "Réglage feux",
+  "Réparation boîte manuelle", "Réparation boîte automatique", "Vidange boîte", "Diagnostic transmission",
+  "Passage au GPL / Éthanol", "Aménagement utilitaire", "Adaptation handicap", "Conversion électrique",
+  "Kit carrosserie", "Rabaissement (Combinés filetés)", "Éclairage personnalisé", "Optimisation performance",
+  "Lavage haute pression", "Nettoyage intérieur / Shampoing", "Lavage moteur", "Traitement céramique",
+  "Pièces moteur", "Consommables (Filtres/Freins)", "Lubrifiants", "Outillage",
+  "Pièces de casse auto", "Moteurs d'occasion", "Portières / Capots", "Jantes occasion",
+  "Tapis et housses", "Coffres de toit", "Produits d'entretien", "Gadgets auto",
+  "Carburant (Essence/Diesel)", "Gonflage pneus", "Boutique de dépannage", "Lavage automatique",
+  "Expertise après sinistre", "Estimation valeur véhicule", "Conseil à l'achat", "Litiges mécaniques",
+  "Permis B (Voiture)", "Code de la route", "Conduite accompagnée", "Perfectionnement",
+  "Visite périodique", "Contre-visite", "Contrôle pollution", "Contrôle spécifique (VTC/Taxi)",
+  "Vente véhicules neufs", "Essai routier", "Reprise ancien véhicule", "Financement / Garantie",
+  "Vente occasions révisées", "Garantie occasion",
+  "Dépannage sur place", "Remorquage 24h/24", "Transport longue distance", "Sortie de fourrière",
+  "Location Longue Durée (LLD)", "LOA (Location avec Option d'Achat)", "Gestion de flotte", "Location courte durée",
+  "Vente motos", "Pièces détachées moto", "Accessoires motard", "Casques et équipements",
+  "Révision moto", "Pneumatiques moto", "Kit chaîne et carburation", "Entretien mécanique moto",
+  "Personnalisation moto", "Préparation moteur", "Aménagement esthétique"
+];
+
+const defaultFilterOptions = {
+  brands: garageBrandsCatalog,
+  specialties: garageSpecialtyCatalog,
+  services: garageServicesCatalog,
+  openModes: ["Ouvert maintenant"],
+  displacements: ["5 km", "10 km", "15 km", "20 km", "25 km", "30 km", "40 km", "50 km", "Toute la ville", "Sur place"]
+};
+
+const mergeUniqueValues = (primary = [], secondary = []) =>
+  Array.from(new Set([...(Array.isArray(primary) ? primary : []), ...(Array.isArray(secondary) ? secondary : [])]));
+
 const initialReviewForm = {
   rating: 5,
   comment: ""
@@ -48,6 +144,7 @@ const brandLogoDomains = {
   Changan: "changan.com",
   Chery: "cheryinternational.com",
   Chevrolet: "chevrolet.com",
+  Citroen: "citroen.com",
   "Citroën": "citroen.com",
   Cupra: "cupraofficial.com",
   Daewoo: "daewoo.com",
@@ -109,16 +206,16 @@ const getBrandLogoCandidates = (marque) => {
 
   const domain = brandLogoDomains[marque];
   if (!domain) {
-    return localCandidates;
+    return [...localCandidates, buildMarqueImage(marque)];
   }
 
   const encodedDomain = encodeURIComponent(domain);
-  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`];
+  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`, buildMarqueImage(marque)];
 };
 
 const buildMarqueImage = (marque) => {
   const initials = getMarqueInitials(marque);
-  const paletteIndex = brandFilters.indexOf(marque) % 4;
+  const paletteIndex = garageBrandsCatalog.indexOf(marque) % 4;
   const top = paletteIndex === 0 ? "#e0f2fe" : paletteIndex === 1 ? "#e0e7ff" : paletteIndex === 2 ? "#ffe4e6" : "#fef3c7";
 
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='220' viewBox='0 0 320 220'>
@@ -154,11 +251,11 @@ const GaragesPage = () => {
 
   // Filter options state - fetched from API
   const [filterOptions, setFilterOptions] = useState({
-    brands: [],
-    specialties: [],
-    services: [],
-    openModes: [],
-    displacements: []
+    brands: defaultFilterOptions.brands,
+    specialties: defaultFilterOptions.specialties,
+    services: defaultFilterOptions.services,
+    openModes: defaultFilterOptions.openModes,
+    displacements: defaultFilterOptions.displacements
   });
 
   const [search, setSearch] = useState("");
@@ -231,22 +328,15 @@ const GaragesPage = () => {
       const payload = data?.data || data;
       
       setFilterOptions({
-        brands: Array.isArray(payload?.brands) ? payload.brands.sort() : [],
-        specialties: Array.isArray(payload?.specialties) ? payload.specialties : [],
-        services: Array.isArray(payload?.services) ? payload.services : [],
-        openModes: Array.isArray(payload?.openModes) ? payload.openModes : [],
-        displacements: Array.isArray(payload?.displacements) ? payload.displacements : []
+        brands: mergeUniqueValues(defaultFilterOptions.brands, payload?.brands).sort((a, b) => a.localeCompare(b)),
+        specialties: mergeUniqueValues(defaultFilterOptions.specialties, payload?.specialties),
+        services: mergeUniqueValues(defaultFilterOptions.services, payload?.services),
+        openModes: mergeUniqueValues(defaultFilterOptions.openModes, payload?.openModes),
+        displacements: mergeUniqueValues(defaultFilterOptions.displacements, payload?.displacements)
       });
     } catch (err) {
       console.error("Error fetching filter options:", err);
-      // Set default empty arrays if fetch fails
-      setFilterOptions({
-        brands: [],
-        specialties: [],
-        services: [],
-        openModes: [],
-        displacements: []
-      });
+      setFilterOptions(defaultFilterOptions);
     }
   };
 
@@ -584,6 +674,9 @@ const GaragesPage = () => {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                 {filterOptions.brands.map((brand) => {
                   const active = selectedBrand === brand;
+                  const logoCandidates = getBrandLogoCandidates(brand);
+                  const logoUrl = logoCandidates[0] || "";
+                  const fallbackImage = buildMarqueImage(brand);
                   return (
                     <button
                       key={brand}
@@ -592,7 +685,25 @@ const GaragesPage = () => {
                       className={`overflow-hidden rounded-[22px] border bg-white p-2 text-center transition ${active ? "border-blue-300 shadow-[0_0_0_2px_rgba(37,99,235,0.16)]" : "border-slate-200"}`}
                     >
                       <div className={`flex h-[112px] items-center justify-center rounded-[16px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3 ${active ? "ring-1 ring-blue-300/40" : ""}`}>
-                        <p className="text-sm font-semibold text-slate-700">{brand}</p>
+                        <img
+                          src={logoUrl || fallbackImage}
+                          alt={brand}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-contain"
+                          data-logo-index="0"
+                          onError={(event) => {
+                            const currentIndex = Number.parseInt(event.currentTarget.dataset.logoIndex || "0", 10);
+                            const nextIndex = currentIndex + 1;
+                            if (nextIndex < logoCandidates.length) {
+                              event.currentTarget.dataset.logoIndex = String(nextIndex);
+                              event.currentTarget.src = logoCandidates[nextIndex];
+                              return;
+                            }
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = fallbackImage;
+                          }}
+                        />
                       </div>
                       <p className={`mt-2 truncate text-[15px] font-bold ${active ? "text-slate-900" : "text-slate-700"}`}>{brand}</p>
                     </button>

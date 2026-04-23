@@ -1,9 +1,12 @@
-import { useContext, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { comparePieceAcrossVendors, createPiece, deletePiece, getPieces, updatePiece } from "../../services/pieces";
 import { getCompleteProfile, getCompleteProfileById, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
 import { AuthContext } from "../../context/AuthContext";
+
+// Google Maps API configuration
+const GOOGLE_MAPS_API_KEY = "AIzaSyCojlT8OsuCl0W4b0Pto2m1GbfUl9FF1pE";
 
 const initialFilters = {
   search: "",
@@ -364,7 +367,9 @@ const createEmptyPieceForm = () => ({
   marque: "",
   modele: "",
   categorie: "",
-  photo_piece: null
+  photo_piece: null,
+  latitude: null,
+  longitude: null
 });
 
 const splitLines = (value, fallback) => {
@@ -394,9 +399,20 @@ const normalizeOfferGroupKey = (piece) => {
   return nom ? `nom:${nom}` : `piece:${piece?.id || "unknown"}`;
 };
 
+const buildGoogleMapsEmbedUrl = (query) => {
+  const safeQuery = String(query || "Tunisie").trim() || "Tunisie";
+  return `https://www.google.com/maps?q=${encodeURIComponent(safeQuery)}&output=embed`;
+};
+
+const buildGoogleMapsSearchUrl = (query) => {
+  const safeQuery = String(query || "Tunisie").trim() || "Tunisie";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(safeQuery)}`;
+};
+
 const CataloguePieces = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("pieces");
   const [profileLoading, setProfileLoading] = useState(false);
   const [myProfile, setMyProfile] = useState(null);
@@ -450,6 +466,75 @@ const CataloguePieces = () => {
   const [catalogScope, setCatalogScope] = useState(() => ((user?.role === "vendeur" || user?.role === "admin") ? "private" : "public"));
   const [marketplaceSortBy, setMarketplaceSortBy] = useState("min_price");
 
+  // Google Maps state
+  const [showMapModal, setShowMapModal] = useState(false);
+  const mapContainerRef = useRef(null);
+  const googleMapRef = useRef(null);
+  const markerRef = useRef(null);
+
+  // Google Maps handlers
+  const initializeGoogleMap = () => {
+    if (!mapContainerRef.current || !window.google) return;
+
+    const center = { lat: newPiece.latitude || 35.8, lng: newPiece.longitude || 10.2 };
+    
+    const map = new window.google.maps.Map(mapContainerRef.current, {
+      zoom: 13,
+      center: center,
+      mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+      fullscreenControl: true,
+      zoomControl: true,
+      mapTypeControl: true
+    });
+
+    googleMapRef.current = map;
+
+    // Create marker
+    const marker = new window.google.maps.Marker({
+      position: center,
+      map: map,
+      draggable: true,
+      title: "Cliquez sur la carte ou arrachez pour définir le lieu"
+    });
+
+    markerRef.current = marker;
+
+    // Handle marker drag
+    marker.addListener("dragend", () => {
+      const pos = marker.getPosition();
+      setNewPiece(prev => ({
+        ...prev,
+        latitude: pos.lat(),
+        longitude: pos.lng()
+      }));
+    });
+
+    // Handle map click
+    map.addListener("click", (e) => {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      marker.setPosition({ lat, lng });
+      setNewPiece(prev => ({
+        ...prev,
+        latitude: lat,
+        longitude: lng
+      }));
+    });
+  };
+
+  const handleOpenMapModal = () => {
+    setShowMapModal(true);
+  };
+
+  const handleSaveLocation = () => {
+    if (newPiece.latitude && newPiece.longitude) {
+      setShowMapModal(false);
+      // Localisation sauvegardée dans newPiece state
+    } else {
+      alert("Veuillez sélectionner un lieu sur la carte");
+    }
+  };
+
   const backendBaseUrl = useMemo(() => {
     const apiUrl = import.meta.env.VITE_API_URL || "";
     return apiUrl.replace(/\/api\/?$/, "");
@@ -457,6 +542,13 @@ const CataloguePieces = () => {
 
   const canManagePieces = user?.role === "vendeur" || user?.role === "admin";
   const canSeeStoreTabs = isStoreView || user?.role === "vendeur" || user?.role === "admin" || user?.role === "garage";
+
+  // Initialize Google Map when modal opens
+  useEffect(() => {
+    if (showMapModal && mapContainerRef.current) {
+      setTimeout(() => initializeGoogleMap(), 100);
+    }
+  }, [showMapModal]);
 
   useEffect(() => {
     let isMounted = true;
@@ -553,6 +645,61 @@ const CataloguePieces = () => {
       setCatalogScope("public");
     }
   }, [canManagePieces]);
+
+  const openStoreViewByOwnerId = async (ownerId, options = {}) => {
+    const { syncUrl = false } = options;
+    const parsedOwnerId = Number.parseInt(ownerId, 10);
+    const isValidOwner = Number.isInteger(parsedOwnerId) && parsedOwnerId > 0;
+
+    setSelectedPiece(null);
+    setIsStoreView(true);
+    setStoreOwnerId(isValidOwner ? parsedOwnerId : null);
+    setActiveTab("presentation");
+
+    if (syncUrl && isValidOwner) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("ownerId", String(parsedOwnerId));
+      nextParams.set("tab", "presentation");
+      setSearchParams(nextParams, { replace: true });
+    }
+
+    if (isValidOwner) {
+      setProfileLoading(true);
+      try {
+        const res = await getCompleteProfileById(parsedOwnerId);
+        const profile = res.data?.data?.user || res.data?.user || null;
+        setStoreProfile(profile);
+      } catch (_error) {
+        setStoreProfile(null);
+      } finally {
+        setProfileLoading(false);
+      }
+    } else {
+      setStoreProfile(null);
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const ownerIdParam = searchParams.get("ownerId");
+    const tabParam = searchParams.get("tab");
+    const parsedOwnerId = Number.parseInt(ownerIdParam || "", 10);
+    const hasValidOwner = Number.isInteger(parsedOwnerId) && parsedOwnerId > 0;
+
+    if (hasValidOwner) {
+      openStoreViewByOwnerId(parsedOwnerId);
+      if (tabParam === "presentation") {
+        setActiveTab("presentation");
+      }
+      return;
+    }
+
+    if (tabParam === "presentation" && canSeeStoreTabs) {
+      setActiveTab("presentation");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const visibleItems = useMemo(() => {
     let filtered = items;
@@ -772,6 +919,28 @@ const CataloguePieces = () => {
   const storeSpecialties = splitLines(activeProfile?.store_specialties, presentationSpecialites);
   const storeServices = splitLines(activeProfile?.store_services, presentationServices);
 
+  const pieceLocationQuery = useMemo(() => {
+    const zone = String(newPiece.zone_geographique || "").trim();
+    const baseAddress = String(myProfile?.store_address || "").trim();
+
+    if (zone && baseAddress) {
+      return `${zone}, ${baseAddress}, Tunisie`;
+    }
+
+    if (zone) {
+      return `${zone}, Tunisie`;
+    }
+
+    if (baseAddress) {
+      return `${baseAddress}, Tunisie`;
+    }
+
+    return "Tunisie";
+  }, [newPiece.zone_geographique, myProfile?.store_address]);
+
+  const googleMapsEmbedUrl = useMemo(() => buildGoogleMapsEmbedUrl(pieceLocationQuery), [pieceLocationQuery]);
+  const googleMapsSearchUrl = useMemo(() => buildGoogleMapsSearchUrl(pieceLocationQuery), [pieceLocationQuery]);
+
   const handlePresentationChange = (event) => {
     const { name, value } = event.target;
     setPresentationForm((prev) => ({
@@ -901,7 +1070,9 @@ const CataloguePieces = () => {
       marque: piece.marque || "",
       modele: piece.modele || "",
       categorie: piece.categorie || "",
-      photo_piece: null
+      photo_piece: null,
+      latitude: piece.latitude || null,
+      longitude: piece.longitude || null
     });
     setSelectedPiece(null);
     setShowCreateModal(true);
@@ -963,6 +1134,9 @@ const CataloguePieces = () => {
       formData.append("marque", String(newPiece.marque || "").trim());
       formData.append("modele", String(newPiece.modele || "").trim());
       formData.append("categorie", String(newPiece.categorie || "").trim());
+      
+      if (newPiece.latitude) formData.append("latitude", newPiece.latitude);
+      if (newPiece.longitude) formData.append("longitude", newPiece.longitude);
 
       if (newPiece.photo_piece) {
         formData.append("photo_piece", newPiece.photo_piece);
@@ -979,7 +1153,9 @@ const CataloguePieces = () => {
           zone_geographique: String(newPiece.zone_geographique || "").trim(),
           marque: String(newPiece.marque || "").trim(),
           modele: String(newPiece.modele || "").trim(),
-          categorie: String(newPiece.categorie || "").trim()
+          categorie: String(newPiece.categorie || "").trim(),
+          ...(newPiece.latitude && { latitude: newPiece.latitude }),
+          ...(newPiece.longitude && { longitude: newPiece.longitude })
         });
 
         setCreateSuccess("Piece modifiee avec succes.");
@@ -1041,27 +1217,7 @@ const CataloguePieces = () => {
       .map((value) => Number.parseInt(value, 10))
       .find((value) => Number.isFinite(value) && value > 0);
 
-    setSelectedPiece(null);
-    setIsStoreView(true);
-    setStoreOwnerId(ownerId || null);
-    setActiveTab("presentation");
-
-    if (ownerId) {
-      setProfileLoading(true);
-      try {
-        const res = await getCompleteProfileById(ownerId);
-        const profile = res.data?.data?.user || res.data?.user || null;
-        setStoreProfile(profile);
-      } catch (_error) {
-        setStoreProfile(null);
-      } finally {
-        setProfileLoading(false);
-      }
-    } else {
-      setStoreProfile(null);
-    }
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    await openStoreViewByOwnerId(ownerId, { syncUrl: true });
   };
 
   const handleExitVendorStore = () => {
@@ -1069,6 +1225,10 @@ const CataloguePieces = () => {
     setStoreOwnerId(null);
     setStoreProfile(null);
     setActiveTab("pieces");
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("ownerId");
+    nextParams.delete("tab");
+    setSearchParams(nextParams, { replace: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1762,6 +1922,87 @@ const CataloguePieces = () => {
                         <option value="Ouest">Ouest</option>
                         <option value="Centre">Centre</option>
                       </select>
+                    </div>
+
+                    <div className="mt-4 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleOpenMapModal}
+                        className="flex-1 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
+                      >
+                        📍 Position GPS
+                      </button>
+                      {newPiece.latitude && newPiece.longitude && (
+                        <div className="flex-1 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-xs font-semibold text-emerald-700">
+                          ✓ Lieu enregistré
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {newPiece.latitude && (
+                        <p className="text-sm text-slate-600">📍 Latitude: {newPiece.latitude.toFixed(4)}</p>
+                      )}
+                      {newPiece.longitude && (
+                        <p className="text-sm text-slate-600">📍 Longitude: {newPiece.longitude.toFixed(4)}</p>
+                      )}
+                    </div>
+
+                    {showMapModal && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="h-4/5 w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col">
+                          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                            <h3 className="text-lg font-semibold text-slate-800">Sélectionner le lieu de la pièce</h3>
+                            <button
+                              onClick={() => setShowMapModal(false)}
+                              className="text-slate-500 hover:text-slate-700"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          
+                          <div ref={mapContainerRef} className="flex-1 w-full" style={{ minHeight: "400px" }} />
+                          
+                          <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
+                            <button
+                              type="button"
+                              onClick={() => setShowMapModal(false)}
+                              className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSaveLocation}
+                              className="flex-1 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
+                            >
+                              ✓ Enregistrer le lieu
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                      <iframe
+                        title="Google Maps localisation piece"
+                        src={googleMapsEmbedUrl}
+                        className="h-64 w-full border-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm text-slate-600">Carte basee sur: {pieceLocationQuery}</p>
+                      <a
+                        href={googleMapsSearchUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
+                      >
+                        Ouvrir dans Google Maps
+                      </a>
                     </div>
                   </div>
 

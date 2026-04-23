@@ -1,5 +1,7 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useJsApiLoader } from "@react-google-maps/api";
 import PlatformLayout from "../../components/PlatformLayout";
+import GoogleMapGarages from "../../components/GoogleMapGarages";
 import {
   createGarageReview,
   deleteGarageReview,
@@ -12,66 +14,418 @@ import {
 import { AuthContext } from "../../context/AuthContext";
 
 const getPayload = (response) => response?.data?.data ?? response?.data;
+const fallbackCenter = { lat: 35.8256, lng: 10.6369 };
+
+// API endpoint for fetching filter options
+const FILTER_OPTIONS_ENDPOINT = "http://localhost:3000/api/garages/filter-options";
 
 const initialReviewForm = {
   rating: 5,
   comment: ""
 };
 
+const getMarqueInitials = (marque) =>
+  marque
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 3)
+    .toUpperCase();
+
+const slugifyLogoName = (value) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const brandLogoDomains = {
+  Audi: "audi.com",
+  BMW: "bmw.com",
+  BYD: "byd.com",
+  Changan: "changan.com",
+  Chery: "cheryinternational.com",
+  Chevrolet: "chevrolet.com",
+  "Citroën": "citroen.com",
+  Cupra: "cupraofficial.com",
+  Daewoo: "daewoo.com",
+  Dacia: "dacia.com",
+  DFM: "dfmc.com.cn",
+  FAW: "faw.com",
+  Fiat: "fiat.com",
+  Ford: "ford.com",
+  Foton: "foton-global.com",
+  Geely: "geely.com",
+  "Great Wall": "gwm-global.com",
+  Haval: "haval.com",
+  Honda: "honda.com",
+  Hyundai: "hyundai.com",
+  Isuzu: "isuzu.com",
+  JAC: "jac.com.cn",
+  Jeep: "jeep.com",
+  Kia: "kia.com",
+  Lada: "lada.ru",
+  "Land Rover": "landrover.com",
+  MG: "mgmotor.eu",
+  Mitsubishi: "mitsubishi-motors.com",
+  Nissan: "nissan-global.com",
+  Peugeot: "peugeot.com",
+  Renault: "renault.com",
+  "Rolls-Royce": "rolls-roycemotorcars.com",
+  Seat: "seat.com",
+  Skoda: "skoda-auto.com",
+  Suzuki: "suzuki.com",
+  Tesla: "tesla.com",
+  Toyota: "toyota.com",
+  Volkswagen: "volkswagen.com",
+  Volvo: "volvocars.com",
+  Wuling: "wuling.com",
+  Xpeng: "xiaopeng.com",
+  Zotye: "zotye.com"
+};
+
+const getBrandLogoCandidates = (marque) => {
+  const slug = slugifyLogoName(marque);
+  const normalized = marque.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  const fileBaseCandidates = Array.from(new Set([
+    slug,
+    slug.replace(/-/g, ""),
+    normalized,
+    normalized.toLowerCase(),
+    normalized.replace(/\s+/g, "-"),
+    normalized.replace(/\s+/g, "_"),
+    normalized.replace(/[\s-]+/g, ""),
+    marque,
+    marque.toLowerCase()
+  ])).filter(Boolean);
+
+  const extensions = ["png", "jpg", "jpeg", "webp", "svg", "PNG", "JPG", "JPEG", "WEBP", "SVG"];
+  const localCandidates = fileBaseCandidates.flatMap((base) =>
+    extensions.map((ext) => `/logos/marques/${encodeURIComponent(base)}.${ext}`)
+  );
+
+  const domain = brandLogoDomains[marque];
+  if (!domain) {
+    return localCandidates;
+  }
+
+  const encodedDomain = encodeURIComponent(domain);
+  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`];
+};
+
+const buildMarqueImage = (marque) => {
+  const initials = getMarqueInitials(marque);
+  const paletteIndex = brandFilters.indexOf(marque) % 4;
+  const top = paletteIndex === 0 ? "#e0f2fe" : paletteIndex === 1 ? "#e0e7ff" : paletteIndex === 2 ? "#ffe4e6" : "#fef3c7";
+
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='220' viewBox='0 0 320 220'>
+    <defs>
+      <linearGradient id='g' x1='0' y1='0' x2='0' y2='1'>
+        <stop offset='0%' stop-color='${top}'/>
+        <stop offset='100%' stop-color='#ffffff'/>
+      </linearGradient>
+    </defs>
+    <rect width='320' height='220' rx='22' fill='url(#g)'/>
+    <rect x='24' y='26' width='272' height='116' rx='18' fill='rgba(255,255,255,0.72)'/>
+    <text x='160' y='98' text-anchor='middle' font-family='Segoe UI, Arial' font-size='40' font-weight='700' fill='#0f172a'>${initials}</text>
+    <text x='160' y='178' text-anchor='middle' font-family='Segoe UI, Arial' font-size='22' font-weight='600' fill='#1f2937'>${marque}</text>
+  </svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const normalizeText = (value) =>
+  String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const includesNormalized = (haystack, needle) => {
+  if (!needle) return true;
+  return normalizeText(haystack).includes(normalizeText(needle));
+};
+
 const GaragesPage = () => {
   const { user } = useContext(AuthContext);
 
-  // Cette section pilote la recherche et la liste paginée des garages.
+  // Filter options state - fetched from API
+  const [filterOptions, setFilterOptions] = useState({
+    brands: [],
+    specialties: [],
+    services: [],
+    openModes: [],
+    displacements: []
+  });
+
   const [search, setSearch] = useState("");
+  const [minRating, setMinRating] = useState(0);
+  const [radiusKm, setRadiusKm] = useState(30);
+  const [openOnly, setOpenOnly] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedSpecialties, setSelectedSpecialties] = useState([]);
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [selectedOpenModes, setSelectedOpenModes] = useState([]);
+  const [selectedDeplacement, setSelectedDeplacement] = useState("25 km");
+  const [showBrandsModal, setShowBrandsModal] = useState(false);
+  const [showSpecialtiesModal, setShowSpecialtiesModal] = useState(false);
+  const [showServicesModal, setShowServicesModal] = useState(false);
+  const [showOpenModal, setShowOpenModal] = useState(false);
+  const [showDeplacementModal, setShowDeplacementModal] = useState(false);
+
   const [garages, setGarages] = useState([]);
   const [selectedGarageId, setSelectedGarageId] = useState(null);
   const [isLoadingList, setIsLoadingList] = useState(false);
 
-  // Cette section contient les données détaillées du garage sélectionné.
-  const [selectedGarage, setSelectedGarage] = useState(null);
   const [garageServices, setGarageServices] = useState([]);
   const [garageReviews, setGarageReviews] = useState([]);
   const [summary, setSummary] = useState({ reviews_count: 0, average_rating: 0 });
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  // Cette section gère le formulaire d'avis (création ou édition de l'avis utilisateur).
   const [reviewForm, setReviewForm] = useState(initialReviewForm);
   const [editingReviewId, setEditingReviewId] = useState(null);
+
+  const [userPosition, setUserPosition] = useState(null);
+  const [mapCenter, setMapCenter] = useState(fallbackCenter);
+  const hasLoadedInitialFilters = useRef(false);
 
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  const getApiErrorMessage = (err, fallback) => {
+    const data = err?.response?.data;
+    const details = Array.isArray(data?.error?.details) ? data.error.details : [];
+
+    if (details.length > 0) {
+      const message = details
+        .map((item) => item?.message)
+        .filter(Boolean)
+        .join(" | ");
+      if (message) {
+        return message;
+      }
+    }
+
+    if (!err?.response) {
+      return "Serveur API inaccessible. Vérifiez que le backend tourne sur http://localhost:3000.";
+    }
+
+    if (typeof data?.message === "string" && data.message.trim().length > 0) {
+      return data.message;
+    }
+
+    return fallback;
+  };
+
+  // Fetch filter options from backend API on component mount
+  const fetchFilterOptions = async () => {
+    try {
+      const response = await fetch(FILTER_OPTIONS_ENDPOINT);
+      if (!response.ok) {
+        throw new Error("Failed to fetch filter options");
+      }
+      const data = await response.json();
+      const payload = data?.data || data;
+      
+      setFilterOptions({
+        brands: Array.isArray(payload?.brands) ? payload.brands.sort() : [],
+        specialties: Array.isArray(payload?.specialties) ? payload.specialties : [],
+        services: Array.isArray(payload?.services) ? payload.services : [],
+        openModes: Array.isArray(payload?.openModes) ? payload.openModes : [],
+        displacements: Array.isArray(payload?.displacements) ? payload.displacements : []
+      });
+    } catch (err) {
+      console.error("Error fetching filter options:", err);
+      // Set default empty arrays if fetch fails
+      setFilterOptions({
+        brands: [],
+        specialties: [],
+        services: [],
+        openModes: [],
+        displacements: []
+      });
+    }
+  };
+
+  const clearQuickFilters = () => {
+    setSelectedBrand("");
+    setSelectedSpecialties([]);
+    setSelectedServices([]);
+    setSelectedOpenModes([]);
+    setSelectedDeplacement("30 km");
+    setOpenOnly(false);
+    setRadiusKm(30);
+    setMinRating(0);
+  };
+
+  const renderFilterButton = (label, count, onClick) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-full border border-[#dbe2ec] bg-white px-3 py-2 text-xs font-semibold text-[#617089] transition hover:border-orange-300 hover:text-orange-600"
+    >
+      {label}{count > 0 ? ` (${count})` : ""}
+    </button>
+  );
+
+  const selectedGarage = useMemo(
+    () => garages.find((g) => g.id === selectedGarageId) || null,
+    [garages, selectedGarageId]
+  );
+
+  const toggleSelection = (value, setter) => {
+    setter((current) =>
+      current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value]
+    );
+  };
+
+  const toggleBrand = (brand) => {
+    setSelectedBrand((current) => (current === brand ? "" : brand));
+  };
+
+  // Fetch filter options when component mounts
+  useEffect(() => {
+    fetchFilterOptions();
+  }, []);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nextPos = { lat: position.coords.latitude, lng: position.coords.longitude };
+        setUserPosition(nextPos);
+        setMapCenter(nextPos);
+      },
+      () => {
+        setUserPosition(null);
+        setMapCenter(fallbackCenter);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }, []);
+
   useEffect(() => {
     fetchGarages();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userPosition]);
 
   useEffect(() => {
     if (selectedGarageId) {
       fetchGarageDetails(selectedGarageId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGarageId]);
 
-  const fetchGarages = async (customSearch = "") => {
+  useEffect(() => {
+    if (!hasLoadedInitialFilters.current) {
+      hasLoadedInitialFilters.current = true;
+      return;
+    }
+
+    fetchGarages(search.trim());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minRating, radiusKm, openOnly, selectedBrand, selectedSpecialties, selectedServices, userPosition]);
+
+  useEffect(() => {
+    const hasOpenSelection = selectedOpenModes.length > 0;
+    setOpenOnly(hasOpenSelection);
+  }, [selectedOpenModes]);
+
+  useEffect(() => {
+    const numeric = Number.parseInt(String(selectedDeplacement).replace(/[^0-9]/g, ""), 10);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      setRadiusKm(numeric);
+    } else if (selectedDeplacement === "Toute la ville") {
+      setRadiusKm(100);
+    } else if (selectedDeplacement === "Sur place") {
+      setRadiusKm(5);
+    }
+  }, [selectedDeplacement]);
+
+  const buildGarageFilters = (customSearch) => {
+    const trimmedSearch = String(customSearch || "").trim();
+    const serviceTerms = [...selectedServices];
+
+    const filters = {
+      page: 1,
+      limit: 100,
+      search: trimmedSearch || undefined,
+      minRating: minRating > 0 ? minRating : undefined,
+      includeClosed: openOnly ? false : true,
+      sortBy: userPosition ? "distance" : "created_at",
+      sortOrder: "asc"
+    };
+
+    if (selectedBrand) {
+      filters.brands = selectedBrand.toLowerCase();
+    }
+
+    if (selectedSpecialties.length > 0) {
+      filters.specialties = selectedSpecialties.map((term) => term.toLowerCase()).join(",");
+    }
+
+    if (serviceTerms.length > 0) {
+      filters.services = serviceTerms.map((term) => term.toLowerCase()).join(",");
+      filters.serviceMatch = "any";
+    }
+
+    if (userPosition) {
+      filters.userLat = userPosition.lat;
+      filters.userLon = userPosition.lng;
+      filters.radiusKm = radiusKm;
+    }
+
+    return filters;
+  };
+
+  const fetchGarages = async (customSearch = search.trim()) => {
     setIsLoadingList(true);
     setError("");
 
     try {
-      const response = await listGarages({ page: 1, limit: 25, search: customSearch || undefined });
+      const response = await listGarages(buildGarageFilters(customSearch));
       const payload = getPayload(response);
       const items = Array.isArray(payload?.items) ? payload.items : [];
-      setGarages(items);
 
-      if (items.length > 0 && !selectedGarageId) {
-        setSelectedGarageId(items[0].id);
-      }
-      if (items.length === 0) {
+      const filteredItems = items.filter((garage) => {
+        const specialtiesText = garage.specialties || garage.store_specialties || "";
+        const servicesText = garage.services_catalog || garage.store_services || "";
+        const serviceNames = Array.isArray(garage.service_names) ? garage.service_names.join(" ") : "";
+        const identityText = `${garage.name || ""} ${garage.adresse || ""} ${specialtiesText} ${servicesText} ${serviceNames}`;
+
+        const matchesBrand = !selectedBrand || includesNormalized(identityText, selectedBrand);
+        const matchesSpecialties =
+          selectedSpecialties.length === 0 ||
+          selectedSpecialties.some((specialty) => includesNormalized(specialtiesText, specialty) || includesNormalized(serviceNames, specialty));
+        const matchesServices =
+          selectedServices.length === 0 ||
+          selectedServices.some((service) => includesNormalized(servicesText, service) || includesNormalized(serviceNames, service));
+
+        return matchesBrand && matchesSpecialties && matchesServices;
+      });
+
+      setGarages(filteredItems);
+
+      if (filteredItems.length > 0) {
+        const stillExists = filteredItems.some((garage) => garage.id === selectedGarageId);
+        const targetGarageId = stillExists ? selectedGarageId : filteredItems[0].id;
+        setSelectedGarageId(targetGarageId);
+
+        const targetGarage = filteredItems.find((garage) => garage.id === targetGarageId);
+        if (targetGarage?.latitude !== null && targetGarage?.longitude !== null) {
+          setMapCenter({ lat: targetGarage.latitude, lng: targetGarage.longitude });
+        }
+      } else {
         setSelectedGarageId(null);
-        setSelectedGarage(null);
         setGarageServices([]);
         setGarageReviews([]);
       }
     } catch (err) {
-      setError(err?.response?.data?.message || "Erreur lors du chargement des garages.");
+      setError(getApiErrorMessage(err, "Erreur lors du chargement des garages."));
     } finally {
       setIsLoadingList(false);
     }
@@ -92,12 +446,10 @@ const GaragesPage = () => {
       const servicePayload = getPayload(servicesRes);
       const reviewPayload = getPayload(reviewsRes);
 
-      setSelectedGarage(garagePayload || null);
       setGarageServices(Array.isArray(servicePayload?.items) ? servicePayload.items : []);
       setGarageReviews(Array.isArray(reviewPayload?.items) ? reviewPayload.items : []);
       setSummary(reviewPayload?.summary || { reviews_count: 0, average_rating: 0 });
 
-      // Pré-remplissage du formulaire si l'utilisateur a déjà publié un avis.
       const myReview = (reviewPayload?.items || []).find((review) => Number(review.user_id) === Number(user?.id));
       if (myReview) {
         setReviewForm({ rating: Number(myReview.rating), comment: myReview.comment || "" });
@@ -107,7 +459,7 @@ const GaragesPage = () => {
         setEditingReviewId(null);
       }
     } catch (err) {
-      setError(err?.response?.data?.message || "Erreur lors du chargement des détails du garage.");
+      setError(getApiErrorMessage(err, "Erreur lors du chargement des détails du garage."));
     } finally {
       setIsLoadingDetails(false);
     }
@@ -116,6 +468,17 @@ const GaragesPage = () => {
   const handleSearchSubmit = async (event) => {
     event.preventDefault();
     await fetchGarages(search.trim());
+  };
+
+  const handleApplyFilters = async () => {
+    await fetchGarages(search.trim());
+  };
+
+  const handleSelectGarage = (garage) => {
+    setSelectedGarageId(garage.id);
+    if (garage.latitude !== null && garage.longitude !== null) {
+      setMapCenter({ lat: garage.latitude, lng: garage.longitude });
+    }
   };
 
   const handleReviewFieldChange = (event) => {
@@ -149,7 +512,7 @@ const GaragesPage = () => {
 
       await fetchGarageDetails(selectedGarageId);
     } catch (err) {
-      setError(err?.response?.data?.message || "Impossible d'enregistrer votre avis.");
+      setError(getApiErrorMessage(err, "Impossible d'enregistrer votre avis."));
     }
   };
 
@@ -168,66 +531,282 @@ const GaragesPage = () => {
       setEditingReviewId(null);
       await fetchGarageDetails(selectedGarageId);
     } catch (err) {
-      setError(err?.response?.data?.message || "Impossible de supprimer votre avis.");
+      setError(getApiErrorMessage(err, "Impossible de supprimer votre avis."));
     }
   };
 
   return (
     <PlatformLayout>
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <h1 className="mb-2 text-3xl font-extrabold text-[#1a2b4b]">Garages partenaires</h1>
-        <p className="mb-6 text-sm text-[#617089]">Recherchez un garage, consultez ses services et partagez votre avis.</p>
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.12),_transparent_30%),linear-gradient(180deg,#f8fbff_0%,#eef3fb_100%)]">
+        <div className="mx-auto max-w-[1400px] px-4 py-5 space-y-5 sm:px-6 sm:py-6">
+          <header className="relative overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.95)_0%,rgba(239,246,255,0.95)_100%)] px-5 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] sm:px-6 sm:py-6">
+            <div className="absolute -right-10 -top-14 h-36 w-36 rounded-full bg-blue-100/70 blur-3xl" />
+            <div className="absolute -bottom-12 left-1/3 h-32 w-32 rounded-full bg-orange-100/70 blur-3xl" />
+            <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700">
+                  Compte automobiliste
+                </span>
+                <h1 className="mt-2 text-3xl font-black tracking-tight text-[#10243f] sm:text-4xl">Carte des garages</h1>
+                <p className="mt-2 max-w-3xl text-sm text-[#5b6f8f] sm:text-[15px]">
+                  Trouvez rapidement le bon garage autour de vous avec des filtres précis, une carte interactive et les avis clients.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="rounded-2xl border border-[#dbe7fb] bg-white/90 px-4 py-3 text-center shadow-sm">
+                  <p className="text-xs font-semibold text-[#64748b]">Résultats</p>
+                  <p className="text-lg font-extrabold text-[#1e3a8a]">{garages.length}</p>
+                </div>
+                <div className="rounded-2xl border border-[#fde4cf] bg-white/90 px-4 py-3 text-center shadow-sm">
+                  <p className="text-xs font-semibold text-[#64748b]">Garage actif</p>
+                  <p className="text-lg font-extrabold text-[#9a3412]">{selectedGarage ? "1" : "0"}</p>
+                </div>
+              </div>
+            </div>
+          </header>
 
-        {error && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-        {successMessage && <p className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{successMessage}</p>}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6b7f9f]">Recherche géolocalisée</p>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.4fr]">
-          <aside className="vb-card p-5">
-            <form className="mb-4 flex gap-2" onSubmit={handleSearchSubmit}>
-              <input
-                className="vb-input w-full px-3 py-2"
-                placeholder="Rechercher un garage..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <button type="submit" className="vb-btn-primary px-4 py-2">Chercher</button>
-            </form>
+          {error && <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
+          {successMessage && <p className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">{successMessage}</p>}
 
-            {isLoadingList ? (
-              <p className="text-sm text-[#617089]">Chargement...</p>
-            ) : garages.length === 0 ? (
-              <p className="text-sm text-[#617089]">Aucun garage trouve.</p>
-            ) : (
-              <ul className="space-y-2">
-                {garages.map((garage) => (
-                  <li key={garage.id}>
+          {showBrandsModal && (
+            <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
+              <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Marques</h3>
+                <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">×</button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+                {filterOptions.brands.map((brand) => {
+                  const active = selectedBrand === brand;
+                  return (
                     <button
+                      key={brand}
                       type="button"
-                      onClick={() => setSelectedGarageId(garage.id)}
-                      className={`w-full rounded-lg border px-3 py-3 text-left transition ${selectedGarageId === garage.id ? "border-blue-400 bg-blue-50" : "border-[#dbe2ec] bg-white hover:bg-slate-50"}`}
+                      onClick={() => toggleBrand(brand)}
+                      className={`overflow-hidden rounded-[22px] border bg-white p-2 text-center transition ${active ? "border-blue-300 shadow-[0_0_0_2px_rgba(37,99,235,0.16)]" : "border-slate-200"}`}
                     >
-                      <p className="font-bold text-[#1a2b4b]">{garage.name}</p>
-                      <p className="text-xs text-[#617089]">{garage.adresse || "Adresse non precisee"}</p>
-                      <p className="mt-1 text-xs text-[#334155]">Note: {garage.rating ?? "-"} • {garage.is_open ? "Ouvert" : "Ferme"}</p>
+                      <div className={`flex h-[112px] items-center justify-center rounded-[16px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3 ${active ? "ring-1 ring-blue-300/40" : ""}`}>
+                        <p className="text-sm font-semibold text-slate-700">{brand}</p>
+                      </div>
+                      <p className={`mt-2 truncate text-[15px] font-bold ${active ? "text-slate-900" : "text-slate-700"}`}>{brand}</p>
                     </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </aside>
+                  );
+                })}
+              </div>
+              </div>
+            </div>
+          )}
 
-          <section className="space-y-6">
-            {!selectedGarageId ? (
-              <div className="vb-card p-6 text-sm text-[#617089]">Selectionnez un garage pour voir ses details.</div>
-            ) : isLoadingDetails ? (
-              <div className="vb-card p-6 text-sm text-[#617089]">Chargement des details...</div>
-            ) : (
-              <>
-                <article className="vb-card p-6">
-                  <h2 className="text-2xl font-bold text-[#1a2b4b]">{selectedGarage?.name}</h2>
-                  <p className="mt-2 text-sm text-[#617089]">{selectedGarage?.adresse || "Adresse non precisee"}</p>
-                  <p className="mt-1 text-sm text-[#617089]">Contact: {selectedGarage?.telephone || "N/A"} • {selectedGarage?.email || "N/A"}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {showSpecialtiesModal && (
+            <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
+              <div className="max-h-[92vh] w-full max-w-[1100px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Spécialités</h3>
+                <button type="button" onClick={() => setShowSpecialtiesModal(false)} className="text-3xl text-slate-500">×</button>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filterOptions.specialties.map((speciality) => {
+                  const active = selectedSpecialties.includes(speciality);
+                  return (
+                    <button
+                      key={speciality}
+                      type="button"
+                      onClick={() => toggleSelection(speciality, setSelectedSpecialties)}
+                      className={`rounded-2xl border p-4 text-left text-sm font-semibold transition ${active ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}
+                    >
+                      {speciality}
+                    </button>
+                  );
+                })}
+              </div>
+              </div>
+            </div>
+          )}
+
+          {showServicesModal && (
+            <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
+              <div className="max-h-[92vh] w-full max-w-[1100px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Services</h3>
+                <button type="button" onClick={() => setShowServicesModal(false)} className="text-3xl text-slate-500">×</button>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {filterOptions.services.map((service) => {
+                  const active = selectedServices.includes(service);
+                  return (
+                    <button
+                      key={service}
+                      type="button"
+                      onClick={() => toggleSelection(service, setSelectedServices)}
+                      className={`rounded-2xl border p-4 text-left text-sm font-semibold transition ${active ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-slate-50"}`}
+                    >
+                      {service}
+                    </button>
+                  );
+                })}
+              </div>
+              </div>
+            </div>
+          )}
+
+          {showOpenModal && (
+            <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
+              <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Ouvert</h3>
+                <button type="button" onClick={() => setShowOpenModal(false)} className="text-3xl text-slate-500">×</button>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {filterOptions.openModes.map((option) => {
+                  const active = selectedOpenModes.includes(option);
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => toggleSelection(option, setSelectedOpenModes)}
+                      className={`rounded-2xl border p-4 text-left text-sm font-semibold transition ${active ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-700 hover:border-amber-200 hover:bg-slate-50"}`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+              </div>
+            </div>
+          )}
+
+          {showDeplacementModal && (
+            <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
+              <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Déplacement</h3>
+                <button type="button" onClick={() => setShowDeplacementModal(false)} className="text-3xl text-slate-500">×</button>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {filterOptions.displacements.map((option) => {
+                  const active = selectedDeplacement === option;
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setSelectedDeplacement(option)}
+                      className={`rounded-2xl border p-4 text-left text-sm font-semibold transition ${active ? "border-violet-300 bg-violet-50 text-violet-800" : "border-slate-200 bg-white text-slate-700 hover:border-violet-200 hover:bg-slate-50"}`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[360px_1fr]">
+            <aside className="h-fit rounded-[24px] border border-white/80 bg-white/95 p-5 shadow-[0_14px_35px_rgba(15,23,42,0.08)] space-y-5">
+              <form className="space-y-3" onSubmit={handleSearchSubmit}>
+              <label className="text-sm font-semibold text-[#334155] block">Recherche</label>
+              <div className="flex gap-2">
+                <input
+                  className="w-full rounded-xl border border-[#dbe2ec] bg-white px-3 py-2 text-sm text-[#1e293b] outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                  placeholder="Nom, adresse, email..."
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+                <button type="submit" className="rounded-xl bg-[#1d4ed8] px-4 py-2 text-sm font-bold text-white shadow transition hover:bg-[#1e40af]">OK</button>
+              </div>
+              </form>
+
+              <div className="space-y-3 rounded-2xl border border-[#dbe2ec] bg-[#f8fbff] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-[#334155]">Filtres rapides</p>
+                <button type="button" onClick={clearQuickFilters} className="text-xs font-semibold text-[#1d4ed8] hover:underline">
+                  Réinitialiser
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {renderFilterButton("Marques", selectedBrand ? 1 : 0, () => setShowBrandsModal(true))}
+                {renderFilterButton("Spécialités", selectedSpecialties.length, () => setShowSpecialtiesModal(true))}
+                {renderFilterButton("Services", selectedServices.length, () => setShowServicesModal(true))}
+                {renderFilterButton("Ouvert", selectedOpenModes.length, () => setShowOpenModal(true))}
+                {renderFilterButton("Déplacement", selectedDeplacement ? 1 : 0, () => setShowDeplacementModal(true))}
+              </div>
+              <p className="text-xs text-[#617089]">Déplacement sélectionné: {selectedDeplacement} • Rayon actuel: {radiusKm} km</p>
+              </div>
+
+              <div className="space-y-3">
+              <label className="text-sm font-semibold text-[#334155] block">Note minimale</label>
+              <select className="vb-input w-full px-3 py-2" value={minRating} onChange={(event) => setMinRating(Number(event.target.value))}>
+                <option value={0}>Toutes</option>
+                <option value={2}>2+</option>
+                <option value={3}>3+</option>
+                <option value={4}>4+</option>
+              </select>
+              </div>
+
+              <button type="button" className="w-full rounded-xl bg-[#1d4ed8] py-2.5 text-sm font-bold text-white shadow transition hover:bg-[#1e40af]" onClick={handleApplyFilters}>
+              Appliquer les filtres
+              </button>
+
+              <div className="border-t border-[#dbe2ec] pt-4">
+              <p className="text-sm font-semibold text-[#334155] mb-2">Resultats ({garages.length})</p>
+              {isLoadingList ? (
+                <p className="text-sm text-[#617089]">Chargement...</p>
+              ) : garages.length === 0 ? (
+                <p className="text-sm text-[#617089]">Aucun garage trouve avec ces filtres.</p>
+              ) : (
+                <ul className="space-y-2 max-h-[350px] overflow-auto pr-1">
+                  {garages.map((garage) => (
+                    <li key={garage.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectGarage(garage)}
+                        className={`w-full rounded-lg border px-3 py-3 text-left transition ${selectedGarageId === garage.id ? "border-blue-400 bg-blue-50" : "border-[#dbe2ec] bg-white hover:bg-slate-50"}`}
+                      >
+                        <p className="font-bold text-[#1a2b4b]">{garage.name}</p>
+                        <p className="text-xs text-[#617089]">{garage.adresse || "Adresse non precisee"}</p>
+                        <p className="mt-1 text-xs text-[#334155]">
+                          Note: {garage.rating ?? "-"}
+                          {garage.distance_km !== null && garage.distance_km !== undefined ? ` • ${garage.distance_km} km` : ""}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              </div>
+            </aside>
+
+            <section className="space-y-5">
+              <div className="rounded-[24px] border border-white/80 bg-white/95 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.08)] h-[600px]">
+                <GoogleMapGarages 
+                  center={mapCenter} 
+                  userPosition={userPosition}
+                  garages={garages}
+                  selectedGarageId={selectedGarageId}
+                  onMarkerClick={setSelectedGarageId}
+                />
+              </div>
+
+              {!selectedGarageId ? (
+                <div className="rounded-[24px] border border-white/80 bg-white/95 p-6 text-sm text-[#617089] shadow-[0_14px_35px_rgba(15,23,42,0.08)]">Selectionnez un garage dans la liste ou sur la carte.</div>
+              ) : isLoadingDetails ? (
+                <div className="rounded-[24px] border border-white/80 bg-white/95 p-6 text-sm text-[#617089] shadow-[0_14px_35px_rgba(15,23,42,0.08)]">Chargement des details...</div>
+              ) : (
+                <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[1.1fr_1fr]">
+                  <article className="rounded-[24px] border border-white/80 bg-white/95 p-6 space-y-4 shadow-[0_14px_35px_rgba(15,23,42,0.08)]">
+                  <div>
+                    <h2 className="text-2xl font-bold text-[#1a2b4b]">{selectedGarage?.name}</h2>
+                    <p className="mt-1 text-sm text-[#617089]">{selectedGarage?.adresse || "Adresse non precisee"}</p>
+                    <p className="mt-1 text-sm text-[#617089]">Contact: {selectedGarage?.telephone || "N/A"} • {selectedGarage?.email || "N/A"}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg bg-[#f4f8ff] p-3 text-center">
                       <p className="text-xs text-[#617089]">Note moyenne</p>
                       <p className="text-xl font-extrabold text-[#12223d]">{summary.average_rating || 0}</p>
@@ -236,104 +815,98 @@ const GaragesPage = () => {
                       <p className="text-xs text-[#617089]">Nombre d'avis</p>
                       <p className="text-xl font-extrabold text-[#12223d]">{summary.reviews_count || 0}</p>
                     </div>
-                    <div className="rounded-lg bg-[#f4f8ff] p-3 text-center">
-                      <p className="text-xs text-[#617089]">Services</p>
-                      <p className="text-xl font-extrabold text-[#12223d]">{garageServices.length}</p>
-                    </div>
-                    <div className="rounded-lg bg-[#f4f8ff] p-3 text-center">
-                      <p className="text-xs text-[#617089]">Etat</p>
-                      <p className="text-xl font-extrabold text-[#12223d]">{selectedGarage?.is_open ? "Ouvert" : "Ferme"}</p>
-                    </div>
                   </div>
-                </article>
 
-                <article className="vb-card p-6">
-                  <h3 className="mb-4 text-xl font-bold text-[#1a2b4b]">Services disponibles</h3>
-                  {garageServices.length === 0 ? (
-                    <p className="text-sm text-[#617089]">Ce garage n'a pas encore publie de services.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      {garageServices.map((service) => (
-                        <div key={service.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
-                          <p className="font-bold text-[#1a2b4b]">{service.name}</p>
-                          <p className="mt-1 text-sm text-[#617089]">{service.description || "Sans description"}</p>
-                          <p className="mt-2 text-sm text-[#334155]">
-                            {service.base_price !== null ? `${service.base_price} TND` : "Prix non precise"}
-                            {" • "}
-                            {service.duration_minutes !== null ? `${service.duration_minutes} min` : "Duree non precisee"}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </article>
-
-                <article className="vb-card p-6">
-                  <h3 className="mb-4 text-xl font-bold text-[#1a2b4b]">Votre avis</h3>
-                  <form className="space-y-3" onSubmit={handleSubmitReview}>
-                    <label className="block text-sm font-semibold text-[#334155]">
-                      Note
-                      <select
-                        name="rating"
-                        className="vb-input mt-1 w-full px-3 py-2"
-                        value={reviewForm.rating}
-                        onChange={handleReviewFieldChange}
-                      >
-                        <option value={1}>1</option>
-                        <option value={2}>2</option>
-                        <option value={3}>3</option>
-                        <option value={4}>4</option>
-                        <option value={5}>5</option>
-                      </select>
-                    </label>
-                    <label className="block text-sm font-semibold text-[#334155]">
-                      Commentaire
-                      <textarea
-                        name="comment"
-                        className="vb-input mt-1 w-full px-3 py-2"
-                        rows={4}
-                        value={reviewForm.comment}
-                        onChange={handleReviewFieldChange}
-                        placeholder="Partagez votre experience..."
-                      />
-                    </label>
-                    <div className="flex flex-wrap gap-3">
-                      <button type="submit" className="vb-btn-primary px-4 py-2">
-                        {editingReviewId ? "Mettre a jour mon avis" : "Publier mon avis"}
-                      </button>
-                      {editingReviewId && (
-                        <button type="button" className="rounded-lg border border-red-200 px-4 py-2 font-semibold text-red-700 hover:bg-red-50" onClick={handleDeleteMyReview}>
-                          Supprimer mon avis
-                        </button>
-                      )}
-                    </div>
-                  </form>
-                </article>
-
-                <article className="vb-card p-6">
-                  <h3 className="mb-4 text-xl font-bold text-[#1a2b4b]">Avis recents</h3>
-                  {garageReviews.length === 0 ? (
-                    <p className="text-sm text-[#617089]">Aucun avis public pour ce garage.</p>
-                  ) : (
-                    <ul className="space-y-3">
-                      {garageReviews.map((review) => (
-                        <li key={review.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <p className="font-bold text-[#1a2b4b]">{review.reviewer?.name || "Utilisateur"}</p>
-                              <p className="text-sm text-[#617089]">Note: {review.rating}/5</p>
-                              <p className="mt-1 text-sm text-[#334155]">{review.comment || "Sans commentaire"}</p>
-                            </div>
-                            <p className="text-xs text-[#617089]">{new Date(review.created_at).toLocaleDateString("fr-FR")}</p>
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Services disponibles</h3>
+                    {garageServices.length === 0 ? (
+                      <p className="text-sm text-[#617089]">Ce garage n'a pas encore publie de services.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {garageServices.map((service) => (
+                          <div key={service.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
+                            <p className="font-bold text-[#1a2b4b]">{service.name}</p>
+                            <p className="mt-1 text-sm text-[#617089]">{service.description || "Sans description"}</p>
+                            <p className="mt-2 text-sm text-[#334155]">
+                              {service.base_price !== null ? `${service.base_price} TND` : "Prix non precise"}
+                              {" • "}
+                              {service.duration_minutes !== null ? `${service.duration_minutes} min` : "Duree non precisee"}
+                            </p>
                           </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </article>
-              </>
-            )}
-          </section>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  </article>
+
+                  <article className="rounded-[24px] border border-white/80 bg-white/95 p-6 space-y-5 shadow-[0_14px_35px_rgba(15,23,42,0.08)]">
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Votre avis</h3>
+                    <form className="space-y-3" onSubmit={handleSubmitReview}>
+                      <label className="block text-sm font-semibold text-[#334155]">
+                        Note
+                        <select name="rating" className="vb-input mt-1 w-full px-3 py-2" value={reviewForm.rating} onChange={handleReviewFieldChange}>
+                          <option value={1}>1</option>
+                          <option value={2}>2</option>
+                          <option value={3}>3</option>
+                          <option value={4}>4</option>
+                          <option value={5}>5</option>
+                        </select>
+                      </label>
+                      <label className="block text-sm font-semibold text-[#334155]">
+                        Commentaire
+                        <textarea
+                          name="comment"
+                          className="vb-input mt-1 w-full px-3 py-2"
+                          rows={4}
+                          value={reviewForm.comment}
+                          onChange={handleReviewFieldChange}
+                          placeholder="Partagez votre experience..."
+                        />
+                      </label>
+                      <div className="flex flex-wrap gap-3">
+                        <button type="submit" className="vb-btn-primary px-4 py-2">
+                          {editingReviewId ? "Mettre a jour mon avis" : "Publier mon avis"}
+                        </button>
+                        {editingReviewId && (
+                          <button
+                            type="button"
+                            className="rounded-lg border border-red-200 px-4 py-2 font-semibold text-red-700 hover:bg-red-50"
+                            onClick={handleDeleteMyReview}
+                          >
+                            Supprimer mon avis
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Avis recents</h3>
+                    {garageReviews.length === 0 ? (
+                      <p className="text-sm text-[#617089]">Aucun avis public pour ce garage.</p>
+                    ) : (
+                      <ul className="space-y-3 max-h-[320px] overflow-auto pr-1">
+                        {garageReviews.map((review) => (
+                          <li key={review.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="font-bold text-[#1a2b4b]">{review.reviewer?.name || "Utilisateur"}</p>
+                                <p className="text-sm text-[#617089]">Note: {review.rating}/5</p>
+                                <p className="mt-1 text-sm text-[#334155]">{review.comment || "Sans commentaire"}</p>
+                              </div>
+                              <p className="text-xs text-[#617089]">{new Date(review.created_at).toLocaleDateString("fr-FR")}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  </article>
+                </div>
+              )}
+            </section>
+          </div>
         </div>
       </div>
     </PlatformLayout>

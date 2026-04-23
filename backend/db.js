@@ -195,9 +195,17 @@ const initDatabase = async () => {
       id BIGSERIAL PRIMARY KEY,
       user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
       name VARCHAR(255) NOT NULL,
+      description TEXT,
       adresse VARCHAR(255),
       telephone VARCHAR(50),
       email VARCHAR(255),
+      specialties TEXT,
+      services_catalog TEXT,
+      keywords TEXT,
+      photo_urls TEXT,
+      work_hours TEXT,
+      travel_hours TEXT,
+      vehicle_brands TEXT,
       latitude DOUBLE PRECISION,
       longitude DOUBLE PRECISION,
       rating NUMERIC(3, 2) DEFAULT 3.5,
@@ -264,6 +272,8 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE SET NULL');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS condition VARCHAR(50) DEFAULT \'Neuf\'');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS zone_geographique VARCHAR(100)');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION');
     await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS marque VARCHAR(100)');
     await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS modele VARCHAR(150)');
     await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS categorie VARCHAR(150)');
@@ -273,6 +283,14 @@ const initDatabase = async () => {
 
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS is_open BOOLEAN DEFAULT true');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE SET NULL');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS description TEXT');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS specialties TEXT');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS services_catalog TEXT');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS keywords TEXT');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS photo_urls TEXT');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS work_hours TEXT');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS travel_hours TEXT');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS vehicle_brands TEXT');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
 

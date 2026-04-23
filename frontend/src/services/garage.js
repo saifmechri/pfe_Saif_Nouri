@@ -21,6 +21,17 @@ export const updateGarage = (garageId, garageData) => {
   return API.put(`/garages/${garageId}`, garageData);
 };
 
+export const uploadGaragePhotos = (files = []) => {
+  const formData = new FormData();
+  files.forEach((file) => formData.append('photos', file));
+
+  return API.post('/garages/photos/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+};
+
 export const deleteGarage = (garageId) => {
   return API.delete(`/garages/${garageId}`);
 };
@@ -65,4 +76,10 @@ export const updateGarageReview = (garageId, reviewId, reviewData) => {
 
 export const deleteGarageReview = (garageId, reviewId) => {
   return API.delete(`/garages/${garageId}/reviews/${reviewId}`);
+};
+
+
+// Cette section gère les options de filtres disponibles
+export const getFilterOptions = () => {
+  return API.get('/garages/filter-options');
 };

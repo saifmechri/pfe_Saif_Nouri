@@ -8,9 +8,20 @@ const mapGarageRow = (row) => ({
   id: Number(row.id),
   user_id: row.user_id === null ? null : Number(row.user_id),
   name: row.name,
+  description: row.description || null,
   adresse: row.adresse || null,
   telephone: row.telephone || null,
   email: row.email || null,
+  specialties: row.specialties || null,
+  services_catalog: row.services_catalog || null,
+  keywords: row.keywords || null,
+  photo_urls: row.photo_urls || null,
+  work_hours: row.work_hours || null,
+  travel_hours: row.travel_hours || null,
+  vehicle_brands: row.vehicle_brands || null,
+  store_specialties: row.store_specialties || null,
+  store_services: row.store_services || null,
+  service_names: Array.isArray(row.service_names) ? row.service_names.filter(Boolean) : [],
   latitude: row.latitude === null ? null : Number(row.latitude),
   longitude: row.longitude === null ? null : Number(row.longitude),
   rating: row.rating === null ? null : Number(row.rating),
@@ -107,6 +118,24 @@ const parseOptionalStringList = (value, fieldName) => {
   return [...new Set(normalizedItems)];
 };
 
+  const buildExactTextMatchClause = (columnName, values, params) => {
+    if (!values || values.length === 0) {
+      return null;
+    }
+
+    params.push(values);
+    const valuesParam = `$${params.length}`;
+
+    return `(
+      SELECT COUNT(*)
+      FROM (
+        SELECT LOWER(BTRIM(item)) AS normalized_item
+        FROM UNNEST(string_to_array(COALESCE(${columnName}, ''), E'\n')) AS item
+      ) AS normalized_items
+      WHERE normalized_item = ANY(${valuesParam}::text[])
+    ) > 0`;
+  };
+
 const resolveOwnerUserId = (req, providedUserId) => {
   const role = req.user?.role;
   const currentUserId = Number(req.user?.id);
@@ -200,15 +229,23 @@ const createGarage = asyncHandler(async (req, res) => {
   }
 
   const insertResult = await pool.query(
-    `INSERT INTO garages (user_id, name, adresse, telephone, email, latitude, longitude, rating, is_open, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9, true), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-     RETURNING id, user_id, name, adresse, telephone, email, latitude, longitude, rating, is_open, created_at, updated_at`,
+    `INSERT INTO garages (user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, COALESCE($17, true), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+     RETURNING id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at`,
     [
       ownerUserId,
       garageName,
+      normalizeOptionalString(req.body?.description),
       normalizeOptionalString(req.body?.adresse),
       normalizeOptionalString(req.body?.telephone),
       normalizeOptionalString(req.body?.email),
+      normalizeOptionalString(req.body?.specialties),
+      normalizeOptionalString(req.body?.services_catalog),
+      normalizeOptionalString(req.body?.keywords),
+      normalizeOptionalString(req.body?.photo_urls),
+      normalizeOptionalString(req.body?.work_hours),
+      normalizeOptionalString(req.body?.travel_hours),
+      normalizeOptionalString(req.body?.vehicle_brands),
       parseNullableNumber(req.body?.latitude, 'latitude'),
       parseNullableNumber(req.body?.longitude, 'longitude'),
       req.body?.rating === undefined || req.body?.rating === null || req.body?.rating === ''
@@ -235,6 +272,8 @@ const listGarages = asyncHandler(async (req, res) => {
   const includeInactiveServices = ['true', '1', 'yes', 'on'].includes(String(req.query.includeInactiveServices || '').toLowerCase());
   const minRating = parseNullableNumber(req.query.minRating, 'minRating');
   const maxRating = parseNullableNumber(req.query.maxRating, 'maxRating');
+  const brandNames = parseOptionalStringList(req.query.brands, 'brands');
+  const specialtyNames = parseOptionalStringList(req.query.specialties, 'specialties');
   const serviceIds = parseOptionalIntegerList(req.query.serviceIds, 'serviceIds');
   const serviceNames = parseOptionalStringList(req.query.services, 'services');
   const serviceMatch = String(req.query.serviceMatch || 'any').toLowerCase() === 'all' ? 'all' : 'any';
@@ -291,6 +330,16 @@ const listGarages = asyncHandler(async (req, res) => {
   if (maxRating !== null) {
     params.push(maxRating);
     whereClauses.push(`g.rating <= $${params.length}`);
+  }
+
+  const brandClause = buildExactTextMatchClause('u.store_specialties', brandNames, params);
+  if (brandClause) {
+    whereClauses.push(brandClause);
+  }
+
+  const specialtyClause = buildExactTextMatchClause('u.store_specialties', specialtyNames, params);
+  if (specialtyClause) {
+    whereClauses.push(specialtyClause);
   }
 
   const serviceActiveClause = includeInactiveServices ? '' : 'AND gs.is_active = true';
@@ -359,8 +408,16 @@ const listGarages = asyncHandler(async (req, res) => {
   let rows = [];
   if (needsGeoPostProcessing) {
     const result = await pool.query(
-      `SELECT g.id, g.user_id, g.name, g.adresse, g.telephone, g.email, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at
+      `SELECT g.id, g.user_id, g.name, g.description, g.adresse, g.telephone, g.email, g.specialties, g.services_catalog, g.keywords, g.photo_urls, g.work_hours, g.travel_hours, g.vehicle_brands, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at,
+              u.store_specialties, u.store_services,
+              (
+                SELECT ARRAY_AGG(DISTINCT LOWER(gs.name))
+                FROM garage_services gs
+                WHERE gs.garage_id = g.id
+                  AND gs.is_active = true
+              ) AS service_names
        FROM garages g
+        LEFT JOIN users u ON u.id = g.user_id
        ${whereSql}
        ORDER BY g.created_at DESC`,
       params
@@ -372,9 +429,17 @@ const listGarages = asyncHandler(async (req, res) => {
     params.push(offset);
 
     const result = await pool.query(
-      `SELECT g.id, g.user_id, g.name, g.adresse, g.telephone, g.email, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at,
+            `SELECT g.id, g.user_id, g.name, g.description, g.adresse, g.telephone, g.email, g.specialties, g.services_catalog, g.keywords, g.photo_urls, g.work_hours, g.travel_hours, g.vehicle_brands, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at,
+              u.store_specialties, u.store_services,
+              (
+          SELECT ARRAY_AGG(DISTINCT LOWER(gs.name))
+          FROM garage_services gs
+          WHERE gs.garage_id = g.id
+            AND gs.is_active = true
+              ) AS service_names,
               COUNT(*) OVER() AS total_count
        FROM garages g
+        LEFT JOIN users u ON u.id = g.user_id
        ${whereSql}
        ORDER BY g.created_at DESC
        LIMIT $${params.length - 1}
@@ -455,6 +520,8 @@ const listGarages = asyncHandler(async (req, res) => {
         radiusKm,
         minRating,
         maxRating,
+        brands: brandNames,
+        specialties: specialtyNames,
         serviceIds,
         services: serviceNames,
         serviceMatch,
@@ -473,7 +540,7 @@ const getGarageById = asyncHandler(async (req, res) => {
   }
 
   const result = await pool.query(
-    `SELECT id, user_id, name, adresse, telephone, email, latitude, longitude, rating, is_open, created_at, updated_at
+    `SELECT id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at
      FROM garages
      WHERE id = $1`,
     [garageId]
@@ -497,7 +564,7 @@ const getMyGarage = asyncHandler(async (req, res) => {
   }
 
   const result = await pool.query(
-    `SELECT id, user_id, name, adresse, telephone, email, latitude, longitude, rating, is_open, created_at, updated_at
+    `SELECT id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at
      FROM garages
      WHERE user_id = $1`,
     [currentUserId]
@@ -520,7 +587,7 @@ const updateGarage = asyncHandler(async (req, res) => {
   }
 
   const existingGarageResult = await pool.query(
-    `SELECT id, user_id, name, adresse, telephone, email, latitude, longitude, rating, is_open, created_at, updated_at
+    `SELECT id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at
      FROM garages
      WHERE id = $1`,
     [garageId]
@@ -535,9 +602,17 @@ const updateGarage = asyncHandler(async (req, res) => {
 
   const hasAnyField = [
     'name',
+    'description',
     'adresse',
     'telephone',
     'email',
+    'specialties',
+    'services_catalog',
+    'keywords',
+    'photo_urls',
+    'work_hours',
+    'travel_hours',
+    'vehicle_brands',
     'latitude',
     'longitude',
     'rating',
@@ -551,21 +626,37 @@ const updateGarage = asyncHandler(async (req, res) => {
   const updatedResult = await pool.query(
     `UPDATE garages
      SET name = COALESCE($1, name),
-         adresse = COALESCE($2, adresse),
-         telephone = COALESCE($3, telephone),
-         email = COALESCE($4, email),
-         latitude = COALESCE($5, latitude),
-         longitude = COALESCE($6, longitude),
-         rating = COALESCE($7, rating),
-         is_open = COALESCE($8, is_open),
+         description = COALESCE($2, description),
+         adresse = COALESCE($3, adresse),
+         telephone = COALESCE($4, telephone),
+         email = COALESCE($5, email),
+         specialties = COALESCE($6, specialties),
+         services_catalog = COALESCE($7, services_catalog),
+         keywords = COALESCE($8, keywords),
+         photo_urls = COALESCE($9, photo_urls),
+         work_hours = COALESCE($10, work_hours),
+         travel_hours = COALESCE($11, travel_hours),
+         vehicle_brands = COALESCE($12, vehicle_brands),
+         latitude = COALESCE($13, latitude),
+         longitude = COALESCE($14, longitude),
+         rating = COALESCE($15, rating),
+         is_open = COALESCE($16, is_open),
          updated_at = CURRENT_TIMESTAMP
-     WHERE id = $9
-     RETURNING id, user_id, name, adresse, telephone, email, latitude, longitude, rating, is_open, created_at, updated_at`,
+       WHERE id = $17
+       RETURNING id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at`,
     [
       req.body?.name !== undefined ? normalizeOptionalString(req.body.name) : null,
+      req.body?.description !== undefined ? normalizeOptionalString(req.body.description) : null,
       req.body?.adresse !== undefined ? normalizeOptionalString(req.body.adresse) : null,
       req.body?.telephone !== undefined ? normalizeOptionalString(req.body.telephone) : null,
       req.body?.email !== undefined ? normalizeOptionalString(req.body.email) : null,
+      req.body?.specialties !== undefined ? normalizeOptionalString(req.body.specialties) : null,
+      req.body?.services_catalog !== undefined ? normalizeOptionalString(req.body.services_catalog) : null,
+      req.body?.keywords !== undefined ? normalizeOptionalString(req.body.keywords) : null,
+      req.body?.photo_urls !== undefined ? normalizeOptionalString(req.body.photo_urls) : null,
+      req.body?.work_hours !== undefined ? normalizeOptionalString(req.body.work_hours) : null,
+      req.body?.travel_hours !== undefined ? normalizeOptionalString(req.body.travel_hours) : null,
+      req.body?.vehicle_brands !== undefined ? normalizeOptionalString(req.body.vehicle_brands) : null,
       req.body?.latitude !== undefined ? parseNullableNumber(req.body.latitude, 'latitude') : null,
       req.body?.longitude !== undefined ? parseNullableNumber(req.body.longitude, 'longitude') : null,
       req.body?.rating !== undefined ? parseNullableNumber(req.body.rating, 'rating') : null,
@@ -607,11 +698,77 @@ const deleteGarage = asyncHandler(async (req, res) => {
   });
 });
 
+const uploadGaragePhotos = asyncHandler(async (req, res) => {
+  const files = Array.isArray(req.files) ? req.files : [];
+
+  if (files.length === 0) {
+    throw new AppError('Aucune photo fournie', 400, 'NO_PHOTO_UPLOADED');
+  }
+
+  const host = `${req.protocol}://${req.get('host')}`;
+  const urls = files.map((file) => `${host}/uploads/garages/${file.filename}`);
+
+  return sendApiResponse(res, {
+    statusCode: 201,
+    message: 'Photos garage uploades avec succes',
+    data: {
+      items: urls
+    }
+  });
+});
+
+const getFilterOptions = asyncHandler(async (req, res) => {
+  // Récupérer les specialités distinctes depuis store_specialties des utilisateurs garage
+  const specialtiesResult = await pool.query(`
+    SELECT DISTINCT TRIM(specialty) AS specialty
+    FROM (
+      SELECT UNNEST(STRING_TO_ARRAY(u.store_specialties, ',')) AS specialty
+      FROM users u
+      WHERE u.role_id = 2 AND u.store_specialties IS NOT NULL AND u.store_specialties != ''
+    ) subquery
+    WHERE specialty != ''
+    ORDER BY specialty ASC
+  `);
+
+  // Récupérer les services distinctes depuis garage_services
+  const servicesResult = await pool.query(`
+    SELECT DISTINCT LOWER(TRIM(gs.name)) AS service_name
+    FROM garage_services gs
+    WHERE gs.is_active = true
+    ORDER BY service_name ASC
+  `);
+
+  // Récupérer les marques distinctes depuis vehicle_brands dans garages
+  const brandsResult = await pool.query(`
+    SELECT DISTINCT TRIM(brand) AS brand
+    FROM (
+      SELECT UNNEST(STRING_TO_ARRAY(g.vehicle_brands, ',')) AS brand
+      FROM garages g
+      WHERE g.vehicle_brands IS NOT NULL AND g.vehicle_brands != ''
+    ) subquery
+    WHERE brand != ''
+    ORDER BY brand ASC
+  `);
+
+  return sendApiResponse(res, {
+    message: 'Options de filtres recuperees avec succes',
+    data: {
+      specialties: specialtiesResult.rows.map(row => row.specialty),
+      services: servicesResult.rows.map(row => row.service_name),
+      brands: brandsResult.rows.map(row => row.brand),
+      openModes: ['Ouvert maintenant', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
+      displacements: ['Sur place', '5 km', '10 km', '25 km', '50 km', '100 km', 'Toute la ville']
+    }
+  });
+});
+
 module.exports = {
   createGarage,
   listGarages,
   getGarageById,
   getMyGarage,
   updateGarage,
-  deleteGarage
+  deleteGarage,
+  uploadGaragePhotos,
+  getFilterOptions
 };

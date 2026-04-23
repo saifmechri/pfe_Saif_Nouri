@@ -6,6 +6,7 @@ const { validateRequest } = require('../middlewares/validateRequest');
 const garageController = require('../controllers/garage.controller');
 const garageServiceController = require('../controllers/garageService.controller');
 const garageReviewController = require('../controllers/garageReview.controller');
+const { uploadGaragePhoto } = require('../middlwares/uploadGaragePhoto');
 
 const router = express.Router();
 
@@ -138,6 +139,7 @@ const updateGarageReviewValidation = [
   body('is_published').optional().isBoolean().withMessage('is_published doit etre booleen')
 ];
 
+router.get('/filter-options', garageController.getFilterOptions);
 router.get('/', listGaragesValidation, validateRequest, garageController.listGarages);
 router.get('/me', verifyToken, checkRole('garage', 'admin'), garageController.getMyGarage);
 router.get('/me/services', verifyToken, checkRole('garage', 'admin'), garageServiceController.listMyGarageServices);
@@ -147,6 +149,7 @@ router.get('/:id/services', listGarageServicesValidation, validateRequest, garag
 router.get('/:id/reviews', listGarageReviewsValidation, validateRequest, garageReviewController.listGarageReviews);
 
 router.post('/', verifyToken, checkRole('garage', 'admin'), createGarageValidation, validateRequest, garageController.createGarage);
+router.post('/photos/upload', verifyToken, checkRole('garage', 'admin'), uploadGaragePhoto.array('photos', 9), garageController.uploadGaragePhotos);
 router.post('/:id/services', verifyToken, checkRole('garage', 'admin'), createGarageServiceValidation, validateRequest, garageServiceController.createGarageService);
 router.post('/:id/reviews', verifyToken, isAutomobiliste, createGarageReviewValidation, validateRequest, garageReviewController.createGarageReview);
 router.put('/:id', verifyToken, checkRole('garage', 'admin'), updateGarageValidation, validateRequest, garageController.updateGarage);

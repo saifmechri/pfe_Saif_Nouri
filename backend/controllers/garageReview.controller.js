@@ -2,6 +2,7 @@ const { pool } = require('../db');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
+const { findGarageIdentityById, findGarageIdentityByUserId } = require('../models/garage.model');
 
 const mapReviewRow = (row) => ({
   id: Number(row.id),
@@ -39,23 +40,23 @@ const parseRating = (value) => {
 };
 
 const getGarageById = async (garageId) => {
-  const result = await pool.query('SELECT id, user_id FROM garages WHERE id = $1', [garageId]);
+  const garage = await findGarageIdentityById(garageId);
 
-  if (result.rows.length === 0) {
+  if (!garage) {
     throw new AppError('Garage non trouve', 404, 'GARAGE_NOT_FOUND');
   }
 
-  return result.rows[0];
+  return garage;
 };
 
 const getMyGarageRow = async (userId) => {
-  const result = await pool.query('SELECT id, user_id FROM garages WHERE user_id = $1', [userId]);
+  const garage = await findGarageIdentityByUserId(userId);
 
-  if (result.rows.length === 0) {
+  if (!garage) {
     throw new AppError('Profil garage introuvable pour cet utilisateur', 404, 'GARAGE_PROFILE_NOT_FOUND');
   }
 
-  return result.rows[0];
+  return garage;
 };
 
 const isGarageOwnerOrAdmin = (req, garageRow) => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Bell, ChevronDown, ChevronRight, Clock3, Heart, Home, ImagePlus, Lock, Menu, MinusCircle, PlusCircle, Search, Settings, Truck, Wrench } from "lucide-react";
+import { ArrowLeft, Bell, ChevronDown, ChevronRight, Clock3, Heart, Home, ImagePlus, Lock, MapPin, Menu, MinusCircle, PlusCircle, Search, Settings, Truck, Wrench } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
   createGarage,
@@ -13,6 +13,7 @@ import {
   updateGarageReview,
   updateGarageService
 } from "../../services/garage";
+import { calculateDistance, formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
 const emptyGarageForm = {
   name: "",
@@ -427,7 +428,7 @@ const serializeScheduleText = (schedule) =>
     .join("\n");
 
 const GarageDashboard = () => {
-  const [activePanel, setActivePanel] = useState("profil");
+  const [activePanel, setActivePanel] = useState("garage");
   const [search, setSearch] = useState("");
 
   const [garage, setGarage] = useState(null);
@@ -1050,30 +1051,44 @@ const GarageDashboard = () => {
 
   return (
     <PlatformLayout>
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(251,146,60,0.12),_transparent_28%),linear-gradient(180deg,#f8fbff_0%,#eef4fb_100%)]">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(244,158,95,0.14),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(30,64,175,0.10),_transparent_30%),linear-gradient(180deg,_#f7f2ea_0%,_#fffdf9_100%)]">
         <div className="mx-auto max-w-[1400px] px-4 py-4 space-y-5 sm:px-6 sm:py-6">
-          <header className="relative overflow-hidden rounded-[28px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.96)_0%,rgba(255,247,237,0.96)_100%)] px-5 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] sm:px-6 sm:py-6">
+          <header className="relative overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.97)_0%,rgba(255,248,241,0.96)_100%)] px-5 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] sm:px-6 sm:py-6">
             <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-orange-100/70 blur-3xl" />
             <div className="absolute -bottom-12 left-1/3 h-32 w-32 rounded-full bg-sky-100/70 blur-3xl" />
-            <div className="relative flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
               <div className="flex items-start gap-4">
                 <button type="button" className="mt-1 rounded-2xl border border-orange-200 bg-white p-2.5 text-orange-500 shadow-sm transition hover:border-orange-300 hover:shadow">
                   <Menu className="h-6 w-6" />
                 </button>
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-orange-600">
                     Mecaways Garage
                   </div>
                   <div>
-                    <h1 className="text-3xl font-black tracking-tight text-[#10243f] sm:text-4xl">Ajouter un point d’intérêt</h1>
+                    <h1 className="text-3xl font-black tracking-tight text-[#10243f] sm:text-4xl">Gestion du garage</h1>
                     <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
-                      Gérez votre fiche, vos spécialités, vos services et votre position GPS depuis une interface claire et rapide.
+                      Configurez votre garage, gérez sa présentation et gardez une vue claire sur vos services et vos avis.
                     </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-3">
+                    <div className="rounded-2xl border border-orange-100 bg-white/90 px-4 py-3 shadow-sm">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-500">Services actifs</p>
+                      <p className="mt-1 text-2xl font-black text-[#10243f]">{activeServicesCount}</p>
+                    </div>
+                    <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 shadow-sm">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-500">Avis clients</p>
+                      <p className="mt-1 text-2xl font-black text-[#10243f]">{reviewSummary.reviews_count}</p>
+                    </div>
+                    <div className="rounded-2xl border border-emerald-100 bg-white/90 px-4 py-3 shadow-sm">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-500">Note moyenne</p>
+                      <p className="mt-1 text-2xl font-black text-[#10243f]">{reviewSummary.average_rating}</p>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-3 xl:justify-end">
+              <div className="flex flex-col gap-3 xl:items-end">
                 <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-slate-500 shadow-sm">
                   <Home className="h-5 w-5 text-orange-500" />
                   <Heart className="h-5 w-5 text-orange-500" />
@@ -1082,7 +1097,7 @@ const GarageDashboard = () => {
                     <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">1</span>
                   </div>
                 </div>
-                <button type="button" onClick={() => setActivePanel("profil")} className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-2.5 text-sm font-semibold text-orange-600 shadow-sm transition hover:border-orange-300 hover:bg-orange-50">
+                <button type="button" onClick={() => setActivePanel("garage")} className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-2.5 text-sm font-semibold text-orange-600 shadow-sm transition hover:border-orange-300 hover:bg-orange-50">
                   <Search className="h-4 w-4" />
                   Rechercher
                 </button>
@@ -1310,7 +1325,7 @@ const GarageDashboard = () => {
                   <button type="button" onClick={() => openServicesModal()} className="rounded-lg border border-[#dbe2ec] bg-white p-2 text-[#45556f]">
                     <Wrench className="h-5 w-5" />
                   </button>
-                  <button type="button" onClick={() => setActivePanel("avis")} className="rounded-lg border border-[#dbe2ec] bg-white p-2 text-[#45556f]">
+                  <button type="button" onClick={() => setActivePanel("presentation")} className="rounded-lg border border-[#dbe2ec] bg-white p-2 text-[#45556f]">
                     <Heart className="h-5 w-5" />
                   </button>
                 </div>
@@ -1318,26 +1333,34 @@ const GarageDashboard = () => {
             </section>
 
             <section className="space-y-5">
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-1 gap-3 rounded-[24px] border border-slate-200 bg-white/90 p-2 shadow-[0_16px_32px_rgba(15,23,42,0.06)] sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() => setActivePanel("profil")}
-                  className={`rounded-lg px-4 py-2 font-semibold ${activePanel === "profil" ? "bg-orange-100 text-orange-700" : "bg-white text-[#5e6d86] border border-[#dbe2ec]"}`}
+                  onClick={() => setActivePanel("garage")}
+                  className={`rounded-2xl px-4 py-3 text-center text-base font-extrabold transition ${activePanel === "garage" ? "bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] text-white shadow-md shadow-blue-900/15" : "text-slate-500 hover:text-slate-800"}`}
                 >
-                  Ajouter un point d'intérêt
+                  Garage
                 </button>
                 <button
                   type="button"
-                  onClick={() => setActivePanel("avis")}
-                  className={`rounded-lg px-4 py-2 font-semibold ${activePanel === "avis" ? "bg-orange-100 text-orange-700" : "bg-white text-[#5e6d86] border border-[#dbe2ec]"}`}
+                  onClick={() => setActivePanel("presentation")}
+                  className={`rounded-2xl px-4 py-3 text-center text-base font-extrabold transition ${activePanel === "presentation" ? "bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] text-white shadow-md shadow-blue-900/15" : "text-slate-500 hover:text-slate-800"}`}
                 >
-                  Avis clients
+                  Présentation
                 </button>
               </div>
 
-              {activePanel === "profil" && (
+              {activePanel === "garage" && (
                 <article className="vb-card p-6">
-                  <h2 className="mb-4 text-3xl font-black text-[#1a2b4b]">Ajouter un point d'intérêt</h2>
+                  <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">Espace garage</p>
+                      <h2 className="text-3xl font-black text-[#1a2b4b]">Gérer le garage</h2>
+                    </div>
+                    <p className="max-w-xl text-sm leading-6 text-[#617089]">
+                      Mettez à jour votre fiche, vos spécialités, vos photos et votre position pour une présentation plus claire côté utilisateur.
+                    </p>
+                  </div>
                   {isGarageLoading ? (
                     <p className="text-sm text-[#617089]">Chargement du profil...</p>
                   ) : (
@@ -1608,70 +1631,193 @@ const GarageDashboard = () => {
                         </div>
                       </div>
 
-                      <button type="submit" className="rounded-xl bg-orange-500 px-5 py-3 text-base font-bold text-white hover:bg-orange-600">
-                        Valider
+                      <button type="submit" className="rounded-xl bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-5 py-3 text-base font-bold text-white shadow-[0_12px_22px_rgba(30,64,175,0.18)] hover:brightness-105">
+                        Enregistrer le garage
                       </button>
                     </form>
                   )}
                 </article>
               )}
 
-              {activePanel === "avis" && (
-                <section className="vb-card p-6">
-                  <h2 className="mb-4 text-3xl font-black text-[#1a2b4b]">Avis clients</h2>
-                  <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <article className="rounded-lg border border-[#dbe2ec] bg-white p-3 text-center">
-                      <p className="text-xs text-[#617089]">Total avis</p>
-                      <p className="text-xl font-black text-[#12223d]">{reviewSummary.reviews_count}</p>
-                    </article>
-                    <article className="rounded-lg border border-[#dbe2ec] bg-white p-3 text-center">
-                      <p className="text-xs text-[#617089]">Moyenne</p>
-                      <p className="text-xl font-black text-[#12223d]">{reviewSummary.average_rating}</p>
-                    </article>
-                    <article className="rounded-lg border border-[#dbe2ec] bg-white p-3 text-center">
-                      <p className="text-xs text-[#617089]">Note min</p>
-                      <p className="text-xl font-black text-[#12223d]">{reviewSummary.min_rating}</p>
-                    </article>
-                    <article className="rounded-lg border border-[#dbe2ec] bg-white p-3 text-center">
-                      <p className="text-xs text-[#617089]">Note max</p>
-                      <p className="text-xl font-black text-[#12223d]">{reviewSummary.max_rating}</p>
-                    </article>
+              {activePanel === "presentation" && (
+                <section className="space-y-5">
+                  {canManagePieces && !isStoreView && (
+                    <form onSubmit={handlePresentationSave} className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <h3 className="text-2xl font-black text-slate-900">Éditer la présentation</h3>
+                        {presentationSaving && <span className="text-sm font-semibold text-blue-700">Enregistrement...</span>}
+                      </div>
+
+                      {presentationError && <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{presentationError}</div>}
+                      {presentationMessage && <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{presentationMessage}</div>}
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <input name="store_name" value={presentationForm.store_name} onChange={handlePresentationChange} placeholder="Nom du garage" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300" />
+                        <input name="store_address" value={presentationForm.store_address} onChange={handlePresentationChange} placeholder="Adresse" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300" />
+                        <textarea name="store_description" value={presentationForm.store_description} onChange={handlePresentationChange} placeholder="Description" rows={3} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
+                        <textarea name="store_hours" value={presentationForm.store_hours} onChange={handlePresentationChange} placeholder="Horaires, une ligne par jour" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
+                        <textarea name="store_specialties" value={presentationForm.store_specialties} onChange={handlePresentationChange} placeholder="Spécialités, une ligne par item" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
+                        <textarea name="store_services" value={presentationForm.store_services} onChange={handlePresentationChange} placeholder="Services, une ligne par item" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
+                      </div>
+
+                      <div className="mt-4 flex justify-end">
+                        <button type="submit" disabled={presentationSaving} className="rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-5 py-3 text-base font-bold text-white shadow-[0_12px_22px_rgba(30,64,175,0.18)] disabled:opacity-60">
+                          {presentationSaving ? "Sauvegarde..." : "Enregistrer la présentation"}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <h2 className="text-4xl font-black tracking-tight text-slate-900">{storeDisplayName}</h2>
+                    <p className="mt-2 text-lg text-slate-700">Spécialiste en services et entretien automobile</p>
+                    <p className="mt-2 text-base leading-relaxed text-slate-600">
+                      {storeDescription}
+                    </p>
+                    <p className="mt-3 text-base font-semibold text-slate-700">Role: {vendorRole}</p>
+                    <p className="text-base font-semibold text-slate-700">Email: {vendorEmail}</p>
+                    <p className="text-base font-semibold text-slate-700">Telephone: {vendorPhone}</p>
+                    {profileLoading && <p className="mt-2 text-sm text-slate-500">Chargement du profil...</p>}
                   </div>
 
-                  {isReviewsLoading ? (
-                    <p className="text-sm text-[#617089]">Chargement des avis...</p>
-                  ) : reviews.length === 0 ? (
-                    <p className="text-sm text-[#617089]">Aucun avis disponible pour ce garage.</p>
-                  ) : (
-                    <ul className="space-y-3">
-                      {reviews.map((review) => (
-                        <li key={review.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <p className="text-base font-bold text-[#1a2b4b]">{review.reviewer?.name || "Client"}</p>
-                              <p className="text-sm text-[#617089]">Note: {review.rating}/5</p>
-                              <p className="mt-1 text-sm text-[#334155]">{review.comment || "Aucun commentaire"}</p>
+                  {garage?.latitude && garage?.longitude && (
+                    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)] space-y-4">
+                      <div>
+                        <h3 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+                          <MapPin className="w-6 h-6 text-blue-600" />
+                          Localisation du garage
+                        </h3>
+                        <p className="mt-2 text-sm text-slate-600">
+                          Latitude: {garage.latitude} • Longitude: {garage.longitude}
+                        </p>
+                      </div>
+                      <div ref={mapContainerRef} className="w-full h-80 rounded-2xl border border-slate-200 overflow-hidden shadow-md" />
+                      {userPosition && (
+                        <div className={`rounded-2xl border-2 p-4 ${getDistanceColor(calculateDistance(userPosition[0], userPosition[1], Number(garage.latitude), Number(garage.longitude)))}`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <MapPin className="w-5 h-5" />
+                              <div>
+                                <p className="font-semibold text-sm">Distance depuis vous</p>
+                                <p className="text-xs opacity-75">{getDistanceLabel(calculateDistance(userPosition[0], userPosition[1], Number(garage.latitude), Number(garage.longitude)))}</p>
+                              </div>
                             </div>
                             <div className="text-right">
-                              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${review.is_published ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-                                {review.is_published ? "Publie" : "Cache"}
-                              </span>
-                              <p className="mt-2 text-xs text-[#617089]">{new Date(review.created_at).toLocaleDateString("fr-FR")}</p>
+                              <p className="text-2xl font-black">{formatDistance(calculateDistance(userPosition[0], userPosition[1], Number(garage.latitude), Number(garage.longitude)))}</p>
                             </div>
                           </div>
-                          <div className="mt-3">
-                            <button
-                              type="button"
-                              className="vb-btn-outline px-3 py-1.5 text-sm"
-                              onClick={() => handleTogglePublished(review)}
-                            >
-                              {review.is_published ? "Masquer" : "Publier"}
-                            </button>
-                          </div>
-                        </li>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <h3 className="text-2xl font-black text-slate-900">Indicateurs en temps réel</h3>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Total services</p>
+                        <p className="text-3xl font-black text-slate-900">{services.length}</p>
+                      </div>
+                      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-center">
+                        <p className="text-xs uppercase tracking-wide text-blue-700">Services actifs</p>
+                        <p className="text-3xl font-black text-blue-700">{activeServicesCount}</p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center">
+                        <p className="text-xs uppercase tracking-wide text-slate-500">Avis publiés</p>
+                        <p className="text-3xl font-black text-slate-900">{reviewSummary.reviews_count}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <h3 className="text-2xl font-black text-slate-900">Spécialités</h3>
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {storeSpecialties.map((item) => (
+                        <span key={item} className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-2 text-center text-sm font-bold text-slate-800">
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <h3 className="text-2xl font-black text-slate-900">Horaires de travail</h3>
+                    <div className="mt-3 space-y-1 text-lg text-slate-700">
+                      {storeHours.map((line, index) => (
+                        <p key={line} className={index === 5 ? "font-bold text-blue-700" : ""}>{line}</p>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <h3 className="text-2xl font-black text-slate-900">Services complémentaires</h3>
+                    <ul className="mt-3 space-y-2 text-lg text-slate-700">
+                      {storeServices.map((service) => (
+                        <li key={service}>✓ {service}</li>
                       ))}
                     </ul>
-                  )}
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-2xl font-black text-slate-900">Avis clients</h3>
+                      <p className="text-sm text-slate-500">Les avis restent disponibles depuis cette vue de présentation.</p>
+                    </div>
+
+                    <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                      <article className="rounded-lg border border-[#dbe2ec] bg-white p-3 text-center">
+                        <p className="text-xs text-[#617089]">Total avis</p>
+                        <p className="text-xl font-black text-[#12223d]">{reviewSummary.reviews_count}</p>
+                      </article>
+                      <article className="rounded-lg border border-[#dbe2ec] bg-white p-3 text-center">
+                        <p className="text-xs text-[#617089]">Moyenne</p>
+                        <p className="text-xl font-black text-[#12223d]">{reviewSummary.average_rating}</p>
+                      </article>
+                      <article className="rounded-lg border border-[#dbe2ec] bg-white p-3 text-center">
+                        <p className="text-xs text-[#617089]">Note min</p>
+                        <p className="text-xl font-black text-[#12223d]">{reviewSummary.min_rating}</p>
+                      </article>
+                      <article className="rounded-lg border border-[#dbe2ec] bg-white p-3 text-center">
+                        <p className="text-xs text-[#617089]">Note max</p>
+                        <p className="text-xl font-black text-[#12223d]">{reviewSummary.max_rating}</p>
+                      </article>
+                    </div>
+
+                    {isReviewsLoading ? (
+                      <p className="text-sm text-[#617089]">Chargement des avis...</p>
+                    ) : reviews.length === 0 ? (
+                      <p className="text-sm text-[#617089]">Aucun avis disponible pour ce garage.</p>
+                    ) : (
+                      <ul className="space-y-3">
+                        {reviews.map((review) => (
+                          <li key={review.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-base font-bold text-[#1a2b4b]">{review.reviewer?.name || "Client"}</p>
+                                <p className="text-sm text-[#617089]">Note: {review.rating}/5</p>
+                                <p className="mt-1 text-sm text-[#334155]">{review.comment || "Aucun commentaire"}</p>
+                              </div>
+                              <div className="text-right">
+                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${review.is_published ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+                                  {review.is_published ? "Publie" : "Cache"}
+                                </span>
+                                <p className="mt-2 text-xs text-[#617089]">{new Date(review.created_at).toLocaleDateString("fr-FR")}</p>
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <button
+                                type="button"
+                                className="vb-btn-outline px-3 py-1.5 text-sm"
+                                onClick={() => handleTogglePublished(review)}
+                              >
+                                {review.is_published ? "Masquer" : "Publier"}
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </section>
               )}
             </section>

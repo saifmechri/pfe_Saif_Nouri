@@ -19,3 +19,7 @@ export const deletePiece = (pieceId) => {
 export const comparePieceAcrossVendors = (params = {}) => {
   return API.get("/pieces/compare/vendors", { params });
 };
+
+export const getPieceSellerLocations = (params = {}) => {
+  return API.get("/pieces/seller-locations", { params });
+};

@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
 
 const mapContainerStyle = {
@@ -32,11 +31,17 @@ const GoogleMapGarages = ({
 
   const garageMarkerIcon = {
     path: "M12 0C5.38 0 0 5.38 0 12s5.38 12 12 12 12-5.38 12-12S18.62 0 12 0z",
-    fillColor: "#2563eb",
+    fillColor: "#f59e0b",
     fillOpacity: 1,
     strokeColor: "#fff",
     strokeWeight: 2,
     scale: 1
+  };
+
+  const selectedGarageMarkerIcon = {
+    ...garageMarkerIcon,
+    fillColor: "#ea580c",
+    scale: 1.2
   };
 
   return (
@@ -69,7 +74,7 @@ const GoogleMapGarages = ({
           <Marker
             key={garage.id}
             position={{ lat: garage.latitude, lng: garage.longitude }}
-            icon={garageMarkerIcon}
+            icon={selectedGarageId === garage.id ? selectedGarageMarkerIcon : garageMarkerIcon}
             onClick={() => onMarkerClick(garage.id)}
             title={garage.name}
           >
@@ -79,6 +84,9 @@ const GoogleMapGarages = ({
                   <p className="font-semibold text-sm">{garage.name}</p>
                   <p className="text-xs text-gray-600">{garage.adresse || "Adresse non précisée"}</p>
                   <p className="text-xs text-gray-600">Note: {garage.rating ?? "-"}</p>
+                  {garage.specialties && (
+                    <p className="text-xs text-amber-700 font-semibold">{String(garage.specialties).split(/\r?\n|,|;/)[0]}</p>
+                  )}
                   {garage.distance_km !== null && garage.distance_km !== undefined && (
                     <p className="text-xs text-gray-600">Distance: {garage.distance_km.toFixed(1)} km</p>
                   )}

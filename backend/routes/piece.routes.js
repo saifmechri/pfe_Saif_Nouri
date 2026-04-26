@@ -111,6 +111,12 @@ const comparePiecesValidation = [
   query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('sortOrder invalide')
 ];
 
+const sellerLocationsValidation = [
+  query('userLat').optional().isFloat({ min: -90, max: 90 }).withMessage('userLat doit etre comprise entre -90 et 90'),
+  query('userLon').optional().isFloat({ min: -180, max: 180 }).withMessage('userLon doit etre comprise entre -180 et 180'),
+  query('radiusKm').optional().isFloat({ gt: 0 }).withMessage('radiusKm doit etre superieur a 0')
+];
+
 const adjustStockValidation = [
   param('id').isInt({ min: 1 }).withMessage('Identifiant de piece invalide'),
   body('quantity_change').notEmpty().withMessage('quantity_change est obligatoire').isInt({ min: -1000000, max: 1000000 }).withMessage('quantity_change doit etre un entier'),
@@ -139,6 +145,7 @@ const stockMovementsValidation = [
 
 router.get('/', listPiecesValidation, validateRequest, pieceController.getAllPieces);
 router.get('/compare/vendors', comparePiecesValidation, validateRequest, pieceController.comparePieceAcrossVendors);
+router.get('/seller-locations', sellerLocationsValidation, validateRequest, pieceController.getPieceSellerLocations);
 router.get('/:id', getPieceValidation, validateRequest, pieceController.getPieceById);
 router.get('/:id/stock/movements', verifyToken, isVendeurOrAdmin, stockMovementsValidation, validateRequest, pieceController.getPieceStockMovements);
 

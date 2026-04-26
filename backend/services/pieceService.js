@@ -771,11 +771,98 @@ const getPieceStockMovements = async (id, { page = 1, limit = 20 } = {}) => {
   };
 };
 
+const listPieceSellerLocations = async ({ userLat, userLon, radiusKm } = {}) => {
+  const parsedUserLat = parseOptionalCoordinate(userLat, 'userLat', -90, 90);
+  const parsedUserLon = parseOptionalCoordinate(userLon, 'userLon', -180, 180);
+  const parsedRadiusKm = parseOptionalPositiveNumber(radiusKm, 'radiusKm');
+  const hasUserCoordinates = parsedUserLat !== null && parsedUserLon !== null;
+
+  if ((parsedUserLat === null) !== (parsedUserLon === null)) {
+    throw new AppError('userLat et userLon doivent etre fournis ensemble', 400, 'MISSING_COORDINATE_PAIR');
+  }
+
+  if (parsedRadiusKm !== null && !hasUserCoordinates) {
+    throw new AppError('radiusKm necessite userLat et userLon', 400, 'COORDINATES_REQUIRED');
+  }
+
+  const result = await pool.query(
+    `SELECT
+      u.id AS user_id,
+      u.name,
+      u.store_name,
+      u.store_address,
+      u.phone,
+      u.latitude,
+      u.longitude,
+      COUNT(DISTINCT p.id)::int AS pieces_count,
+      MIN(p.prix_unitaire)::numeric AS min_piece_price
+     FROM users u
+     INNER JOIN roles r ON r.id = u.role_id
+     INNER JOIN pieces p ON p.user_id = u.id AND p.deleted_at IS NULL
+     WHERE r.name = 'vendeur'
+       AND u.latitude IS NOT NULL
+       AND u.longitude IS NOT NULL
+     GROUP BY u.id, u.name, u.store_name, u.store_address, u.phone, u.latitude, u.longitude
+     ORDER BY pieces_count DESC, min_piece_price ASC, u.id ASC`
+  );
+
+  let items = result.rows.map((row) => {
+    const latitude = Number(row.latitude);
+    const longitude = Number(row.longitude);
+    const base = {
+      user_id: Number(row.user_id),
+      name: row.name || null,
+      store_name: row.store_name || null,
+      store_address: row.store_address || null,
+      phone: row.phone || null,
+      latitude,
+      longitude,
+      pieces_count: Number(row.pieces_count || 0),
+      min_piece_price: row.min_piece_price === null ? null : Number(row.min_piece_price)
+    };
+
+    if (!hasUserCoordinates) {
+      return {
+        ...base,
+        distance_km: null
+      };
+    }
+
+    return {
+      ...base,
+      distance_km: haversine(parsedUserLat, parsedUserLon, latitude, longitude)
+    };
+  });
+
+  if (parsedRadiusKm !== null) {
+    items = items.filter((item) => item.distance_km !== null && item.distance_km <= parsedRadiusKm);
+  }
+
+  if (hasUserCoordinates) {
+    items = items.sort((a, b) => {
+      if (a.distance_km !== b.distance_km) {
+        return a.distance_km - b.distance_km;
+      }
+
+      return b.pieces_count - a.pieces_count;
+    });
+  }
+
+  return {
+    user_position: hasUserCoordinates
+      ? { latitude: parsedUserLat, longitude: parsedUserLon }
+      : null,
+    total: items.length,
+    items
+  };
+};
+
 module.exports = {
   createPiece,
   getPieces,
   getPieceById,
   comparePieceAcrossVendors,
+  listPieceSellerLocations,
   updatePiece,
   deletePiece,
   adjustPieceStock,

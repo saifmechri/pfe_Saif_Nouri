@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
 import PlatformLayout from "../../components/PlatformLayout";
-import { listGarages } from "../../services/garage";
+import { getPieceSellerLocations } from "../../services/pieces";
 import { getCompleteProfile } from "../../services/user";
 
 const fallbackCenter = [35.8256, 10.6369];
@@ -15,7 +15,7 @@ const sellerIcon = L.divIcon({
   iconAnchor: [9, 9]
 });
 
-const garageIcon = L.divIcon({
+const nearbySellerIcon = L.divIcon({
   className: "",
   html: '<div style="background:#2563eb;border:2px solid #ffffff;width:16px;height:16px;border-radius:9999px;box-shadow:0 0 0 4px rgba(37,99,235,.25)"></div>',
   iconSize: [16, 16],
@@ -52,7 +52,7 @@ const VendeurDashboard = () => {
   const [mapCenter, setMapCenter] = useState(fallbackCenter);
   const [sellerPosition, setSellerPosition] = useState(null);
   const [sellerUserId, setSellerUserId] = useState(null);
-  const [nearbyGarages, setNearbyGarages] = useState([]);
+  const [nearbySellers, setNearbySellers] = useState([]);
   const [radiusKm, setRadiusKm] = useState(25);
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [mapError, setMapError] = useState("");
@@ -69,17 +69,17 @@ const VendeurDashboard = () => {
     { id: 1, acheteur: "Paul Durand", vehicule: "Toyota Corolla", montant: 15000, date: "2026-03-10" },
   ];
 
-  const nearestGarage = useMemo(() => {
-    if (nearbyGarages.length === 0) {
+  const nearestSeller = useMemo(() => {
+    if (nearbySellers.length === 0) {
       return null;
     }
 
-    return [...nearbyGarages].sort((a, b) => {
+    return [...nearbySellers].sort((a, b) => {
       const first = Number(a.distance_km ?? Number.MAX_SAFE_INTEGER);
       const second = Number(b.distance_km ?? Number.MAX_SAFE_INTEGER);
       return first - second;
     })[0];
-  }, [nearbyGarages]);
+  }, [nearbySellers]);
 
   const goToStorePresentation = (ownerId) => {
     const parsedOwnerId = Number.parseInt(ownerId, 10);
@@ -121,24 +121,19 @@ const VendeurDashboard = () => {
     return [lat, lon];
   };
 
-  const fetchNearbyGarages = async (coords, radius = radiusKm) => {
+  const fetchNearbySellers = async (coords, radius = radiusKm) => {
     try {
-      const response = await listGarages({
-        page: 1,
-        limit: 100,
+      const response = await getPieceSellerLocations({
         userLat: coords[0],
         userLon: coords[1],
-        radiusKm: radius,
-        includeClosed: true,
-        sortBy: "distance",
-        sortOrder: "asc"
+        radiusKm: radius
       });
 
       const payload = getPayload(response);
       const items = Array.isArray(payload?.items) ? payload.items : [];
-      setNearbyGarages(items.filter((garage) => garage.latitude !== null && garage.longitude !== null));
+      setNearbySellers(items.filter((item) => item.latitude !== null && item.longitude !== null));
     } catch {
-      setMapError("Impossible de charger les garages proches pour le moment.");
+      setMapError("Impossible de charger les vendeurs de pieces proches pour le moment.");
     }
   };
 
@@ -172,7 +167,7 @@ const VendeurDashboard = () => {
 
       setSellerPosition(coords);
       setMapCenter(coords);
-      await fetchNearbyGarages(coords, radiusKm);
+      await fetchNearbySellers(coords, radiusKm);
     } catch {
       setSellerPosition(null);
       setMapCenter(fallbackCenter);
@@ -187,7 +182,7 @@ const VendeurDashboard = () => {
     setRadiusKm(nextRadius);
 
     if (sellerPosition) {
-      await fetchNearbyGarages(sellerPosition, nextRadius);
+      await fetchNearbySellers(sellerPosition, nextRadius);
     }
   };
 
@@ -201,7 +196,7 @@ const VendeurDashboard = () => {
           <div className="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
             <div className="vb-card p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-[#1a2b4b]">Carte vendeur et garages proches</h2>
+                <h2 className="text-lg font-bold text-[#1a2b4b]">Carte vendeur et vendeurs de pieces proches</h2>
                 <button
                   type="button"
                   onClick={initializeMapData}
@@ -241,24 +236,25 @@ const VendeurDashboard = () => {
                   </Marker>
                 )}
 
-                {nearbyGarages.map((garage) => (
+                {nearbySellers.map((seller) => (
                   <Marker
-                    key={garage.id}
-                    position={[Number(garage.latitude), Number(garage.longitude)]}
-                    icon={garageIcon}
+                    key={seller.user_id}
+                    position={[Number(seller.latitude), Number(seller.longitude)]}
+                    icon={nearbySellerIcon}
                     eventHandlers={{
-                      click: () => goToStorePresentation(garage.user_id)
+                      click: () => goToStorePresentation(seller.user_id)
                     }}
                   >
                     <Popup>
                       <div className="space-y-1">
-                        <p className="font-semibold">{garage.name}</p>
-                        <p className="text-xs text-[#617089]">{garage.adresse || "Adresse non disponible"}</p>
-                        <p className="text-xs">Distance: {garage.distance_km ? `${Number(garage.distance_km).toFixed(1)} km` : "N/A"}</p>
+                        <p className="font-semibold">{seller.store_name || seller.name || "Vendeur"}</p>
+                        <p className="text-xs text-[#617089]">{seller.store_address || "Adresse non disponible"}</p>
+                        <p className="text-xs">Distance: {seller.distance_km ? `${Number(seller.distance_km).toFixed(1)} km` : "N/A"}</p>
+                        <p className="text-xs">Pieces: {seller.pieces_count ?? 0}</p>
                         <button
                           type="button"
                           className="mt-1 rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white"
-                          onClick={() => goToStorePresentation(garage.user_id)}
+                          onClick={() => goToStorePresentation(seller.user_id)}
                         >
                           Voir presentation
                         </button>
@@ -274,7 +270,7 @@ const VendeurDashboard = () => {
             <div className="vb-card p-4">
               <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Parametres localisation</h3>
               <label className="block text-sm font-medium text-[#334155]">
-                Rayon de recherche garages (km)
+                Rayon de recherche vendeurs (km)
                 <select
                   value={radiusKm}
                   onChange={handleRadiusChange}
@@ -289,18 +285,18 @@ const VendeurDashboard = () => {
 
               <div className="mt-4 space-y-2 text-sm text-[#617089]">
                 <p>Etat: {isMapLoading ? "Chargement..." : "Pret"}</p>
-                <p>Garages trouves: {nearbyGarages.length}</p>
+                <p>Vendeurs trouves: {nearbySellers.length}</p>
                 <p>
-                  Garage le plus proche: {nearestGarage ? `${nearestGarage.name} (${Number(nearestGarage.distance_km || 0).toFixed(1)} km)` : "Aucun"}
+                  Vendeur le plus proche: {nearestSeller ? `${nearestSeller.store_name || nearestSeller.name || "Vendeur"} (${Number(nearestSeller.distance_km || 0).toFixed(1)} km)` : "Aucun"}
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => navigate("/automobiliste/garages")}
+                onClick={() => navigate("/vendeur/catalogue")}
                 className="mt-4 w-full rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600"
               >
-                Ouvrir la page garages
+                Ouvrir le catalogue pieces
               </button>
             </div>
           </div>

@@ -25,6 +25,7 @@ backend/
   server.js                   # Bootstrap technique (env, DB, lancement HTTP)
   db.js                       # Connexion Pool PG + initialisation schema compatible
   controllers/                # Couche HTTP (req/res), orchestration
+  models/                     # Acces donnees reutilisable (migration douce depuis SQL inline)
   services/                   # Logique metier et acces SQL principal
   routes/                     # Definition des endpoints et validations
   middlewares/                # Middlewares transverses (erreurs, validation, async)
@@ -95,6 +96,21 @@ Responsabilites:
 
 Exemple actuel:
 - `services/pieceService.js` centralise CRUD, stock, historique et comparaison multi-vendeurs.
+
+### 5-bis) `models/` (acces donnees)
+
+Responsabilites:
+- Centraliser les requetes SQL reutilisees dans plusieurs couches.
+- Eviter la duplication de requetes identiques entre controleurs/middlewares.
+- Permettre une migration progressive sans casser l API existante.
+
+Modules introduits:
+- `models/user.model.js`: auth user lookup, verification role, creation user.
+- `models/garage.model.js`: resolution identite garage (par id / par user_id).
+
+Note:
+- Cette couche est volontairement legere et non intrusive.
+- La logique metier reste inchangée (meme validations, memes routes, memes reponses).
 
 ### 6) `middlewares/` et `middlwares/`
 

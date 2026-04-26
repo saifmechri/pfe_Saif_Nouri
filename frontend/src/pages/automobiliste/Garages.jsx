@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useJsApiLoader } from "@react-google-maps/api";
+import { CalendarCheck2, Clock3, MapPin, Navigation, Share2, Star } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import GoogleMapGarages from "../../components/GoogleMapGarages";
 import {
@@ -12,6 +12,7 @@ import {
   updateGarageReview
 } from "../../services/garage";
 import { AuthContext } from "../../context/AuthContext";
+import { formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
 const getPayload = (response) => response?.data?.data ?? response?.data;
 const fallbackCenter = { lat: 35.8256, lng: 10.6369 };
@@ -246,6 +247,46 @@ const includesNormalized = (haystack, needle) => {
   return normalizeText(haystack).includes(normalizeText(needle));
 };
 
+const weekOrder = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
+
+const parseScheduleText = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return [];
+  }
+
+  const lines = raw
+    .split(/\r?\n|,|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const parsed = lines.map((line) => {
+    const pipeParts = line.split("|").map((part) => part.trim());
+    if (pipeParts.length === 4) {
+      const [day, enabled, start, end] = pipeParts;
+      return {
+        day,
+        enabled: enabled === "1" || enabled.toLowerCase() === "true",
+        timeLabel: `${start || "08:00"} - ${end || "18:00"}`
+      };
+    }
+
+    const match = line.match(/^([^:]+):\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+    if (match) {
+      const [, day, start, end] = match;
+      return {
+        day: day.trim(),
+        enabled: true,
+        timeLabel: `${start} - ${end}`
+      };
+    }
+
+    return null;
+  }).filter(Boolean);
+
+  return parsed.sort((a, b) => weekOrder.indexOf(a.day) - weekOrder.indexOf(b.day));
+};
+
 const GaragesPage = () => {
   const { user } = useContext(AuthContext);
 
@@ -264,6 +305,7 @@ const GaragesPage = () => {
   const [openOnly, setOpenOnly] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedSpecialties, setSelectedSpecialties] = useState([]);
+  const [selectedMapSpecialty, setSelectedMapSpecialty] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedOpenModes, setSelectedOpenModes] = useState([]);
   const [selectedDeplacement, setSelectedDeplacement] = useState("25 km");
@@ -366,6 +408,28 @@ const GaragesPage = () => {
     [garages, selectedGarageId]
   );
 
+  const garagesForMap = useMemo(() => {
+    if (!selectedMapSpecialty) {
+      return garages;
+    }
+
+    return garages.filter((garage) => {
+      const specialtiesText = garage.specialties || garage.store_specialties || "";
+      const servicesText = garage.services_catalog || garage.store_services || "";
+      return includesNormalized(specialtiesText, selectedMapSpecialty) || includesNormalized(servicesText, selectedMapSpecialty);
+    });
+  }, [garages, selectedMapSpecialty]);
+
+  const selectedGarageWorkSchedule = useMemo(
+    () => parseScheduleText(selectedGarage?.work_hours),
+    [selectedGarage?.work_hours]
+  );
+
+  const selectedGarageTravelSchedule = useMemo(
+    () => parseScheduleText(selectedGarage?.travel_hours),
+    [selectedGarage?.travel_hours]
+  );
+
   const toggleSelection = (value, setter) => {
     setter((current) =>
       current.includes(value)
@@ -409,6 +473,19 @@ const GaragesPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedGarageId]);
+
+  useEffect(() => {
+    if (!selectedGarageId) {
+      return;
+    }
+
+    const visible = garagesForMap.some((garage) => garage.id === selectedGarageId);
+    if (!visible) {
+      setSelectedGarageId(null);
+      setGarageServices([]);
+      setGarageReviews([]);
+    }
+  }, [garagesForMap, selectedGarageId]);
 
   useEffect(() => {
     if (!hasLoadedInitialFilters.current) {
@@ -536,6 +613,12 @@ const GaragesPage = () => {
       const servicePayload = getPayload(servicesRes);
       const reviewPayload = getPayload(reviewsRes);
 
+      if (garagePayload?.id) {
+        setGarages((current) =>
+          current.map((item) => (item.id === garagePayload.id ? { ...item, ...garagePayload } : item))
+        );
+      }
+
       setGarageServices(Array.isArray(servicePayload?.items) ? servicePayload.items : []);
       setGarageReviews(Array.isArray(reviewPayload?.items) ? reviewPayload.items : []);
       setSummary(reviewPayload?.summary || { reviews_count: 0, average_rating: 0 });
@@ -568,6 +651,65 @@ const GaragesPage = () => {
     setSelectedGarageId(garage.id);
     if (garage.latitude !== null && garage.longitude !== null) {
       setMapCenter({ lat: garage.latitude, lng: garage.longitude });
+    }
+  };
+
+  const handleMarkerClick = (garageId) => {
+    if (!garageId) {
+      setSelectedGarageId(null);
+      return;
+    }
+
+    const clickedGarage = garagesForMap.find((item) => item.id === garageId) || garages.find((item) => item.id === garageId);
+    if (!clickedGarage) {
+      return;
+    }
+
+    handleSelectGarage(clickedGarage);
+  };
+
+  const handleOpenDirections = () => {
+    if (!selectedGarage?.latitude || !selectedGarage?.longitude) {
+      return;
+    }
+
+    const destination = `${selectedGarage.latitude},${selectedGarage.longitude}`;
+    const origin = userPosition ? `${userPosition.lat},${userPosition.lng}` : "";
+    const url = origin
+      ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`;
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const handleBookAppointment = () => {
+    if (!selectedGarage?.telephone) {
+      return;
+    }
+
+    window.location.href = `tel:${selectedGarage.telephone}`;
+  };
+
+  const handleShareGarage = async () => {
+    if (!selectedGarage) {
+      return;
+    }
+
+    const shareData = {
+      title: selectedGarage.name,
+      text: `${selectedGarage.name} - ${selectedGarage.adresse || "Garage"}`,
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text} | ${shareData.url}`);
+        setSuccessMessage("Lien du garage copié.");
+      }
+    } catch {
+      // Ignore cancel and unsupported share errors silently.
     }
   };
 
@@ -872,44 +1014,182 @@ const GaragesPage = () => {
                 <p className="text-sm text-[#617089]">Aucun garage trouve avec ces filtres.</p>
               ) : (
                 <ul className="space-y-2 max-h-[350px] overflow-auto pr-1">
-                  {garages.map((garage) => (
-                    <li key={garage.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectGarage(garage)}
-                        className={`w-full rounded-lg border px-3 py-3 text-left transition ${selectedGarageId === garage.id ? "border-blue-400 bg-blue-50" : "border-[#dbe2ec] bg-white hover:bg-slate-50"}`}
-                      >
-                        <p className="font-bold text-[#1a2b4b]">{garage.name}</p>
-                        <p className="text-xs text-[#617089]">{garage.adresse || "Adresse non precisee"}</p>
-                        <p className="mt-1 text-xs text-[#334155]">
-                          Note: {garage.rating ?? "-"}
-                          {garage.distance_km !== null && garage.distance_km !== undefined ? ` • ${garage.distance_km} km` : ""}
-                        </p>
-                      </button>
-                    </li>
-                  ))}
+                  {garages.map((garage) => {
+                    const hasDistance = garage.distance_km !== null && garage.distance_km !== undefined;
+                    const distance = hasDistance ? Number(garage.distance_km) : null;
+                    const distanceColor = distance !== null ? getDistanceColor(distance) : "";
+                    const distanceLabel = distance !== null ? getDistanceLabel(distance) : "";
+                    
+                    return (
+                      <li key={garage.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectGarage(garage)}
+                          className={`w-full rounded-lg border px-3 py-3 text-left transition ${selectedGarageId === garage.id ? "border-blue-400 bg-blue-50" : "border-[#dbe2ec] bg-white hover:bg-slate-50"}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="font-bold text-[#1a2b4b] truncate">{garage.name}</p>
+                              <p className="text-xs text-[#617089] truncate">{garage.adresse || "Adresse non precisee"}</p>
+                            </div>
+                            {hasDistance && (
+                              <div className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold border ${distanceColor}`}>
+                                {formatDistance(distance)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-2 flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                              <span className="text-xs font-semibold text-[#334155]">{garage.rating ?? "-"}</span>
+                              <span className="text-xs text-[#9ca3af]">({garage.reviews_count || 0})</span>
+                            </div>
+                            {distanceLabel && (
+                              <span className="text-xs text-[#617089] italic">{distanceLabel}</span>
+                            )}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
               </div>
             </aside>
 
             <section className="space-y-5">
+              <div className="rounded-[24px] border border-white/80 bg-white/95 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.08)]">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMapSpecialty("")}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${selectedMapSpecialty ? "border-slate-200 bg-white text-slate-600" : "border-amber-300 bg-amber-50 text-amber-700"}`}
+                  >
+                    Toutes spécialités
+                  </button>
+                  {filterOptions.specialties.slice(0, 10).map((specialty) => {
+                    const active = selectedMapSpecialty === specialty;
+                    return (
+                      <button
+                        key={specialty}
+                        type="button"
+                        onClick={() => setSelectedMapSpecialty(active ? "" : specialty)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${active ? "border-amber-300 bg-amber-50 text-amber-700" : "border-slate-200 bg-white text-slate-600 hover:border-amber-200"}`}
+                      >
+                        {specialty}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-[#64748b]">
+                  {selectedMapSpecialty ? `Spécialité sélectionnée: ${selectedMapSpecialty}` : "Sélectionnez une spécialité pour filtrer les garages sur la carte"}
+                  {` • ${garagesForMap.length} garage(s) affiché(s)`}
+                </p>
+              </div>
+
               <div className="rounded-[24px] border border-white/80 bg-white/95 p-4 shadow-[0_14px_35px_rgba(15,23,42,0.08)] h-[600px]">
                 <GoogleMapGarages 
                   center={mapCenter} 
                   userPosition={userPosition}
-                  garages={garages}
+                  garages={garagesForMap}
                   selectedGarageId={selectedGarageId}
-                  onMarkerClick={setSelectedGarageId}
+                  onMarkerClick={handleMarkerClick}
                 />
               </div>
 
               {!selectedGarageId ? (
-                <div className="rounded-[24px] border border-white/80 bg-white/95 p-6 text-sm text-[#617089] shadow-[0_14px_35px_rgba(15,23,42,0.08)]">Selectionnez un garage dans la liste ou sur la carte.</div>
+                <div className="rounded-[24px] border border-white/80 bg-white/95 p-6 text-sm text-[#617089] shadow-[0_14px_35px_rgba(15,23,42,0.08)]">Choisissez une spécialité puis cliquez sur un garage sur la carte pour afficher sa présentation.</div>
               ) : isLoadingDetails ? (
                 <div className="rounded-[24px] border border-white/80 bg-white/95 p-6 text-sm text-[#617089] shadow-[0_14px_35px_rgba(15,23,42,0.08)]">Chargement des details...</div>
               ) : (
                 <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[1.1fr_1fr]">
+                  <article className="rounded-[24px] border border-amber-100 bg-white p-6 shadow-[0_14px_35px_rgba(15,23,42,0.08)] 2xl:col-span-2">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-2">
+                        <p className="text-sm font-bold uppercase tracking-[0.12em] text-amber-600">Présentation</p>
+                        <h2 className="text-3xl font-black text-[#0f172a]">{selectedGarage?.name}</h2>
+                        <p className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-sm font-bold text-amber-700">
+                          {selectedMapSpecialty || selectedSpecialties[0] || "Garage automobile"}
+                        </p>
+                        <p className="flex items-center gap-2 text-base font-semibold text-[#1e293b]">
+                          <MapPin className="h-4 w-4 text-amber-500" />
+                          {selectedGarage?.adresse || "Adresse non précisée"}
+                        </p>
+                      </div>
+
+                      <div className="grid w-full gap-2 sm:grid-cols-3 md:w-auto">
+                        <button
+                          type="button"
+                          onClick={handleOpenDirections}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
+                        >
+                          <Navigation className="h-4 w-4" />
+                          Itinéraires
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleBookAppointment}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
+                        >
+                          <CalendarCheck2 className="h-4 w-4" />
+                          RDV
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleShareGarage}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600"
+                        >
+                          <Share2 className="h-4 w-4" />
+                          Partager
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <h3 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-[#0f172a]">
+                          <Clock3 className="h-5 w-5 text-amber-500" />
+                          Horaires de Travail
+                        </h3>
+                        {selectedGarageWorkSchedule.length === 0 ? (
+                          <p className="text-sm text-slate-500">Horaires non renseignés.</p>
+                        ) : (
+                          <ul className="space-y-1">
+                            {selectedGarageWorkSchedule.map((item) => (
+                              <li key={`${item.day}-${item.timeLabel}`} className="flex items-center justify-between text-sm">
+                                <span className="font-semibold text-slate-700">{item.day}</span>
+                                <span className={`${item.enabled ? "text-slate-900" : "text-slate-400"}`}>
+                                  {item.enabled ? item.timeLabel : "Fermé"}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <h3 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-[#0f172a]">
+                          <Clock3 className="h-5 w-5 text-amber-500" />
+                          Horaires de Déplacement
+                        </h3>
+                        {selectedGarageTravelSchedule.length === 0 ? (
+                          <p className="text-sm text-slate-500">Pas de déplacement déclaré.</p>
+                        ) : (
+                          <ul className="space-y-1">
+                            {selectedGarageTravelSchedule.map((item) => (
+                              <li key={`${item.day}-${item.timeLabel}`} className="flex items-center justify-between text-sm">
+                                <span className="font-semibold text-slate-700">{item.day}</span>
+                                <span className={`${item.enabled ? "text-slate-900" : "text-slate-400"}`}>
+                                  {item.enabled ? item.timeLabel : "Non disponible"}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+
                   <article className="rounded-[24px] border border-white/80 bg-white/95 p-6 space-y-4 shadow-[0_14px_35px_rgba(15,23,42,0.08)]">
                   <div>
                     <h2 className="text-2xl font-bold text-[#1a2b4b]">{selectedGarage?.name}</h2>
@@ -927,6 +1207,21 @@ const GaragesPage = () => {
                       <p className="text-xl font-extrabold text-[#12223d]">{summary.reviews_count || 0}</p>
                     </div>
                   </div>
+
+                  {selectedGarage?.distance_km !== null && selectedGarage?.distance_km !== undefined && userPosition && (
+                    <div className={`rounded-lg border-2 p-4 ${getDistanceColor(Number(selectedGarage.distance_km))}`}>
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-5 h-5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold">Distance from vous</p>
+                          <p className="text-xs opacity-75">{getDistanceLabel(Number(selectedGarage.distance_km))}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold">{formatDistance(Number(selectedGarage.distance_km))}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Services disponibles</h3>

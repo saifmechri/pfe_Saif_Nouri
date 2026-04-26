@@ -1,9 +1,11 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { MapPin, Package, TrendingDown } from "lucide-react";
 import { comparePieceAcrossVendors, createPiece, deletePiece, getPieces, updatePiece } from "../../services/pieces";
 import { getCompleteProfile, getCompleteProfileById, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
 import { AuthContext } from "../../context/AuthContext";
+import { calculateDistance, formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
 // Google Maps API configuration
 const GOOGLE_MAPS_API_KEY = "AIzaSyCojlT8OsuCl0W4b0Pto2m1GbfUl9FF1pE";
@@ -407,6 +409,29 @@ const buildGoogleMapsEmbedUrl = (query) => {
 const buildGoogleMapsSearchUrl = (query) => {
   const safeQuery = String(query || "Tunisie").trim() || "Tunisie";
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(safeQuery)}`;
+};
+
+const buildVendorLocationQuery = (vendor) => {
+  if (!vendor) {
+    return "";
+  }
+
+  if (vendor.latitude !== null && vendor.latitude !== undefined && vendor.longitude !== null && vendor.longitude !== undefined) {
+    return `${vendor.latitude},${vendor.longitude}`;
+  }
+
+  return [vendor.magasin || vendor.nom || vendor.name, vendor.address, vendor.store_address]
+    .filter(Boolean)
+    .join(", ");
+};
+
+const buildVendorGoogleMapsEmbedUrl = (vendor) => buildGoogleMapsEmbedUrl(buildVendorLocationQuery(vendor));
+
+const buildVendorGoogleMapsSearchUrl = (vendor) => buildGoogleMapsSearchUrl(buildVendorLocationQuery(vendor));
+
+const buildPieceLocationSearchUrl = (piece) => {
+  const parts = [piece?.seller_store_name, piece?.seller_name, piece?.zone_geographique, "Tunisie"].filter(Boolean);
+  return buildGoogleMapsSearchUrl(parts.join(", "));
 };
 
 const CataloguePieces = () => {
@@ -878,6 +903,7 @@ const CataloguePieces = () => {
       });
 
       setComparisonData(res.data?.data || res.data || null);
+      setComparisonError("");
     } catch (err) {
       setComparisonError(err.response?.data?.message || "Erreur lors du chargement de la comparaison multi-vendeurs.");
     } finally {
@@ -940,6 +966,15 @@ const CataloguePieces = () => {
 
   const googleMapsEmbedUrl = useMemo(() => buildGoogleMapsEmbedUrl(pieceLocationQuery), [pieceLocationQuery]);
   const googleMapsSearchUrl = useMemo(() => buildGoogleMapsSearchUrl(pieceLocationQuery), [pieceLocationQuery]);
+  const selectedPieceVendor = selectedPiece?.offers?.[0]?.vendeur || selectedPiece?.vendeur || null;
+  const selectedPieceVendorMapUrl = useMemo(
+    () => (selectedPieceVendor ? buildVendorGoogleMapsEmbedUrl(selectedPieceVendor) : ""),
+    [selectedPieceVendor]
+  );
+  const selectedPieceVendorSearchUrl = useMemo(
+    () => (selectedPieceVendor ? buildVendorGoogleMapsSearchUrl(selectedPieceVendor) : ""),
+    [selectedPieceVendor]
+  );
 
   const handlePresentationChange = (event) => {
     const { name, value } = event.target;
@@ -1408,6 +1443,14 @@ const CataloguePieces = () => {
                             >
                               Comparer les vendeurs
                             </button>
+                            <a
+                              href={buildPieceLocationSearchUrl(cheapest)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-2 flex w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300"
+                            >
+                              Localisation piece auto
+                            </a>
                             <button
                               type="button"
                               onClick={() => openComparisonPage(cheapest)}
@@ -1457,6 +1500,15 @@ const CataloguePieces = () => {
                                 Details
                               </button>
                             </div>
+
+                            <a
+                              href={buildPieceLocationSearchUrl(piece)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-3 flex w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300"
+                            >
+                              Localisation piece auto
+                            </a>
                           </div>
                         </article>
                       );
@@ -2042,9 +2094,7 @@ const CataloguePieces = () => {
 
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-lg font-semibold text-slate-700">{formatDate(selectedPiece.created_at)}</p>
-                  <a href="tel:+21621216460" className="rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-8 py-3 text-lg font-semibold text-white shadow-[0_10px_20px_rgba(30,64,175,0.22)]">
-                    Appeler
-                  </a>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">Fiche produit</span>
                 </div>
               </div>
 
@@ -2055,20 +2105,6 @@ const CataloguePieces = () => {
                       <span className="mr-3 text-2xl">🏪</span>
                       Voir magasin de vendeur
                       <span className="ml-3 text-xl">›</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openComparisonView(selectedPiece)}
-                      className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 shadow-sm"
-                    >
-                      Comparer prix
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openComparisonPage(selectedPiece)}
-                      className="rounded-full border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-700 shadow-sm"
-                    >
-                      Page comparaison
                     </button>
                     <button type="button" className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-2xl text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)]" aria-label="Partager">
                       ⤴
@@ -2148,8 +2184,33 @@ const CataloguePieces = () => {
 
                     <div className="mb-4 rounded-2xl bg-slate-50 p-4">
                       <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Lieu</p>
-                      <p className="mt-1 text-base font-semibold text-slate-800">Localisation approximative</p>
-                      <p className="mt-1 text-sm text-slate-500">Maps désactivée pour le moment</p>
+                      <p className="mt-1 text-base font-semibold text-slate-800">Localisation du vendeur</p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {selectedPieceVendor?.magasin || selectedPieceVendor?.nom || selectedPieceVendor?.name || selectedPiece.zone_geographique || "Adresse du vendeur"}
+                      </p>
+                      {selectedPieceVendorMapUrl ? (
+                        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                          <iframe
+                            title="Localisation du vendeur"
+                            src={selectedPieceVendorMapUrl}
+                            className="h-56 w-full border-0"
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                          />
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-slate-500">Aucune position GPS vendeur renseignée.</p>
+                      )}
+                      {selectedPieceVendorSearchUrl && (
+                        <a
+                          href={selectedPieceVendorSearchUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
+                        >
+                          Ouvrir la localisation vendeur
+                        </a>
+                      )}
                     </div>
 
                     <div className="rounded-2xl bg-slate-50 p-4">
@@ -2220,7 +2281,13 @@ const CataloguePieces = () => {
                 <h3 className="text-2xl font-black text-slate-900">Vue comparative dynamique</h3>
                 <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps réel via l'API backend.</p>
               </div>
-              <button type="button" onClick={() => setShowComparisonModal(false)} className="text-3xl text-slate-500">×</button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowComparisonModal(false);
+                }} 
+                className="text-3xl text-slate-500"
+              >×</button>
             </div>
 
             {comparisonLoading ? (

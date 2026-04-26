@@ -106,6 +106,19 @@ const comparePieceAcrossVendors = asyncHandler(async (req, res) => {
   });
 });
 
+const getPieceSellerLocations = asyncHandler(async (req, res) => {
+  const locations = await pieceService.listPieceSellerLocations({
+    userLat: req.query.userLat,
+    userLon: req.query.userLon,
+    radiusKm: req.query.radiusKm
+  });
+
+  return sendApiResponse(res, {
+    message: 'Localisations vendeurs de pieces recuperees avec succes',
+    data: locations
+  });
+});
+
 const updatePiece = asyncHandler(async (req, res) => {
   const pieceId = Number.parseInt(req.params.id, 10);
   if (!Number.isFinite(pieceId) || pieceId <= 0) {
@@ -184,6 +197,7 @@ module.exports = {
   getAllPieces,
   getPieceById,
   comparePieceAcrossVendors,
+  getPieceSellerLocations,
   updatePiece,
   deletePiece,
   adjustPieceStock,

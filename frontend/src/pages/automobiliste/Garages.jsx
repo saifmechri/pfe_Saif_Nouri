@@ -110,7 +110,7 @@ const defaultFilterOptions = {
   specialties: garageSpecialtyCatalog,
   services: garageServicesCatalog,
   openModes: ["Ouvert maintenant"],
-  displacements: ["5 km", "10 km", "15 km", "20 km", "25 km", "30 km", "40 km", "50 km", "Toute la ville", "Sur place"]
+  displacements: ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]
 };
 
 const mergeUniqueValues = (primary = [], secondary = []) =>
@@ -301,14 +301,13 @@ const GaragesPage = () => {
 
   const [search, setSearch] = useState("");
   const [minRating, setMinRating] = useState(0);
-  const [radiusKm, setRadiusKm] = useState(30);
   const [openOnly, setOpenOnly] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState("");
   const [selectedSpecialties, setSelectedSpecialties] = useState([]);
   const [selectedMapSpecialty, setSelectedMapSpecialty] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedOpenModes, setSelectedOpenModes] = useState([]);
-  const [selectedDeplacement, setSelectedDeplacement] = useState("25 km");
+  const [selectedDeplacements, setSelectedDeplacements] = useState([]);
   const [showBrandsModal, setShowBrandsModal] = useState(false);
   const [showSpecialtiesModal, setShowSpecialtiesModal] = useState(false);
   const [showServicesModal, setShowServicesModal] = useState(false);
@@ -374,7 +373,7 @@ const GaragesPage = () => {
         specialties: mergeUniqueValues(defaultFilterOptions.specialties, payload?.specialties),
         services: mergeUniqueValues(defaultFilterOptions.services, payload?.services),
         openModes: mergeUniqueValues(defaultFilterOptions.openModes, payload?.openModes),
-        displacements: mergeUniqueValues(defaultFilterOptions.displacements, payload?.displacements)
+        displacements: defaultFilterOptions.displacements
       });
     } catch (err) {
       console.error("Error fetching filter options:", err);
@@ -387,21 +386,26 @@ const GaragesPage = () => {
     setSelectedSpecialties([]);
     setSelectedServices([]);
     setSelectedOpenModes([]);
-    setSelectedDeplacement("30 km");
+    setSelectedDeplacements([]);
     setOpenOnly(false);
-    setRadiusKm(30);
     setMinRating(0);
   };
 
-  const renderFilterButton = (label, count, onClick) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className="rounded-full border border-[#dbe2ec] bg-white px-3 py-2 text-xs font-semibold text-[#617089] transition hover:border-orange-300 hover:text-orange-600"
-    >
-      {label}{count > 0 ? ` (${count})` : ""}
-    </button>
-  );
+  const renderFilterButton = (label, count, onClick, disabled = false) => {
+    const disabledClass = "border-[#e2e8f0] bg-[#f1f5f9] text-[#cbd5e1] cursor-not-allowed";
+    const enabledClass = "border-[#dbe2ec] bg-white text-[#617089] hover:border-orange-300 hover:text-orange-600";
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        title={disabled ? "Sélectionnez d'abord Marques, Spécialités ou Services" : ""}
+        className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${disabled ? disabledClass : enabledClass}`}
+      >
+        {label}{count > 0 ? ` (${count})` : ""}
+      </button>
+    );
+  };
 
   const selectedGarage = useMemo(
     () => garages.find((g) => g.id === selectedGarageId) || null,
@@ -495,23 +499,12 @@ const GaragesPage = () => {
 
     fetchGarages(search.trim());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [minRating, radiusKm, openOnly, selectedBrand, selectedSpecialties, selectedServices, userPosition]);
+  }, [minRating, openOnly, selectedBrand, selectedSpecialties, selectedServices, selectedDeplacements, userPosition]);
 
   useEffect(() => {
     const hasOpenSelection = selectedOpenModes.length > 0;
     setOpenOnly(hasOpenSelection);
   }, [selectedOpenModes]);
-
-  useEffect(() => {
-    const numeric = Number.parseInt(String(selectedDeplacement).replace(/[^0-9]/g, ""), 10);
-    if (Number.isFinite(numeric) && numeric > 0) {
-      setRadiusKm(numeric);
-    } else if (selectedDeplacement === "Toute la ville") {
-      setRadiusKm(100);
-    } else if (selectedDeplacement === "Sur place") {
-      setRadiusKm(5);
-    }
-  }, [selectedDeplacement]);
 
   const buildGarageFilters = (customSearch) => {
     const trimmedSearch = String(customSearch || "").trim();
@@ -543,7 +536,6 @@ const GaragesPage = () => {
     if (userPosition) {
       filters.userLat = userPosition.lat;
       filters.userLon = userPosition.lng;
-      filters.radiusKm = radiusKm;
     }
 
     return filters;
@@ -559,20 +551,27 @@ const GaragesPage = () => {
       const items = Array.isArray(payload?.items) ? payload.items : [];
 
       const filteredItems = items.filter((garage) => {
+        const brandsText = garage.vehicle_brands || "";
         const specialtiesText = garage.specialties || garage.store_specialties || "";
         const servicesText = garage.services_catalog || garage.store_services || "";
         const serviceNames = Array.isArray(garage.service_names) ? garage.service_names.join(" ") : "";
-        const identityText = `${garage.name || ""} ${garage.adresse || ""} ${specialtiesText} ${servicesText} ${serviceNames}`;
+        const identityText = `${garage.name || ""} ${garage.adresse || ""} ${brandsText} ${specialtiesText} ${servicesText} ${serviceNames}`;
 
-        const matchesBrand = !selectedBrand || includesNormalized(identityText, selectedBrand);
+        const matchesBrand = !selectedBrand || includesNormalized(brandsText, selectedBrand) || includesNormalized(identityText, selectedBrand);
         const matchesSpecialties =
           selectedSpecialties.length === 0 ||
           selectedSpecialties.some((specialty) => includesNormalized(specialtiesText, specialty) || includesNormalized(serviceNames, specialty));
         const matchesServices =
           selectedServices.length === 0 ||
           selectedServices.some((service) => includesNormalized(servicesText, service) || includesNormalized(serviceNames, service));
+        const travelSchedule = parseScheduleText(garage.travel_hours);
+        const availableTravelDays = travelSchedule.filter((entry) => entry.enabled).map((entry) => entry.day);
+        // Déplacement is only valid as secondary filter
+        const hasOtherFilters = selectedBrand || selectedSpecialties.length > 0 || selectedServices.length > 0;
+        const matchesDeplacement = !hasOtherFilters || selectedDeplacements.length === 0 ||
+          selectedDeplacements.some((day) => availableTravelDays.includes(day));
 
-        return matchesBrand && matchesSpecialties && matchesServices;
+        return matchesBrand && matchesSpecialties && matchesServices && matchesDeplacement;
       });
 
       setGarages(filteredItems);
@@ -943,12 +942,12 @@ const GaragesPage = () => {
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {filterOptions.displacements.map((option) => {
-                  const active = selectedDeplacement === option;
+                  const active = selectedDeplacements.includes(option);
                   return (
                     <button
                       key={option}
                       type="button"
-                      onClick={() => setSelectedDeplacement(option)}
+                      onClick={() => toggleSelection(option, setSelectedDeplacements)}
                       className={`rounded-2xl border p-4 text-left text-sm font-semibold transition ${active ? "border-violet-300 bg-violet-50 text-violet-800" : "border-slate-200 bg-white text-slate-700 hover:border-violet-200 hover:bg-slate-50"}`}
                     >
                       {option}
@@ -987,9 +986,16 @@ const GaragesPage = () => {
                 {renderFilterButton("Spécialités", selectedSpecialties.length, () => setShowSpecialtiesModal(true))}
                 {renderFilterButton("Services", selectedServices.length, () => setShowServicesModal(true))}
                 {renderFilterButton("Ouvert", selectedOpenModes.length, () => setShowOpenModal(true))}
-                {renderFilterButton("Déplacement", selectedDeplacement ? 1 : 0, () => setShowDeplacementModal(true))}
+                {renderFilterButton(
+                  "Déplacement",
+                  selectedDeplacements.length,
+                  () => setShowDeplacementModal(true),
+                  selectedBrand === "" && selectedSpecialties.length === 0 && selectedServices.length === 0
+                )}
               </div>
-              <p className="text-xs text-[#617089]">Déplacement sélectionné: {selectedDeplacement} • Rayon actuel: {radiusKm} km</p>
+              {(selectedBrand || selectedSpecialties.length > 0 || selectedServices.length > 0) && (
+                <p className="text-xs text-[#617089]">Déplacement sélectionné: {selectedDeplacements.length > 0 ? selectedDeplacements.join(", ") : "Aucun jour"}</p>
+              )}
               </div>
 
               <div className="space-y-3">

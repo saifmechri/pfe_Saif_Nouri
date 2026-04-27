@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Bell, ChevronDown, ChevronRight, Clock3, Heart, Home, ImagePlus, Lock, MapPin, Menu, MinusCircle, PlusCircle, Search, Settings, Truck, Wrench } from "lucide-react";
+import { AuthContext } from "../../context/AuthContext";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
   createGarage,
@@ -431,6 +432,8 @@ const GarageDashboard = () => {
   const [activePanel, setActivePanel] = useState("garage");
   const [search, setSearch] = useState("");
 
+  const { user } = useContext(AuthContext);
+
   const [garage, setGarage] = useState(null);
   const [garageForm, setGarageForm] = useState(emptyGarageForm);
   const [isGarageLoading, setIsGarageLoading] = useState(false);
@@ -679,7 +682,7 @@ const GarageDashboard = () => {
 
   useEffect(() => {
     loadGarageProfile();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (hasGarageProfile) {

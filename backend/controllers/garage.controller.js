@@ -118,23 +118,23 @@ const parseOptionalStringList = (value, fieldName) => {
   return [...new Set(normalizedItems)];
 };
 
-  const buildExactTextMatchClause = (columnName, values, params) => {
-    if (!values || values.length === 0) {
-      return null;
-    }
+const buildExactTextMatchClause = (columnName, values, params) => {
+  if (!values || values.length === 0) {
+    return null;
+  }
 
-    params.push(values);
-    const valuesParam = `$${params.length}`;
+  params.push(values);
+  const valuesParam = `$${params.length}`;
 
-    return `(
-      SELECT COUNT(*)
-      FROM (
-        SELECT LOWER(BTRIM(item)) AS normalized_item
-        FROM UNNEST(string_to_array(COALESCE(${columnName}, ''), E'\n')) AS item
-      ) AS normalized_items
-      WHERE normalized_item = ANY(${valuesParam}::text[])
-    ) > 0`;
-  };
+  return `(
+    SELECT COUNT(*)
+    FROM (
+      SELECT LOWER(BTRIM(item)) AS normalized_item
+      FROM regexp_split_to_table(COALESCE(${columnName}, ''), E'[\\n,;]+') AS item
+    ) AS normalized_items
+    WHERE normalized_item = ANY(${valuesParam}::text[])
+  ) > 0`;
+};
 
 const resolveOwnerUserId = (req, providedUserId) => {
   const role = req.user?.role;
@@ -332,12 +332,12 @@ const listGarages = asyncHandler(async (req, res) => {
     whereClauses.push(`g.rating <= $${params.length}`);
   }
 
-  const brandClause = buildExactTextMatchClause('u.store_specialties', brandNames, params);
+  const brandClause = buildExactTextMatchClause('g.vehicle_brands', brandNames, params);
   if (brandClause) {
     whereClauses.push(brandClause);
   }
 
-  const specialtyClause = buildExactTextMatchClause('u.store_specialties', specialtyNames, params);
+  const specialtyClause = buildExactTextMatchClause('g.specialties', specialtyNames, params);
   if (specialtyClause) {
     whereClauses.push(specialtyClause);
   }
@@ -379,20 +379,36 @@ const listGarages = asyncHandler(async (req, res) => {
       params.push(serviceNames.length);
       const countParam = `$${params.length}`;
       whereClauses.push(
-        `(SELECT COUNT(DISTINCT LOWER(gs.name))
-          FROM garage_services gs
-          WHERE gs.garage_id = g.id
-            ${serviceActiveClause}
-            AND LOWER(gs.name) = ANY(${namesParam}::text[])) = ${countParam}`
+        `(SELECT COUNT(DISTINCT requested_name)
+          FROM UNNEST(${namesParam}::text[]) AS requested_name
+          WHERE EXISTS (
+            SELECT 1
+            FROM garage_services gs
+            WHERE gs.garage_id = g.id
+              ${serviceActiveClause}
+              AND LOWER(gs.name) = requested_name
+          ) OR EXISTS (
+            SELECT 1
+            FROM regexp_split_to_table(COALESCE(g.services_catalog, ''), E'[\\n,;]+') AS service_item
+            WHERE LOWER(BTRIM(service_item)) = requested_name
+          )) = ${countParam}`
       );
     } else {
       whereClauses.push(
         `EXISTS (
           SELECT 1
-          FROM garage_services gs
-          WHERE gs.garage_id = g.id
-            ${serviceActiveClause}
-            AND LOWER(gs.name) = ANY(${namesParam}::text[])
+          FROM UNNEST(${namesParam}::text[]) AS requested_name
+          WHERE EXISTS (
+            SELECT 1
+            FROM garage_services gs
+            WHERE gs.garage_id = g.id
+              ${serviceActiveClause}
+              AND LOWER(gs.name) = requested_name
+          ) OR EXISTS (
+            SELECT 1
+            FROM regexp_split_to_table(COALESCE(g.services_catalog, ''), E'[\\n,;]+') AS service_item
+            WHERE LOWER(BTRIM(service_item)) = requested_name
+          )
         )`
       );
     }
@@ -757,7 +773,7 @@ const getFilterOptions = asyncHandler(async (req, res) => {
       services: servicesResult.rows.map(row => row.service_name),
       brands: brandsResult.rows.map(row => row.brand),
       openModes: ['Ouvert maintenant', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'],
-      displacements: ['Sur place', '5 km', '10 km', '25 km', '50 km', '100 km', 'Toute la ville']
+      displacements: ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
     }
   });
 });

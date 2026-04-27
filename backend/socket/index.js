@@ -1,7 +1,7 @@
 const { Server } = require('socket.io');
 
 const { authenticateSocket } = require('./socketAuth');
-const { registerChatHandlers } = require('./chat.socket');
+const { registerChatHandlers, getUserRoom } = require('./chat.socket');
 const { logger } = require('../utils/logger');
 
 const getAllowedOrigins = () => {
@@ -30,6 +30,8 @@ const createSocketServer = (httpServer) => {
   io.use(authenticateSocket);
 
   io.on('connection', (socket) => {
+    socket.join(getUserRoom(socket.user.id));
+
     logger.info('Socket connected', {
       socketId: socket.id,
       userId: socket.user.id

@@ -243,6 +243,38 @@ const initDatabase = async () => {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_conversations (
+      id BIGSERIAL PRIMARY KEY,
+      conversation_type VARCHAR(40) NOT NULL,
+      automobiliste_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      garage_id BIGINT REFERENCES garages(id) ON DELETE CASCADE,
+      vendeur_user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+      created_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      last_message_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT chk_chat_conversation_type CHECK (conversation_type IN ('automobiliste_garage', 'automobiliste_vendeur')),
+      CONSTRAINT chk_chat_conversation_pair CHECK (
+        (conversation_type = 'automobiliste_garage' AND garage_id IS NOT NULL AND vendeur_user_id IS NULL)
+        OR
+        (conversation_type = 'automobiliste_vendeur' AND vendeur_user_id IS NOT NULL AND garage_id IS NULL)
+      )
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id BIGSERIAL PRIMARY KEY,
+      conversation_id BIGINT NOT NULL REFERENCES chat_conversations(id) ON DELETE CASCADE,
+      sender_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      content TEXT NOT NULL,
+      client_message_id VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT chk_chat_messages_content_not_empty CHECK (LENGTH(BTRIM(content)) > 0)
+    )
+  `);
+
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255)');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
@@ -508,6 +540,15 @@ const initDatabase = async () => {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_garage_reviews_garage_id ON garage_reviews (garage_id, created_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_garage_reviews_user_id ON garage_reviews (user_id, created_at DESC)');
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS ux_garage_reviews_garage_user_unique ON garage_reviews (garage_id, user_id)');
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_conversations_auto_user ON chat_conversations (automobiliste_user_id, COALESCE(last_message_at, created_at) DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_conversations_garage_id ON chat_conversations (garage_id, COALESCE(last_message_at, created_at) DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_conversations_vendeur_id ON chat_conversations (vendeur_user_id, COALESCE(last_message_at, created_at) DESC)');
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS ux_chat_conversations_auto_garage ON chat_conversations (automobiliste_user_id, garage_id) WHERE conversation_type = 'automobiliste_garage'");
+  await pool.query("CREATE UNIQUE INDEX IF NOT EXISTS ux_chat_conversations_auto_vendeur ON chat_conversations (automobiliste_user_id, vendeur_user_id) WHERE conversation_type = 'automobiliste_vendeur'");
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_created ON chat_messages (conversation_id, created_at DESC, id DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_created ON chat_messages (sender_user_id, created_at DESC)');
 };
 
 module.exports = {

@@ -1,28 +1,50 @@
 # GUIDE Socket.io Chat Temps Reel (Backend)
 
-Ce guide explique les evenements Socket.io exposes par le backend.
+Ce guide decrit la messagerie backend avec persistance PostgreSQL/Supabase.
+
+## Cas couverts
+
+- Chat automobiliste <-> garage
+- Chat automobiliste <-> vendeur
+
+Les conversations garage <-> vendeur, garage <-> garage, vendeur <-> vendeur ne sont pas autorisees.
+
+## Stockage en base
+
+Le backend cree/maintient ces tables:
+
+- `chat_conversations`
+  - `conversation_type`: `automobiliste_garage` ou `automobiliste_vendeur`
+  - `automobiliste_user_id`
+  - `garage_id` (si chat auto-garage)
+  - `vendeur_user_id` (si chat auto-vendeur)
+  - `created_by_user_id`, `last_message_at`, timestamps
+
+- `chat_messages`
+  - `conversation_id`
+  - `sender_user_id`
+  - `content`
+  - `client_message_id`
+  - `created_at`
+
+Contrainte d unicite appliquee:
+- 1 conversation unique par paire automobiliste-garage
+- 1 conversation unique par paire automobiliste-vendeur
 
 ## Demarrage
 
-1. Installer les dependances backend:
-
 ```bash
 npm install
-```
-
-2. Lancer le backend:
-
-```bash
 npm run dev
 ```
 
-Le serveur Socket.io est demarre avec le serveur HTTP Express.
+Le schema chat est initialise dans `initDatabase()` au demarrage backend.
 
 ## Authentification Socket
 
-Le backend exige un JWT valide a la connexion Socket.
+JWT obligatoire a la connexion Socket.
 
-Option 1 (recommandee): `auth.token`
+Option recommandee:
 
 ```js
 const socket = io('http://localhost:3000', {
@@ -32,13 +54,13 @@ const socket = io('http://localhost:3000', {
 });
 ```
 
-Option 2: header `Authorization: Bearer <JWT>`.
+Option alternative: header `Authorization: Bearer <JWT>`.
 
 ## Variables d environnement utiles
 
-- `PORT`: port HTTP/Socket (defaut 3000)
+- `PORT`: port HTTP/Socket (defaut `3000`)
 - `SOCKET_PATH`: chemin Socket.io (defaut `/socket.io`)
-- `SOCKET_CORS_ORIGIN`: origines autorisees, separees par virgule
+- `SOCKET_CORS_ORIGIN`: origines autorisees (CSV)
 
 Exemple:
 
@@ -47,35 +69,75 @@ SOCKET_CORS_ORIGIN=http://localhost:5173,http://127.0.0.1:5173
 SOCKET_PATH=/socket.io
 ```
 
+## Evenements client
+
+- `chat:conversations`
+  - payload: `{ limit?, offset? }`
+  - ack success: `{ ok: true, items: Conversation[] }`
+
+- `chat:start`
+  - but: creer ou recuperer une conversation autorisee
+  - payload auto-garage:
+    - automobiliste: `{ conversationType: 'automobiliste_garage', garageId }`
+    - garage: `{ conversationType: 'automobiliste_garage', automobilisteId }`
+  - payload auto-vendeur:
+    - automobiliste: `{ conversationType: 'automobiliste_vendeur', vendeurId }`
+    - vendeur: `{ conversationType: 'automobiliste_vendeur', automobilisteId }`
+  - ack success: `{ ok: true, conversation, messages }`
+
+- `chat:join`
+  - payload: `{ conversationId, historyLimit? }`
+  - rejoint la room de conversation si utilisateur autorise
+  - ack success: `{ ok: true, conversation, messages }`
+
+- `chat:history`
+  - payload: `{ conversationId, limit?, beforeMessageId? }`
+  - pagination historique
+  - ack success: `{ ok: true, conversation, messages }`
+
+- `chat:message`
+  - payload: `{ conversationId, message, clientMessageId? }`
+  - le message est valide, persiste en DB, puis diffuse
+  - ack success: `{ ok: true, conversationId, messageId }`
+
+- `chat:leave`
+  - payload: `{ conversationId }`
+  - ack success: `{ ok: true, conversationId }`
+
 ## Evenements serveur
 
 - `chat:connected`
-  - emis apres connexion et auth valide
+  - emis apres auth socket
   - payload: `{ socketId, user, connectedAt }`
 
+- `chat:conversation_available`
+  - notifie le destinataire qu une conversation existe/devient disponible
+  - payload: `{ conversation }`
+
+- `chat:new_message`
+  - notification utilisateur ciblé pour nouveau message
+  - payload: `{ conversationId, message }`
+
 - `chat:user_joined`
-  - emis a la room quand un utilisateur la rejoint
-  - payload: `{ roomId, user, joinedAt }`
+  - emis dans la room conversation
+  - payload: `{ conversationId, user, joinedAt }`
 
 - `chat:user_left`
-  - emis a la room quand un utilisateur la quitte
-  - payload: `{ roomId, user, leftAt }`
+  - emis dans la room conversation
+  - payload: `{ conversationId, user, leftAt }`
 
 - `chat:message`
-  - emis a toute la room quand un message est envoye
-  - payload: `{ id, clientMessageId, roomId, message, sender, createdAt }`
+  - emis dans la room conversation apres insertion DB
+  - payload: `{ conversationId, message }`
 
-## Evenements client attendus
+## Format d erreur ack
 
-- `chat:join`
-  - payload: `{ roomId }`
-  - ack: `{ ok: true, roomId }` ou `{ ok: false, error }`
+Tous les handlers Socket renvoient:
 
-- `chat:leave`
-  - payload: `{ roomId }`
-  - ack: `{ ok: true, roomId }` ou `{ ok: false, error }`
-
-- `chat:message`
-  - payload: `{ roomId, message, clientMessageId? }`
-  - la room doit etre rejointe avant envoi
-  - ack: `{ ok: true, messageId }` ou `{ ok: false, error }`
+```json
+{
+  "ok": false,
+  "error": "Message lisible",
+  "code": "ERROR_CODE"
+}
+```

@@ -103,7 +103,18 @@ const comparePiecesValidation = [
 
     return true;
   }),
-  query('includeOutOfStock').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeOutOfStock invalide')
+  query('includeOutOfStock').optional().isIn(['true', 'false', '1', '0', 'yes', 'no', 'on', 'off']).withMessage('includeOutOfStock invalide'),
+  query('userLat').optional().isFloat({ min: -90, max: 90 }).withMessage('userLat doit etre comprise entre -90 et 90'),
+  query('userLon').optional().isFloat({ min: -180, max: 180 }).withMessage('userLon doit etre comprise entre -180 et 180'),
+  query('radiusKm').optional().isFloat({ gt: 0 }).withMessage('radiusKm doit etre superieur a 0'),
+  query('sortBy').optional().isIn(['price', 'distance']).withMessage('sortBy invalide'),
+  query('sortOrder').optional().isIn(['asc', 'desc']).withMessage('sortOrder invalide')
+];
+
+const sellerLocationsValidation = [
+  query('userLat').optional().isFloat({ min: -90, max: 90 }).withMessage('userLat doit etre comprise entre -90 et 90'),
+  query('userLon').optional().isFloat({ min: -180, max: 180 }).withMessage('userLon doit etre comprise entre -180 et 180'),
+  query('radiusKm').optional().isFloat({ gt: 0 }).withMessage('radiusKm doit etre superieur a 0')
 ];
 
 const adjustStockValidation = [
@@ -134,6 +145,7 @@ const stockMovementsValidation = [
 
 router.get('/', listPiecesValidation, validateRequest, pieceController.getAllPieces);
 router.get('/compare/vendors', comparePiecesValidation, validateRequest, pieceController.comparePieceAcrossVendors);
+router.get('/seller-locations', sellerLocationsValidation, validateRequest, pieceController.getPieceSellerLocations);
 router.get('/:id', getPieceValidation, validateRequest, pieceController.getPieceById);
 router.get('/:id/stock/movements', verifyToken, isVendeurOrAdmin, stockMovementsValidation, validateRequest, pieceController.getPieceStockMovements);
 

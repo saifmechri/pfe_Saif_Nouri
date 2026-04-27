@@ -298,3 +298,45 @@ Cette API compare les offres d une meme piece chez plusieurs vendeurs et retourn
 - Les offres sont triees par prix croissant.
 - Les offres en rupture de stock sont ignorees par defaut.
 - La premiere offre devient automatiquement la meilleure offre.
+
+## Test filtres intelligents garages (rating / distance / services)
+
+Endpoint principal:
+
+- `GET /api/garages`
+
+Parametres disponibles:
+
+- `page`, `limit`, `search`, `includeClosed`
+- `userLat`, `userLon`, `radiusKm`
+- `minRating`, `maxRating`
+- `serviceIds` (CSV: `1,5,9`)
+- `services` (CSV: `vidange,diagnostic`)
+- `serviceMatch` (`any` ou `all`)
+- `includeInactiveServices` (`true/false`)
+- `sortBy=distance`, `sortOrder=asc|desc`
+
+### Cas 1: distance + note + services (any)
+
+```bash
+curl -X GET "http://localhost:3000/api/garages?userLat=36.8065&userLon=10.1815&radiusKm=20&minRating=4&services=vidange,diagnostic&serviceMatch=any&sortBy=distance&sortOrder=asc"
+```
+
+### Cas 2: services par IDs (all)
+
+```bash
+curl -X GET "http://localhost:3000/api/garages?serviceIds=1,2,3&serviceMatch=all"
+```
+
+### Cas 3: intervalle rating
+
+```bash
+curl -X GET "http://localhost:3000/api/garages?minRating=3.5&maxRating=5"
+```
+
+### Cas erreurs attendues
+
+- `GET /api/garages?userLat=36.8` -> 400 (`MISSING_COORDINATE_PAIR`)
+- `GET /api/garages?radiusKm=10` -> 400 (`COORDINATES_REQUIRED`)
+- `GET /api/garages?minRating=5&maxRating=3` -> 400 (`INVALID_RATING_RANGE`)
+- `GET /api/garages?serviceIds=abc,2` -> 400 (validation `serviceIds`)

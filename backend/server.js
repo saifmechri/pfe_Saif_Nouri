@@ -8,6 +8,7 @@ const authRoutes = require("./routes/auth");
 const vehiculeRoutes = require("./routes/vehicules");
 const interventionRoutes = require("./routes/interventions");
 const pieceRoutes = require("./routes/pieces");
+const garageRoutes = require("./routes/garages");
 const recommendationRoutes = require("./routes/recommendations");
 const { initDatabase, testConnection } = require("./db");
 const { errorHandler } = require("./middlewares/errorHandler");
@@ -28,6 +29,7 @@ app.get("/", (req, res) => {
       login: "POST /api/auth/login",
       profile: "GET /api/auth/profile (protégée - nécessite token JWT)",
       vehicules: "CRUD /api/vehicules (protégé - nécessite token JWT)",
+      garages: "CRUD /api/garages",
       interventions: "CRUD /api/vehicules/:vehicleId/interventions (protégé)"
     }
   });
@@ -36,6 +38,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/vehicules", vehiculeRoutes);
 app.use("/api/pieces", pieceRoutes);
+app.use("/api/garages", garageRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/recommandations", recommendationRoutes);
 

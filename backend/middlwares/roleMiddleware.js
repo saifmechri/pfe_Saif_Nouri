@@ -1,5 +1,5 @@
-const { pool } = require("../db");
 const { AppError } = require("../utils/appError");
+const { hasRole: userHasRole } = require("../models/user.model");
 
 /**
  * Middleware de vérification de rôle utilisateur
@@ -83,14 +83,7 @@ const isVendeurOrAdmin = checkRole('vendeur', 'admin');
  */
 const hasRole = async (userId, roleName) => {
   try {
-    const result = await pool.query(
-      `SELECT r.name 
-       FROM users u 
-       JOIN roles r ON u.role_id = r.id 
-       WHERE u.id = $1 AND r.name = $2`,
-      [userId, roleName]
-    );
-    return result.rows.length > 0;
+    return await userHasRole(userId, roleName);
   } catch (err) {
     console.error("Erreur hasRole:", err);
     return false;

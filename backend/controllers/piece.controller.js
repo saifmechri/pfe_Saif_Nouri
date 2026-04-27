@@ -83,16 +83,39 @@ const comparePieceAcrossVendors = asyncHandler(async (req, res) => {
   const name = req.query.name;
   const includeOutOfStock = ['true', '1', 'yes', 'on']
     .includes(String(req.query.includeOutOfStock || '').toLowerCase());
+  const userLat = req.query.userLat;
+  const userLon = req.query.userLon;
+  const radiusKm = req.query.radiusKm;
+  const sortBy = req.query.sortBy;
+  const sortOrder = req.query.sortOrder;
 
   const comparison = await pieceService.comparePieceAcrossVendors({
     pieceId,
     name,
-    includeOutOfStock
+    includeOutOfStock,
+    userLat,
+    userLon,
+    radiusKm,
+    sortBy,
+    sortOrder
   });
 
   return sendApiResponse(res, {
     message: 'Comparaison multi-vendeurs recuperee avec succes',
     data: comparison
+  });
+});
+
+const getPieceSellerLocations = asyncHandler(async (req, res) => {
+  const locations = await pieceService.listPieceSellerLocations({
+    userLat: req.query.userLat,
+    userLon: req.query.userLon,
+    radiusKm: req.query.radiusKm
+  });
+
+  return sendApiResponse(res, {
+    message: 'Localisations vendeurs de pieces recuperees avec succes',
+    data: locations
   });
 });
 
@@ -174,6 +197,7 @@ module.exports = {
   getAllPieces,
   getPieceById,
   comparePieceAcrossVendors,
+  getPieceSellerLocations,
   updatePiece,
   deletePiece,
   adjustPieceStock,

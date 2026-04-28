@@ -207,7 +207,7 @@ Centraliser toute la communication avec le backend.
 Gestion de l’état global :
 
 * AuthContext → Utilisateur connecté & JWT
-* SocketContext → Connexion WebSocket
+* RealtimeContext → Connexion Supabase Realtime
 * NotificationContext → Gestion notifications
 
 Rôle :
@@ -221,7 +221,7 @@ Hooks personnalisés :
 
 * useAuth → Gestion authentification
 * useFetch → Appels API génériques
-* useSocket → Connexion temps réel
+* useRealtime → Connexion temps réel Supabase
 * useRole → Vérification rôle utilisateur
 
 Rôle :
@@ -254,7 +254,7 @@ Optionnel (si Redux ou autre gestionnaire d’état global avancé).
 Fichiers de configuration :
 
 * apiConfig.js → URL API
-* socketConfig.js → Configuration WebSocket
+* supabaseClient.js → Configuration Supabase Realtime
 * roles.js → Définition des rôles
 
 Rôle :

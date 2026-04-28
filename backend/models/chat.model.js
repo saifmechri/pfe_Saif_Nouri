@@ -229,6 +229,92 @@ const findUserByIdWithRole = async (userId) => {
   return result.rows[0] || null;
 };
 
+const searchGarageContacts = async ({ query, limit }) => {
+  const safeQuery = `%${String(query || '').trim().toLowerCase()}%`;
+  const safeLimit = Math.min(50, Math.max(1, Number.parseInt(limit, 10) || 20));
+
+  const result = await pool.query(
+    `SELECT
+       g.id AS garage_id,
+       g.name AS garage_name,
+       g.adresse AS garage_address,
+       g.user_id,
+       u.name AS owner_name,
+       u.email AS owner_email
+     FROM garages g
+     LEFT JOIN users u ON u.id = g.user_id
+     WHERE g.user_id IS NOT NULL
+       AND (
+         $1 = '%%'
+         OR LOWER(g.name) LIKE $1
+         OR LOWER(COALESCE(g.adresse, '')) LIKE $1
+         OR LOWER(COALESCE(u.name, '')) LIKE $1
+         OR LOWER(COALESCE(u.email, '')) LIKE $1
+       )
+     ORDER BY g.updated_at DESC, g.id DESC
+     LIMIT $2`,
+    [safeQuery, safeLimit]
+  );
+
+  return result.rows;
+};
+
+const searchVendeurContacts = async ({ query, limit }) => {
+  const safeQuery = `%${String(query || '').trim().toLowerCase()}%`;
+  const safeLimit = Math.min(50, Math.max(1, Number.parseInt(limit, 10) || 20));
+
+  const result = await pool.query(
+    `SELECT
+       u.id,
+       u.name,
+       u.email,
+       u.store_name,
+       u.store_address
+     FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE r.name = 'vendeur'
+       AND (
+         $1 = '%%'
+         OR LOWER(COALESCE(u.store_name, '')) LIKE $1
+         OR LOWER(u.name) LIKE $1
+         OR LOWER(u.email) LIKE $1
+         OR LOWER(COALESCE(u.store_address, '')) LIKE $1
+       )
+     ORDER BY u.updated_at DESC, u.id DESC
+     LIMIT $2`,
+    [safeQuery, safeLimit]
+  );
+
+  return result.rows;
+};
+
+const searchAutomobilisteContacts = async ({ query, limit }) => {
+  const safeQuery = `%${String(query || '').trim().toLowerCase()}%`;
+  const safeLimit = Math.min(50, Math.max(1, Number.parseInt(limit, 10) || 20));
+
+  const result = await pool.query(
+    `SELECT
+       u.id,
+       u.name,
+       u.email,
+       u.phone
+     FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE r.name = 'automobiliste'
+       AND (
+         $1 = '%%'
+         OR LOWER(u.name) LIKE $1
+         OR LOWER(u.email) LIKE $1
+         OR LOWER(COALESCE(u.phone, '')) LIKE $1
+       )
+     ORDER BY u.updated_at DESC, u.id DESC
+     LIMIT $2`,
+    [safeQuery, safeLimit]
+  );
+
+  return result.rows;
+};
+
 module.exports = {
   findConversationById,
   findConversationByParticipants,
@@ -240,5 +326,8 @@ module.exports = {
   createMessage,
   touchConversation,
   listMessagesByConversation,
-  findUserByIdWithRole
+  findUserByIdWithRole,
+  searchGarageContacts,
+  searchVendeurContacts,
+  searchAutomobilisteContacts
 };

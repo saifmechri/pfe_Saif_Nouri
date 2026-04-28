@@ -17,9 +17,6 @@ import { formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/
 const getPayload = (response) => response?.data?.data ?? response?.data;
 const fallbackCenter = { lat: 35.8256, lng: 10.6369 };
 
-// API endpoint for fetching filter options
-const FILTER_OPTIONS_ENDPOINT = "http://localhost:3000/api/garages/filter-options";
-
 const garageBrandsCatalog = [
   "Audi", "BMW", "BYD", "Changan", "Chery", "Chevrolet", "Citroen", "Cupra",
   "Daewoo", "Dacia", "DFM", "FAW", "Fiat", "Ford", "Foton", "Geely", "Great Wall",

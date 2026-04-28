@@ -1,11 +1,14 @@
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import ChatModal from "../components/ChatModal";
+import { MessageCircle } from "lucide-react";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const isAuthenticated = Boolean(user);
 
   const openSidebar = () => setIsSidebarOpen(true);
@@ -76,6 +79,17 @@ const Navbar = () => {
                 </>
               )}
             </div>
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => setIsChatOpen(true)}
+                className="inline-flex items-center justify-center h-10 w-10 rounded-full border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md hover:text-blue-600"
+                aria-label="Ouvrir la messagerie"
+                title="Messagerie"
+              >
+                <MessageCircle className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
       </nav>
@@ -247,6 +261,8 @@ const Navbar = () => {
           </div>
         </section>
       </main>
+
+      <ChatModal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
     </div>
   );
 };

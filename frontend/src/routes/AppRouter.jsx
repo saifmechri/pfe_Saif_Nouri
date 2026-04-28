@@ -9,6 +9,7 @@ import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations
 import GaragesPage from "../pages/automobiliste/Garages";
 import CataloguePieces from "../pages/vendeur/CataloguePieces";
 import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
+import ChatCenter from "../pages/chat/ChatCenter";
 
 // Import des pages spécifiques aux rôles
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
@@ -61,6 +62,14 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/automobiliste/messages"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
+              <ChatCenter />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/automobiliste/*"
           element={
             <ProtectedRoute allowedRoles={["automobiliste"]}>
@@ -77,6 +86,14 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/garage/messages"
+          element={
+            <ProtectedRoute allowedRoles={["garage"]}>
+              <ChatCenter />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/garage/*"
           element={
             <ProtectedRoute allowedRoles={["garage"]}>
@@ -89,6 +106,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["garage"]}>
               <GarageDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendeur/messages"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur"]}>
+              <ChatCenter />
             </ProtectedRoute>
           }
         />

@@ -66,6 +66,8 @@ const ChatCenter = () => {
     [messagesByConversation, selectedConversationId]
   );
 
+  const messagesContainerRef = useRef(null);
+
   const upsertConversation = useCallback((conversation) => {
     setConversations((prev) => {
       const next = [...prev];
@@ -235,6 +237,23 @@ const ChatCenter = () => {
     };
   }, [appendMessageToConversation, selectedConversationId, upsertConversation, user]);
 
+  // Auto-scroll to bottom when messages change for the selected conversation
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // small delay to ensure DOM updated
+    const t = setTimeout(() => {
+      try {
+        container.scrollTop = container.scrollHeight;
+      } catch (e) {
+        // ignore
+      }
+    }, 50);
+
+    return () => clearTimeout(t);
+  }, [selectedMessages.length, selectedConversationId]);
+
   const handleSearchSubmit = async (event) => {
     event.preventDefault();
     await loadContacts(contactsQuery);
@@ -397,7 +416,7 @@ const ChatCenter = () => {
                 )}
               </div>
 
-              <div className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-lg bg-[#f8fbff] p-3">
+              <div ref={messagesContainerRef} className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-lg bg-[#f8fbff] p-3">
                 {selectedConversation && selectedMessages.length === 0 && (
                   <p className="text-sm text-[#617089]">Commencez la discussion avec votre contact.</p>
                 )}

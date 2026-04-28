@@ -549,6 +549,24 @@ const initDatabase = async () => {
 
   await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_created ON chat_messages (conversation_id, created_at DESC, id DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_created ON chat_messages (sender_user_id, created_at DESC)');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      type VARCHAR(50) NOT NULL,
+      reference_id BIGINT,
+      title VARCHAR(255),
+      body TEXT,
+      is_read BOOLEAN DEFAULT false,
+      metadata JSONB,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications (user_id, created_at DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications (is_read)');
 };
 
 module.exports = {

@@ -11,6 +11,7 @@ const {
   listMessagesByConversation,
   findUserByIdWithRole
 } = require('../models/chat.model');
+const notificationService = require('./notificationService');
 const { findGarageIdentityById, findGarageIdentityByUserId } = require('../models/garage.model');
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -310,6 +311,44 @@ const sendMessageToConversation = async ({ user, conversationId, message, client
   });
 
   await touchConversation(conversation.id);
+
+  // Génération automatique d'une notification pour le destinataire du message
+  try {
+    const senderId = Number(user.id);
+    let recipientUserId = null;
+
+    if (conversation.conversationType === 'automobiliste_garage') {
+      // conversation.automobiliste contains user id of automobiliste, conversation.garage contains garage info with user_id
+      const automobilisteId = Number(conversation.automobiliste.id);
+      const garageUserId = conversation.garage?.user_id ? Number(conversation.garage.user_id) : null;
+      if (senderId === automobilisteId) recipientUserId = garageUserId;
+      else recipientUserId = automobilisteId;
+    } else if (conversation.conversationType === 'automobiliste_vendeur') {
+      const automobilisteId = Number(conversation.automobiliste.id);
+      const vendeurUserId = conversation.vendeur ? Number(conversation.vendeur.id) : null;
+      if (senderId === automobilisteId) recipientUserId = vendeurUserId;
+      else recipientUserId = automobilisteId;
+    }
+
+    if (recipientUserId && recipientUserId !== senderId) {
+      const title = `Nouveau message de ${user.name || 'contact'}`;
+      const body = normalizedMessage.length > 200 ? normalizedMessage.slice(0, 197) + '...' : normalizedMessage;
+
+      // create notification (non bloquant semantics but await to ensure persistence)
+      await notificationService.createForUser({
+        userId: recipientUserId,
+        actorUserId: senderId,
+        type: 'message',
+        referenceId: conversation.id,
+        title,
+        body,
+        metadata: { conversationId: conversation.id, messageId: Number(created.id) }
+      });
+    }
+  } catch (err) {
+    // log but do not fail the message send
+    console.error('Failed to create message notification:', err && err.message ? err.message : err);
+  }
 
   return {
     conversation,

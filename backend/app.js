@@ -3,13 +3,30 @@ const cors = require('cors');
 const path = require('path');
 
 const { registerRoutes } = require('./routes');
+
 const { errorHandler } = require('./middlewares/errorHandler');
+
+let chatRoutes;
+try {
+  chatRoutes = require('./routes/chat.routes');
+} catch (e) {
+  console.error('[app.js] ✗ Error loading chat.routes:', e.message);
+}
 
 const createApp = () => {
   const app = express();
 
   app.use(cors());
   app.use(express.json());
+  
+  // Debug middleware to log all requests
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/api/chat')) {
+      console.log(`[DEBUG] Incoming request: ${req.method} ${req.path}`);
+    }
+    next();
+  });
+  
   app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
   // Route racine
@@ -27,6 +44,13 @@ const createApp = () => {
   });
 
   registerRoutes(app);
+  
+  // Direct mount chat routes as workaround
+  if (chatRoutes) {
+    app.use('/api/chat', chatRoutes);
+  } else {
+    console.error('[app.js] ✗ chatRoutes is not available!');
+  }
 
   app.use(errorHandler);
 

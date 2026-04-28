@@ -1,8 +1,8 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
-const { verifyToken } = require('../middlwares/authMiddleware');
-const { isVendeurOrAdmin } = require('../middlwares/roleMiddleware');
-const { uploadPiecePhoto } = require('../middlwares/uploadPiecePhoto');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const { isVendeurOrAdmin } = require('../middlewares/roleMiddleware');
+const { uploadPiecePhoto } = require('../middlewares/uploadPiecePhoto');
 const { validateRequest } = require('../middlewares/validateRequest');
 const pieceController = require('../controllers/piece.controller');
 

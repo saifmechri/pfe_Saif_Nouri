@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { verifyToken } = require('../middlwares/authMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
 const { listChatContacts } = require('../controllers/chatContacts.controller');
 const {
 	listChatConversations,

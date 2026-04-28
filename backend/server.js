@@ -4,11 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 
-const authRoutes = require("./routes/auth");
-const vehiculeRoutes = require("./routes/vehicules");
-const interventionRoutes = require("./routes/interventions");
-const pieceRoutes = require("./routes/pieces");
-const garageRoutes = require("./routes/garages");
+const { registerRoutes } = require("./routes");
 const recommendationRoutes = require("./routes/recommendations");
 const { initDatabase, testConnection } = require("./db");
 const { errorHandler } = require("./middlewares/errorHandler");
@@ -35,15 +31,8 @@ app.get("/", (req, res) => {
   });
 });
 
-app.use("/api/auth", authRoutes);
-app.use("/api/vehicules", vehiculeRoutes);
-app.use("/api/pieces", pieceRoutes);
-app.use("/api/garages", garageRoutes);
-app.use("/api/recommendations", recommendationRoutes);
+registerRoutes(app);
 app.use("/api/recommandations", recommendationRoutes);
-
-// Route pour les interventions d'un véhicule
-app.use("/api/vehicules/:vehicleId/interventions", interventionRoutes);
 
 // Gestion globale des erreurs applicatives (AppError et erreurs inattendues)
 app.use(errorHandler);

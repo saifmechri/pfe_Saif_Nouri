@@ -1,5 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 :root {
 	--vb-bg: #f3f5f9;
@@ -71,4 +72,12 @@ h6 {
 	outline: none;
 	border-color: var(--vb-primary);
 	box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+}
+
+.garage-map {
+	height: 520px;
+	width: 100%;
+	border-radius: var(--vb-radius);
+	overflow: hidden;
+	border: 1px solid #dbe2ec;
 }

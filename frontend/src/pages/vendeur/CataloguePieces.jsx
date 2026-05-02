@@ -1,9 +1,15 @@
-import { useContext, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { MapPin, Navigation2, Package, TrendingDown } from "lucide-react";
 import { comparePieceAcrossVendors, createPiece, deletePiece, getPieces, updatePiece } from "../../services/pieces";
+import { extractConversationAndMessages, startChatConversation } from "../../services/chat";
 import { getCompleteProfile, getCompleteProfileById, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
 import { AuthContext } from "../../context/AuthContext";
+import { calculateDistance, formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
+
+// Google Maps API configuration
+const GOOGLE_MAPS_API_KEY = "AIzaSyCojlT8OsuCl0W4b0Pto2m1GbfUl9FF1pE";
 
 const initialFilters = {
   search: "",
@@ -104,6 +110,12 @@ const categories = [
   "Huiles et Fluides",
   "Batterie"
 ].sort();
+
+const chatRouteByRole = {
+  automobiliste: "/automobiliste/messages",
+  garage: "/garage/messages",
+  vendeur: "/vendeur/messages"
+};
 
 const marqueStyleByName = {
   Audi: "from-slate-100 to-white",
@@ -331,6 +343,14 @@ const getPieceImageFallback = (piece) => {
   });
 };
 
+const getPieceImageUrl = (piece, backendBaseUrl) => {
+  if (piece?.photo_url) {
+    return piece.photo_url.startsWith("http") ? piece.photo_url : `${backendBaseUrl}${piece.photo_url}`;
+  }
+
+  return getPieceImageFallback(piece);
+};
+
 const presentationSpecialites = [
   "Pieces consommables",
   "Batterie",
@@ -364,7 +384,9 @@ const createEmptyPieceForm = () => ({
   marque: "",
   modele: "",
   categorie: "",
-  photo_piece: null
+  photo_piece: null,
+  latitude: null,
+  longitude: null
 });
 
 const splitLines = (value, fallback) => {
@@ -394,9 +416,43 @@ const normalizeOfferGroupKey = (piece) => {
   return nom ? `nom:${nom}` : `piece:${piece?.id || "unknown"}`;
 };
 
+const buildGoogleMapsEmbedUrl = (query) => {
+  const safeQuery = String(query || "Tunisie").trim() || "Tunisie";
+  return `https://www.google.com/maps?q=${encodeURIComponent(safeQuery)}&output=embed`;
+};
+
+const buildGoogleMapsSearchUrl = (query) => {
+  const safeQuery = String(query || "Tunisie").trim() || "Tunisie";
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(safeQuery)}`;
+};
+
+const buildVendorLocationQuery = (vendor) => {
+  if (!vendor) {
+    return "";
+  }
+
+  if (vendor.latitude !== null && vendor.latitude !== undefined && vendor.longitude !== null && vendor.longitude !== undefined) {
+    return `${vendor.latitude},${vendor.longitude}`;
+  }
+
+  return [vendor.magasin || vendor.nom || vendor.name, vendor.address, vendor.store_address]
+    .filter(Boolean)
+    .join(", ");
+};
+
+const buildVendorGoogleMapsEmbedUrl = (vendor) => buildGoogleMapsEmbedUrl(buildVendorLocationQuery(vendor));
+
+const buildVendorGoogleMapsSearchUrl = (vendor) => buildGoogleMapsSearchUrl(buildVendorLocationQuery(vendor));
+
+const buildPieceLocationSearchUrl = (piece) => {
+  const parts = [piece?.seller_store_name, piece?.seller_name, piece?.zone_geographique, "Tunisie"].filter(Boolean);
+  return buildGoogleMapsSearchUrl(parts.join(", "));
+};
+
 const CataloguePieces = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("pieces");
   const [profileLoading, setProfileLoading] = useState(false);
   const [myProfile, setMyProfile] = useState(null);
@@ -435,6 +491,7 @@ const CataloguePieces = () => {
   const [createSuccess, setCreateSuccess] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [newPiece, setNewPiece] = useState(createEmptyPieceForm);
+  const [locationFocusToken, setLocationFocusToken] = useState(0);
 
   const [showMarquesModal, setShowMarquesModal] = useState(false);
   const [showModelesModal, setShowModelesModal] = useState(false);
@@ -450,13 +507,90 @@ const CataloguePieces = () => {
   const [catalogScope, setCatalogScope] = useState(() => ((user?.role === "vendeur" || user?.role === "admin") ? "private" : "public"));
   const [marketplaceSortBy, setMarketplaceSortBy] = useState("min_price");
 
+  // Google Maps state
+  const [showMapModal, setShowMapModal] = useState(false);
+  const mapContainerRef = useRef(null);
+  const googleMapRef = useRef(null);
+  const markerRef = useRef(null);
+  const vendorLocationRef = useRef(null);
+
+  // Google Maps handlers
+  const initializeGoogleMap = () => {
+    if (!mapContainerRef.current || !window.google) return;
+
+    const center = { lat: newPiece.latitude || 35.8, lng: newPiece.longitude || 10.2 };
+    
+    const map = new window.google.maps.Map(mapContainerRef.current, {
+      zoom: 13,
+      center: center,
+      mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+      fullscreenControl: true,
+      zoomControl: true,
+      mapTypeControl: true
+    });
+
+    googleMapRef.current = map;
+
+    // Create marker
+    const marker = new window.google.maps.Marker({
+      position: center,
+      map: map,
+      draggable: true,
+      title: "Cliquez sur la carte ou arrachez pour définir le lieu"
+    });
+
+    markerRef.current = marker;
+
+    // Handle marker drag
+    marker.addListener("dragend", () => {
+      const pos = marker.getPosition();
+      setNewPiece(prev => ({
+        ...prev,
+        latitude: pos.lat(),
+        longitude: pos.lng()
+      }));
+    });
+
+    // Handle map click
+    map.addListener("click", (e) => {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      marker.setPosition({ lat, lng });
+      setNewPiece(prev => ({
+        ...prev,
+        latitude: lat,
+        longitude: lng
+      }));
+    });
+  };
+
+  const handleOpenMapModal = () => {
+    setShowMapModal(true);
+  };
+
+  const handleSaveLocation = () => {
+    if (newPiece.latitude && newPiece.longitude) {
+      setShowMapModal(false);
+      // Localisation sauvegardée dans newPiece state
+    } else {
+      alert("Veuillez sélectionner un lieu sur la carte");
+    }
+  };
+
   const backendBaseUrl = useMemo(() => {
-    const apiUrl = import.meta.env.VITE_API_URL || "";
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
     return apiUrl.replace(/\/api\/?$/, "");
   }, []);
 
   const canManagePieces = user?.role === "vendeur" || user?.role === "admin";
   const canSeeStoreTabs = isStoreView || user?.role === "vendeur" || user?.role === "admin" || user?.role === "garage";
+
+  // Initialize Google Map when modal opens
+  useEffect(() => {
+    if (showMapModal && mapContainerRef.current) {
+      setTimeout(() => initializeGoogleMap(), 100);
+    }
+  }, [showMapModal]);
 
   useEffect(() => {
     let isMounted = true;
@@ -553,6 +687,56 @@ const CataloguePieces = () => {
       setCatalogScope("public");
     }
   }, [canManagePieces]);
+
+  const openStoreViewByOwnerId = async (ownerId, options = {}) => {
+    const { syncUrl = false, tab = "presentation" } = options;
+    const parsedOwnerId = Number.parseInt(ownerId, 10);
+    const isValidOwner = Number.isInteger(parsedOwnerId) && parsedOwnerId > 0;
+    const nextTab = tab === "pieces" ? "pieces" : "presentation";
+
+    setSelectedPiece(null);
+    setIsStoreView(true);
+    setStoreOwnerId(isValidOwner ? parsedOwnerId : null);
+    setActiveTab(nextTab);
+
+    if (syncUrl && isValidOwner) {
+      navigate(`/vendeur/magasin?ownerId=${parsedOwnerId}&tab=${nextTab}`, { replace: true });
+    }
+
+    if (isValidOwner) {
+      setProfileLoading(true);
+      try {
+        const res = await getCompleteProfileById(parsedOwnerId);
+        const profile = res.data?.data?.user || res.data?.user || null;
+        setStoreProfile(profile);
+      } catch (_error) {
+        setStoreProfile(null);
+      } finally {
+        setProfileLoading(false);
+      }
+    } else {
+      setStoreProfile(null);
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    const ownerIdParam = searchParams.get("ownerId");
+    const tabParam = searchParams.get("tab");
+    const parsedOwnerId = Number.parseInt(ownerIdParam || "", 10);
+    const hasValidOwner = Number.isInteger(parsedOwnerId) && parsedOwnerId > 0;
+
+    if (hasValidOwner) {
+      openStoreViewByOwnerId(parsedOwnerId, { tab: tabParam === "pieces" ? "pieces" : "presentation" });
+      return;
+    }
+
+    if ((tabParam === "presentation" || tabParam === "pieces") && canSeeStoreTabs) {
+      setActiveTab(tabParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const visibleItems = useMemo(() => {
     let filtered = items;
@@ -671,6 +855,8 @@ const CataloguePieces = () => {
       });
   }, [scopedItems, isPublicMarketplace, marketplaceSortBy]);
 
+  
+
   const availableModeles = useMemo(() => {
     if (selectedMarques.length === 0) return [];
     const merged = selectedMarques.flatMap((marque) => modelsByMarque[marque] || []);
@@ -731,6 +917,7 @@ const CataloguePieces = () => {
       });
 
       setComparisonData(res.data?.data || res.data || null);
+      setComparisonError("");
     } catch (err) {
       setComparisonError(err.response?.data?.message || "Erreur lors du chargement de la comparaison multi-vendeurs.");
     } finally {
@@ -771,6 +958,113 @@ const CataloguePieces = () => {
   ]);
   const storeSpecialties = splitLines(activeProfile?.store_specialties, presentationSpecialites);
   const storeServices = splitLines(activeProfile?.store_services, presentationServices);
+
+  const pieceLocationQuery = useMemo(() => {
+    const zone = String(newPiece.zone_geographique || "").trim();
+    const baseAddress = String(myProfile?.store_address || "").trim();
+
+    if (zone && baseAddress) {
+      return `${zone}, ${baseAddress}, Tunisie`;
+    }
+
+    if (zone) {
+      return `${zone}, Tunisie`;
+    }
+
+    if (baseAddress) {
+      return `${baseAddress}, Tunisie`;
+    }
+
+    return "Tunisie";
+  }, [newPiece.zone_geographique, myProfile?.store_address]);
+
+  const googleMapsEmbedUrl = useMemo(() => buildGoogleMapsEmbedUrl(pieceLocationQuery), [pieceLocationQuery]);
+  const googleMapsSearchUrl = useMemo(() => buildGoogleMapsSearchUrl(pieceLocationQuery), [pieceLocationQuery]);
+  const selectedPieceVendor = selectedPiece?.vendeur || selectedPiece?.offers?.[0]?.vendeur || null;
+  const selectedPieceVendorOffers = useMemo(() => {
+    const offers = Array.isArray(selectedPiece?.offers) ? selectedPiece.offers : [];
+
+    return offers;
+  }, [selectedPiece]);
+  const selectedPieceLocationQuery = useMemo(() => {
+    const parts = [
+      selectedPieceVendor?.magasin,
+      selectedPieceVendor?.store_name,
+      selectedPieceVendor?.nom,
+      selectedPieceVendor?.name,
+      selectedPiece?.seller_store_name,
+      selectedPiece?.seller_name,
+      selectedPiece?.zone_geographique,
+      "Tunisie"
+    ].filter(Boolean);
+
+    return parts.join(", ");
+  }, [selectedPiece, selectedPieceVendor]);
+  const selectedPieceLocationMapUrl = useMemo(
+    () => (selectedPieceLocationQuery ? buildGoogleMapsEmbedUrl(selectedPieceLocationQuery) : ""),
+    [selectedPieceLocationQuery]
+  );
+  const selectedPieceLocationSearchUrl = useMemo(
+    () => (selectedPieceLocationQuery ? buildGoogleMapsSearchUrl(selectedPieceLocationQuery) : ""),
+    [selectedPieceLocationQuery]
+  );
+  const selectedPieceVendorMapUrl = useMemo(
+    () => (selectedPieceVendor ? buildVendorGoogleMapsEmbedUrl(selectedPieceVendor) : ""),
+    [selectedPieceVendor]
+  );
+  const selectedPieceVendorSearchUrl = useMemo(
+    () => (selectedPieceVendor ? buildVendorGoogleMapsSearchUrl(selectedPieceVendor) : ""),
+    [selectedPieceVendor]
+  );
+
+  const getVendorOwnerId = (vendorOffer) => {
+    if (!vendorOffer) {
+      return null;
+    }
+
+    const vendorProfile = vendorOffer.vendeur && typeof vendorOffer.vendeur === "object" ? vendorOffer.vendeur : null;
+    if (vendorProfile?.id) {
+      const vendorProfileId = Number.parseInt(vendorProfile.id, 10);
+      if (Number.isFinite(vendorProfileId) && vendorProfileId > 0) {
+        return vendorProfileId;
+      }
+    }
+
+    if (vendorOffer.user_id !== undefined && vendorOffer.user_id !== null) {
+      const pieceOwnerId = Number.parseInt(vendorOffer.user_id, 10);
+      if (Number.isFinite(pieceOwnerId) && pieceOwnerId > 0) {
+        return pieceOwnerId;
+      }
+    }
+
+    const looksLikePiece =
+      vendorOffer.reference !== undefined ||
+      vendorOffer.prix_unitaire !== undefined ||
+      vendorOffer.stock !== undefined ||
+      vendorOffer.categorie !== undefined ||
+      vendorOffer.marque !== undefined ||
+      vendorOffer.modele !== undefined;
+
+    if (!looksLikePiece && Number.isInteger(Number(vendorOffer.id)) && (vendorOffer.store_name || vendorOffer.magasin || vendorOffer.name || vendorOffer.email)) {
+      return Number(vendorOffer.id);
+    }
+
+    const ownerIdCandidates = [
+      vendorOffer?.user_id,
+      vendorOffer?.vendeur?.id,
+      vendorOffer?.vendeur_user_id,
+      vendorOffer?.vendor_user_id,
+      vendorOffer?.seller_user_id,
+      vendorOffer?.owner_id,
+      vendorOffer?.vendeur_id,
+      vendorOffer?.vendor_id,
+      vendorOffer?.seller_id
+    ];
+
+    return ownerIdCandidates
+      .map((value) => Number.parseInt(value, 10))
+      .find((value) => Number.isFinite(value) && value > 0) || null;
+  };
 
   const handlePresentationChange = (event) => {
     const { name, value } = event.target;
@@ -901,7 +1195,9 @@ const CataloguePieces = () => {
       marque: piece.marque || "",
       modele: piece.modele || "",
       categorie: piece.categorie || "",
-      photo_piece: null
+      photo_piece: null,
+      latitude: piece.latitude || null,
+      longitude: piece.longitude || null
     });
     setSelectedPiece(null);
     setShowCreateModal(true);
@@ -963,25 +1259,16 @@ const CataloguePieces = () => {
       formData.append("marque", String(newPiece.marque || "").trim());
       formData.append("modele", String(newPiece.modele || "").trim());
       formData.append("categorie", String(newPiece.categorie || "").trim());
+      
+      if (newPiece.latitude) formData.append("latitude", newPiece.latitude);
+      if (newPiece.longitude) formData.append("longitude", newPiece.longitude);
 
       if (newPiece.photo_piece) {
         formData.append("photo_piece", newPiece.photo_piece);
       }
 
       if (editingPieceId) {
-        await updatePiece(editingPieceId, {
-          nom: normalizedNom,
-          reference: normalizedReference,
-          description: String(newPiece.description || "").trim(),
-          prix_unitaire: String(parsedPrice),
-          stock: String(parsedStock),
-          condition: newPiece.condition || "Neuf",
-          zone_geographique: String(newPiece.zone_geographique || "").trim(),
-          marque: String(newPiece.marque || "").trim(),
-          modele: String(newPiece.modele || "").trim(),
-          categorie: String(newPiece.categorie || "").trim()
-        });
-
+        await updatePiece(editingPieceId, formData);
         setCreateSuccess("Piece modifiee avec succes.");
       } else {
         await createPiece(formData);
@@ -993,14 +1280,23 @@ const CataloguePieces = () => {
       setPage(1);
       syncPiecesList();
     } catch (err) {
-      const details = err.response?.data?.error?.details;
-      if (Array.isArray(details) && details.length > 0) {
-        const formatted = details
-          .map((item) => `${item.field || "champ"}: ${item.message || "valeur invalide"}`)
-          .join(" | ");
-        setCreateError(formatted);
-      } else {
-        setCreateError(err.response?.data?.message || "Erreur lors de l'ajout de la piece");
+      try {
+        const errorResponse = err.response?.data;
+        const details = errorResponse?.error?.details;
+        
+        if (Array.isArray(details) && details.length > 0) {
+          const formatted = details
+            .map((item) => {
+              if (!item || typeof item !== 'object') return "Erreur de validation";
+              return `${item.field || "champ"}: ${item.message || "valeur invalide"}`;
+            })
+            .join(" | ");
+          setCreateError(formatted);
+        } else {
+          setCreateError(errorResponse?.message || "Erreur lors de la modification de la piece");
+        }
+      } catch (parseErr) {
+        setCreateError(err.message || "Erreur lors de la modification de la piece");
       }
     } finally {
       setIsCreating(false);
@@ -1028,47 +1324,113 @@ const CataloguePieces = () => {
     }
   };
 
-  const handleOpenVendorStore = async () => {
-    const ownerIdCandidates = [
-      selectedPiece?.user_id,
-      selectedPiece?.vendeur_id,
-      selectedPiece?.vendor_id,
-      selectedPiece?.seller_id,
-      selectedPiece?.owner_id
-    ];
-
-    const ownerId = ownerIdCandidates
-      .map((value) => Number.parseInt(value, 10))
-      .find((value) => Number.isFinite(value) && value > 0);
-
+  const openStoreFallbackTab = (tab = "pieces") => {
+    const nextTab = tab === "presentation" ? "presentation" : "pieces";
     setSelectedPiece(null);
     setIsStoreView(true);
-    setStoreOwnerId(ownerId || null);
-    setActiveTab("presentation");
-
-    if (ownerId) {
-      setProfileLoading(true);
-      try {
-        const res = await getCompleteProfileById(ownerId);
-        const profile = res.data?.data?.user || res.data?.user || null;
-        setStoreProfile(profile);
-      } catch (_error) {
-        setStoreProfile(null);
-      } finally {
-        setProfileLoading(false);
-      }
-    } else {
-      setStoreProfile(null);
-    }
-
+    setStoreOwnerId(null);
+    setStoreProfile(null);
+    setActiveTab(nextTab);
+    navigate(`/vendeur/magasin?tab=${nextTab}`, { replace: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const resolveOwnerIdForStore = (vendorOffer) => {
+    return (
+      getVendorOwnerId(vendorOffer) ||
+      getVendorOwnerId(selectedPieceVendor) ||
+      getVendorOwnerId(selectedPieceVendorOffers[0]) ||
+      getVendorOwnerId(selectedPieceVendorOffers[0]?.vendeur) ||
+      getVendorOwnerId(selectedPiece)
+    );
+  };
+
+  const handleOpenVendorStore = async (vendorOffer = selectedPieceVendorOffers[0]?.vendeur || selectedPieceVendorOffers[0] || selectedPiece) => {
+    const ownerId = resolveOwnerIdForStore(vendorOffer);
+
+    if (!ownerId) {
+      openStoreFallbackTab("pieces");
+      return;
+    }
+
+    await openStoreViewByOwnerId(ownerId, { syncUrl: true, tab: "pieces" });
+  };
+
+  const handleOpenVendorPresentation = async (vendorOffer = selectedPieceVendorOffers[0]?.vendeur || selectedPieceVendorOffers[0] || selectedPiece) => {
+    const ownerId = resolveOwnerIdForStore(vendorOffer);
+
+    if (!ownerId) {
+      openStoreFallbackTab("presentation");
+      return;
+    }
+
+    await openStoreViewByOwnerId(ownerId, { syncUrl: true, tab: "presentation" });
+  };
+
+  const handleContactVendorChat = async () => {
+    const sellerUserId = resolveOwnerIdForStore(selectedPieceVendor || selectedPiece);
+    const targetMessagesPath = chatRouteByRole[user?.role] || "/login";
+
+    if (user?.role !== "automobiliste") {
+      navigate(targetMessagesPath);
+      return;
+    }
+
+    if (!sellerUserId) {
+      setError("Impossible de trouver le vendeur pour demarrer le chat.");
+      return;
+    }
+
+    try {
+      setError("");
+      const response = await startChatConversation({
+        conversationType: "automobiliste_vendeur",
+        vendeurId: Number(sellerUserId),
+        historyLimit: 50
+      });
+
+      const { conversation } = extractConversationAndMessages(response);
+      if (conversation?.id) {
+        navigate(`${targetMessagesPath}?conversationId=${conversation.id}`);
+        return;
+      }
+
+      navigate(targetMessagesPath);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Impossible de contacter le vendeur par chat.");
+    }
+  };
+
+  const handleOpenPieceLocation = (piece) => {
+    if (!piece) {
+      return;
+    }
+
+    setSelectedPiece(piece);
+    setLocationFocusToken(Date.now());
+  };
+
+  useEffect(() => {
+    if (!selectedPiece || !locationFocusToken) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      vendorLocationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedPiece, locationFocusToken]);
 
   const handleExitVendorStore = () => {
     setIsStoreView(false);
     setStoreOwnerId(null);
     setStoreProfile(null);
     setActiveTab("pieces");
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("ownerId");
+    nextParams.delete("tab");
+    setSearchParams(nextParams, { replace: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1208,13 +1570,14 @@ const CataloguePieces = () => {
               ) : displayedCount === 0 ? (
                 <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600 shadow-[0_16px_30px_rgba(15,23,42,0.06)]">Aucune piece trouvee avec ces filtres.</div>
               ) : (
+                <div>
+                  
+
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {isPublicMarketplace
                     ? marketplaceGroups.map((group) => {
                       const cheapest = group.cheapestOffer;
-                      const imageSrc = cheapest?.photo_url
-                        ? (cheapest.photo_url.startsWith("http") ? cheapest.photo_url : `${backendBaseUrl}${cheapest.photo_url}`)
-                        : getPieceImageFallback(group.imagePiece);
+                      const imageSrc = getPieceImageUrl(cheapest, backendBaseUrl);
 
                       return (
                         <article key={group.key} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.12)]">
@@ -1250,6 +1613,13 @@ const CataloguePieces = () => {
                             </button>
                             <button
                               type="button"
+                              onClick={() => handleOpenPieceLocation(cheapest)}
+                              className="mt-2 flex w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300"
+                            >
+                              Localisation piece auto
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => openComparisonPage(cheapest)}
                               className="mt-2 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
                             >
@@ -1260,11 +1630,7 @@ const CataloguePieces = () => {
                       );
                     })
                     : scopedItems.map((piece) => {
-                      const imageSrc = piece.photo_url
-                        ? piece.photo_url.startsWith("http")
-                          ? piece.photo_url
-                          : `${backendBaseUrl}${piece.photo_url}`
-                        : getPieceImageFallback(piece);
+                      const imageSrc = getPieceImageUrl(piece, backendBaseUrl);
 
                       return (
                         <article key={piece.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.12)]">
@@ -1297,10 +1663,19 @@ const CataloguePieces = () => {
                                 Details
                               </button>
                             </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPieceLocation(piece)}
+                              className="mt-3 flex w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300"
+                            >
+                              Localisation piece auto
+                            </button>
                           </div>
                         </article>
                       );
                     })}
+                </div>
                 </div>
               )}
 
@@ -1763,6 +2138,87 @@ const CataloguePieces = () => {
                         <option value="Centre">Centre</option>
                       </select>
                     </div>
+
+                    <div className="mt-4 flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleOpenMapModal}
+                        className="flex-1 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
+                      >
+                        📍 Position GPS
+                      </button>
+                      {newPiece.latitude && newPiece.longitude && (
+                        <div className="flex-1 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-xs font-semibold text-emerald-700">
+                          ✓ Lieu enregistré
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      {newPiece.latitude && (
+                        <p className="text-sm text-slate-600">📍 Latitude: {newPiece.latitude.toFixed(4)}</p>
+                      )}
+                      {newPiece.longitude && (
+                        <p className="text-sm text-slate-600">📍 Longitude: {newPiece.longitude.toFixed(4)}</p>
+                      )}
+                    </div>
+
+                    {showMapModal && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="h-4/5 w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col">
+                          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                            <h3 className="text-lg font-semibold text-slate-800">Sélectionner le lieu de la pièce</h3>
+                            <button
+                              onClick={() => setShowMapModal(false)}
+                              className="text-slate-500 hover:text-slate-700"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          
+                          <div ref={mapContainerRef} className="flex-1 w-full" style={{ minHeight: "400px" }} />
+                          
+                          <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
+                            <button
+                              type="button"
+                              onClick={() => setShowMapModal(false)}
+                              className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSaveLocation}
+                              className="flex-1 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
+                            >
+                              ✓ Enregistrer le lieu
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                      <iframe
+                        title="Google Maps localisation piece"
+                        src={googleMapsEmbedUrl}
+                        className="h-64 w-full border-0"
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                      />
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm text-slate-600">Carte basee sur: {pieceLocationQuery}</p>
+                      <a
+                        href={googleMapsSearchUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
+                      >
+                        Ouvrir dans Google Maps
+                      </a>
+                    </div>
                   </div>
 
                   <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
@@ -1801,38 +2257,43 @@ const CataloguePieces = () => {
 
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-lg font-semibold text-slate-700">{formatDate(selectedPiece.created_at)}</p>
-                  <a href="tel:+21621216460" className="rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-8 py-3 text-lg font-semibold text-white shadow-[0_10px_20px_rgba(30,64,175,0.22)]">
-                    Appeler
-                  </a>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-600">Fiche produit</span>
                 </div>
               </div>
 
               <div className="grid gap-6 px-4 pb-8 pt-4 lg:grid-cols-[1.1fr_0.9fr] lg:px-6">
                 <div className="space-y-4">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <button type="button" onClick={handleOpenVendorStore} className="flex flex-1 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-5 py-4 text-lg font-semibold text-white shadow-[0_10px_18px_rgba(30,64,175,0.18)]">
+                    <button type="button" onClick={handleOpenVendorStore} className="group flex flex-1 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-5 py-3 text-white shadow-[0_10px_18px_rgba(30,64,175,0.18)]">
                       <span className="mr-3 text-2xl">🏪</span>
-                      Voir magasin de vendeur
-                      <span className="ml-3 text-xl">›</span>
+                      <span className="flex flex-col items-start leading-tight">
+                        <span className="text-lg font-semibold">Voir magasin de vendeur</span>
+                        <span className="text-xs text-blue-100">Pieces + Presentation</span>
+                      </span>
+                      <span className="ml-3 text-xl transition-transform group-hover:translate-x-0.5">›</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => openComparisonView(selectedPiece)}
-                      className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 shadow-sm"
+                      onClick={handleContactVendorChat}
+                      className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-2xl text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
+                      aria-label="Contacter le vendeur"
+                      title="Contacter le vendeur"
                     >
-                      Comparer prix
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => openComparisonPage(selectedPiece)}
-                      className="rounded-full border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-700 shadow-sm"
-                    >
-                      Page comparaison
-                    </button>
-                    <button type="button" className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-2xl text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)]" aria-label="Partager">
-                      ⤴
+                      💬
                     </button>
                   </div>
+
+                  {user?.role === "automobiliste" && selectedPieceLocationSearchUrl && (
+                    <a
+                      href={selectedPieceLocationSearchUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center rounded-full bg-black px-5 py-4 text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-zinc-900"
+                    >
+                      <Navigation2 className="mr-3 h-5 w-5" />
+                      <span className="text-lg font-semibold">Itinéraires</span>
+                    </a>
+                  )}
 
                   {canEditSelectedPiece && (
                     <div className="grid grid-cols-2 gap-3">
@@ -1905,10 +2366,98 @@ const CataloguePieces = () => {
                       <p className="mt-1 text-sm text-slate-600">Stock: {selectedPiece.stock}</p>
                     </div>
 
-                    <div className="mb-4 rounded-2xl bg-slate-50 p-4">
+                    <div ref={vendorLocationRef} className="mb-4 rounded-2xl bg-slate-50 p-4">
                       <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Lieu</p>
-                      <p className="mt-1 text-base font-semibold text-slate-800">Localisation approximative</p>
-                      <p className="mt-1 text-sm text-slate-500">Maps désactivée pour le moment</p>
+                      <p className="mt-1 text-base font-semibold text-slate-800">Localisation du vendeur</p>
+                      <button
+                        type="button"
+                        onClick={handleOpenVendorStore}
+                        className="mt-1 text-left text-sm font-semibold text-blue-700 underline decoration-blue-300 underline-offset-4 transition hover:text-blue-900"
+                      >
+                        {selectedPieceVendor?.magasin || selectedPieceVendor?.nom || selectedPieceVendor?.name || selectedPiece?.seller_store_name || selectedPiece?.seller_name || selectedPiece.zone_geographique || "Adresse du vendeur"}
+                      </button>
+                      {selectedPieceVendorOffers.length > 1 ? (
+                        <div className="mt-3 space-y-3">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {selectedPieceVendorOffers.length} vendeurs pour cette reference
+                          </p>
+                          <div className="space-y-3">
+                            {selectedPieceVendorOffers.map((offer, index) => {
+                              const vendorName = offer?.seller_store_name || offer?.seller_name || offer?.vendeur_magasin || offer?.vendeur_nom || offer?.vendeur?.magasin || offer?.vendeur?.name || `Vendeur ${index + 1}`;
+                              const vendorQuery = buildVendorLocationQuery(offer?.vendeur || offer);
+                              const vendorMapUrl = vendorQuery ? buildGoogleMapsEmbedUrl(vendorQuery) : "";
+                              const vendorSearchUrl = vendorQuery ? buildGoogleMapsSearchUrl(vendorQuery) : "";
+
+                              return (
+                                <div key={offer?.id || `${vendorName}-${index}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3">
+                                  <div className="flex items-center justify-between gap-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenVendorStore(offer)}
+                                      className="text-left text-sm font-semibold text-blue-700 underline decoration-blue-300 underline-offset-4 transition hover:text-blue-900"
+                                    >
+                                      {vendorName}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenVendorPresentation(offer)}
+                                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                                    >
+                                      Presentation
+                                    </button>
+                                  </div>
+                                  <p className="mt-1 text-xs text-slate-500">{offer?.zone_geographique || offer?.zone || "Zone non renseignee"}</p>
+                                  {vendorMapUrl ? (
+                                    <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                      <iframe
+                                        title={`Localisation ${vendorName}`}
+                                        src={vendorMapUrl}
+                                        className="h-44 w-full border-0"
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <p className="mt-2 text-sm text-slate-500">Aucune position GPS vendeur renseignée.</p>
+                                  )}
+                                  {vendorSearchUrl && (
+                                    <a
+                                      href={vendorSearchUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="mt-3 inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700"
+                                    >
+                                      Ouvrir dans Google Maps
+                                    </a>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : selectedPieceLocationMapUrl ? (
+                        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                          <iframe
+                            title="Localisation du vendeur"
+                            src={selectedPieceLocationMapUrl}
+                            className="h-56 w-full border-0"
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                          />
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-sm text-slate-500">Aucune position GPS vendeur renseignée.</p>
+                      )}
+                      {selectedPieceVendorOffers.length <= 1 && selectedPieceLocationSearchUrl && (
+                        <a
+                          href={selectedPieceLocationSearchUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
+                        >
+                          Ouvrir la localisation vendeur
+                        </a>
+                      )}
                     </div>
 
                     <div className="rounded-2xl bg-slate-50 p-4">
@@ -1979,7 +2528,13 @@ const CataloguePieces = () => {
                 <h3 className="text-2xl font-black text-slate-900">Vue comparative dynamique</h3>
                 <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps réel via l'API backend.</p>
               </div>
-              <button type="button" onClick={() => setShowComparisonModal(false)} className="text-3xl text-slate-500">×</button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowComparisonModal(false);
+                }} 
+                className="text-3xl text-slate-500"
+              >×</button>
             </div>
 
             {comparisonLoading ? (

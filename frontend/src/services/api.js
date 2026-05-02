@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const resolvedApiBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
+
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: resolvedApiBaseUrl,
 });
 
 // Interceptor pour ajouter JWT automatiquement
@@ -9,6 +11,10 @@ API.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  // Si c'est FormData, ne pas définir Content-Type (laisser le navigateur le faire avec boundary)
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
   }
   return config;
 });

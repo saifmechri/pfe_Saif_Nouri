@@ -15,6 +15,18 @@ const AutomobilisteDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("vehicules");
 
+  const backendBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api\/?$/, "");
+
+  const getVehiclePhotoUrl = (photoVoiture) => {
+    if (!photoVoiture) return "";
+
+    if (/^https?:\/\//i.test(photoVoiture)) {
+      return photoVoiture;
+    }
+
+    return `${backendBaseUrl}${photoVoiture}`;
+  };
+
   // États pour les véhicules
   const [vehicules, setVehicules] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -400,6 +412,12 @@ const AutomobilisteDashboard = () => {
               Historique
             </button>
             <button
+              onClick={() => navigate("/automobiliste/garages")}
+              className="rounded-lg px-4 py-2 font-semibold text-gray-600 hover:bg-white"
+            >
+              Garages
+            </button>
+            <button
               onClick={() => navigate("/automobiliste/recommandations")}
               className="vb-btn-primary ml-auto px-4 py-2 text-sm"
             >
@@ -512,7 +530,7 @@ const AutomobilisteDashboard = () => {
                   <div key={v.id} className="vb-card p-4 transition hover:shadow-md">
                     {v.photo_voiture && (
                       <img 
-                        src={v.photo_voiture.startsWith("http") ? v.photo_voiture : `${import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "")}${v.photo_voiture}`} 
+                        src={getVehiclePhotoUrl(v.photo_voiture)}
                         alt={v.modele_voiture}
                         className="w-full h-40 object-cover rounded mb-3"
                       />

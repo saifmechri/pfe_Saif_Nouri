@@ -1,6 +1,8 @@
 import { useContext, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import ChatModal from "./ChatModal";
+import { MessageCircle } from "lucide-react";
 
 const roleDashboardMap = {
   automobiliste: "/automobiliste",
@@ -14,6 +16,7 @@ const PlatformLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const dashboardPath = useMemo(() => {
     if (!user?.role) return "/dashboard";
@@ -34,8 +37,17 @@ const PlatformLayout = ({ children }) => {
     { label: "Catalogue pièces", to: "/vendeur/catalogue" }
   ];
 
-  if (user?.role === "automobiliste") {
+  if (user?.role === "automobiliste" || user?.role === "vendeur") {
     navItems.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
+    navItems.push({ label: "Garages", to: "/automobiliste/garages" });
+  }
+
+  if (user?.role === "garage") {
+    navItems.push({ label: "Gestion garage", to: "/garage" });
+  }
+
+  if (user?.role === "vendeur") {
+    // Messagerie accessible via navbar/chat modal — removed from sidebar
   }
 
   return (

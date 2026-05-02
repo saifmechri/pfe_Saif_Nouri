@@ -5,8 +5,8 @@ const { sendApiResponse } = require("../utils/apiResponse");
 
 const { register, login } = require("../controllers/authController");
 const { updateProfile, deleteProfile, changePassword } = require("../controllers/profileController");
-const { verifyToken } = require("../middlwares/authMiddleware");
-const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste } = require("../middlwares/roleMiddleware");
+const { verifyToken } = require("../middlewares/authMiddleware");
+const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste } = require("../middlewares/roleMiddleware");
 
 // Authentification (public)
 router.post("/register", register);
@@ -82,12 +82,59 @@ router.get("/automobiliste/mes-vehicules", verifyToken, isAutomobiliste, (req, r
 });
 
 // Route accessible SEULEMENT aux garages
-router.get("/garage/mes-services", verifyToken, isGarage, (req, res) => {
-  return sendApiResponse(res, {
-    message: 'Liste de vos services',
-    data: { garageId: req.user.id, role: req.userRole },
-    extra: { garageId: req.user.id, role: req.userRole }
-  });
+router.get("/garage/mes-services", verifyToken, isGarage, async (req, res) => {
+  try {
+    const garageResult = await pool.query(
+      `SELECT id
+       FROM garages
+       WHERE user_id = $1`,
+      [req.user.id]
+    );
+
+    if (garageResult.rows.length === 0) {
+      return sendApiResponse(res, {
+        statusCode: 404,
+        success: false,
+        message: "Profil garage introuvable pour cet utilisateur",
+        error: { code: 'GARAGE_PROFILE_NOT_FOUND' }
+      });
+    }
+
+    const garageId = garageResult.rows[0].id;
+    const servicesResult = await pool.query(
+      `SELECT id, garage_id, name, description, base_price, duration_minutes, is_active, created_at, updated_at
+       FROM garage_services
+       WHERE garage_id = $1
+       ORDER BY created_at DESC`,
+      [garageId]
+    );
+
+    const services = servicesResult.rows.map((row) => ({
+      id: Number(row.id),
+      garage_id: Number(row.garage_id),
+      name: row.name,
+      description: row.description || null,
+      base_price: row.base_price === null ? null : Number(row.base_price),
+      duration_minutes: row.duration_minutes === null ? null : Number(row.duration_minutes),
+      is_active: row.is_active === null ? true : Boolean(row.is_active),
+      created_at: row.created_at,
+      updated_at: row.updated_at
+    }));
+
+    return sendApiResponse(res, {
+      message: 'Liste de vos services',
+      data: { garageId: Number(garageId), services },
+      extra: { garageId: Number(garageId), services }
+    });
+  } catch (err) {
+    console.error(err);
+    return sendApiResponse(res, {
+      statusCode: 500,
+      success: false,
+      message: "Erreur serveur",
+      error: { code: 'INTERNAL_SERVER_ERROR' }
+    });
+  }
 });
 
 // Route accessible SEULEMENT aux vendeurs

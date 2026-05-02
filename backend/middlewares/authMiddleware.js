@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
-const { pool } = require("../db");
+const { findUserForAuthById } = require("../models/user.model");
 
-const SECRET = process.env.JWT_SECRET || "dtttrrzggfb_HJdfvdfs_gfbgfs55_4ffgbè44";
+const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
 const { AppError } = require("../utils/appError");
 const { logger } = require("../utils/logger");
 const isTransientDbError = (error) => {
@@ -12,14 +12,10 @@ const isTransientDbError = (error) => {
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const fetchUserForToken = async (userId) => {
-  const query = `SELECT u.id, u.name, u.email, u.phone, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, u.created_at, u.updated_at, r.name as role 
-       FROM users u 
-       JOIN roles r ON u.role_id = r.id 
-       WHERE u.id = $1`;
-
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
-      return await pool.query(query, [userId]);
+      const user = await findUserForAuthById(userId);
+      return { rows: user ? [user] : [] };
     } catch (error) {
       if (!isTransientDbError(error) || attempt === 2) {
         throw error;

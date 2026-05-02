@@ -6,8 +6,10 @@ import Register from "../pages/auth/Register";
 import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
 import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
+import GaragesPage from "../pages/automobiliste/Garages";
 import CataloguePieces from "../pages/vendeur/CataloguePieces";
 import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
+import ChatCenter from "../pages/chat/ChatCenter";
 
 // Import des pages spécifiques aux rôles
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
@@ -52,6 +54,22 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/automobiliste/garages"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste", "vendeur"]}>
+              <GaragesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/automobiliste/messages"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
+              <ChatCenter />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/automobiliste/*"
           element={
             <ProtectedRoute allowedRoles={["automobiliste"]}>
@@ -64,6 +82,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["automobiliste"]}>
               <AutomobilisteDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/garage/messages"
+          element={
+            <ProtectedRoute allowedRoles={["garage"]}>
+              <ChatCenter />
             </ProtectedRoute>
           }
         />
@@ -84,6 +110,14 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/vendeur/messages"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur"]}>
+              <ChatCenter />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/vendeur/*"
           element={
             <ProtectedRoute allowedRoles={["vendeur"]}>
@@ -93,6 +127,14 @@ const AppRouter = () => {
         />
         <Route
           path="/vendeur/catalogue"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
+              <CataloguePieces />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendeur/magasin"
           element={
             <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
               <CataloguePieces />

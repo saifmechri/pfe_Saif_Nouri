@@ -237,6 +237,9 @@ async function getRecommendations(req, res) {
       for (const interventionType of interventionTypes) {
         const lastIntervention = await getLastInterventionByType(vehicle.id, interventionType.type);
 
+        const kmRecommande = Number(interventionType.km_recommande ?? 0);
+        const kmRestant = kmRecommande > 0 ? Math.max(0, kmRecommande - kmActuel) : null;
+
         const interventionScore = calculateInterventionScore(
           {
             ...vehicle,
@@ -285,13 +288,11 @@ async function getRecommendations(req, res) {
             intervention: {
               id: interventionType.id,
               type: interventionType.type,
-              urgence: getUrgency(interventionScore),
+              urgence: getUrgency(kmActuel, kmRecommande),
               score: parseFloat(interventionScore.toFixed(2)),
-              km_recommande: interventionType.km_recommande,
+              km_recommande: kmRecommande || null,
               km_actuel: kmActuel,
-              km_restant: interventionType.km_recommande
-                ? Math.max(0, interventionType.km_recommande - kmActuel)
-                : null,
+              km_restant: kmRestant,
               jours_recommandes: interventionType.jours_recommandes
             },
             garages: bestGarages.map((g) => ({

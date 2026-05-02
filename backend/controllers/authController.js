@@ -1,9 +1,9 @@
-const { pool } = require("../db");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { sendApiResponse } = require("../utils/apiResponse");
+const { createUser, emailExists, findUserByEmail } = require("../models/user.model");
 
-const SECRET = process.env.JWT_SECRET || "dtttrrzggfb_HJdfvdfs_gfbgfs55_4ffgbè44";
+const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
 
 const isValidBcryptHash = (value) => {
   return typeof value === "string" && /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/.test(value);
@@ -38,8 +38,8 @@ const register = async (req, res) => {
     }
 
     // Vérifier si l'email existe déjà
-    const userCheck = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
-    if (userCheck.rows.length > 0) {
+    const emailAlreadyUsed = await emailExists(email);
+    if (emailAlreadyUsed) {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
@@ -74,16 +74,19 @@ const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Insérer le nouvel utilisateur
-    const newUser = await pool.query(
-      "INSERT INTO users(name, email, password, phone, role_id) VALUES($1, $2, $3, $4, $5) RETURNING id, name, email, phone, role_id, created_at",
-      [fullName, email, hashedPassword, telephone, roleId]
-    );
+    const newUser = await createUser({
+      name: fullName,
+      email,
+      password: hashedPassword,
+      phone: telephone,
+      roleId
+    });
 
     return sendApiResponse(res, {
       statusCode: 201,
       message: "Utilisateur créé avec succès",
-      data: { user: newUser.rows[0] },
-      extra: { user: newUser.rows[0] }
+      data: { user: newUser },
+      extra: { user: newUser }
     });
   } catch (err) {
     console.error("Erreur lors de l'inscription:", err);
@@ -115,15 +118,9 @@ const login = async (req, res) => {
     }
 
     // Récupérer l'utilisateur ET son rôle
-    const user = await pool.query(
-      `SELECT u.*, r.name as role_name 
-       FROM users u 
-       JOIN roles r ON u.role_id = r.id 
-       WHERE u.email = $1`,
-      [email]
-    );
+    const user = await findUserByEmail(email);
     
-    if (user.rows.length === 0) {
+    if (!user) {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
@@ -132,7 +129,7 @@ const login = async (req, res) => {
       });
     }
 
-    if (!user.rows[0].password || !isValidBcryptHash(user.rows[0].password)) {
+    if (!user.password || !isValidBcryptHash(user.password)) {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
@@ -142,7 +139,7 @@ const login = async (req, res) => {
     }
 
     // Comparer le mot de passe avec bcrypt
-    const isPasswordValid = await bcrypt.compare(password, user.rows[0].password);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     
     if (!isPasswordValid) {
       return sendApiResponse(res, {
@@ -156,8 +153,8 @@ const login = async (req, res) => {
     // Générer le token JWT
     const token = jwt.sign(
       { 
-        id: user.rows[0].id,
-        email: user.rows[0].email 
+        id: user.id,
+        email: user.email 
       }, 
       SECRET, 
       { expiresIn: "7d" }
@@ -168,33 +165,33 @@ const login = async (req, res) => {
       data: {
         token,
         user: {
-          id: user.rows[0].id,
-          name: user.rows[0].name,
-          email: user.rows[0].email,
-          phone: user.rows[0].phone,
-          role: user.rows[0].role_name,
-          store_name: user.rows[0].store_name || null,
-          store_address: user.rows[0].store_address || null,
-          store_description: user.rows[0].store_description || null,
-          store_hours: user.rows[0].store_hours || null,
-          store_specialties: user.rows[0].store_specialties || null,
-          store_services: user.rows[0].store_services || null
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role_name,
+          store_name: user.store_name || null,
+          store_address: user.store_address || null,
+          store_description: user.store_description || null,
+          store_hours: user.store_hours || null,
+          store_specialties: user.store_specialties || null,
+          store_services: user.store_services || null
         }
       },
       extra: {
         token,
         user: {
-          id: user.rows[0].id,
-          name: user.rows[0].name,
-          email: user.rows[0].email,
-          phone: user.rows[0].phone,
-          role: user.rows[0].role_name,
-          store_name: user.rows[0].store_name || null,
-          store_address: user.rows[0].store_address || null,
-          store_description: user.rows[0].store_description || null,
-          store_hours: user.rows[0].store_hours || null,
-          store_specialties: user.rows[0].store_specialties || null,
-          store_services: user.rows[0].store_services || null
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role_name,
+          store_name: user.store_name || null,
+          store_address: user.store_address || null,
+          store_description: user.store_description || null,
+          store_hours: user.store_hours || null,
+          store_specialties: user.store_specialties || null,
+          store_services: user.store_services || null
         }
       }
     });

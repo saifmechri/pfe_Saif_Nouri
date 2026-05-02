@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 
-const uploadDir = path.join(__dirname, '..', 'uploads', 'pieces');
+const uploadDir = path.join(__dirname, '..', 'uploads', 'garages');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -27,18 +27,21 @@ const storage = multer.diskStorage({
 
 const fileFilter = (_req, file, cb) => {
   const allowedMimeTypes = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
-
   if (allowedMimeTypes.has(file.mimetype)) {
     cb(null, true);
-  } else {
-    cb(new Error('Seules les images sont autorisees'));
+    return;
   }
+
+  cb(new Error('Seules les images sont autorisees'));
 };
 
-const uploadPiecePhoto = multer({
+const uploadGaragePhoto = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 9
+  }
 });
 
-module.exports = { uploadPiecePhoto };
+module.exports = { uploadGaragePhoto };

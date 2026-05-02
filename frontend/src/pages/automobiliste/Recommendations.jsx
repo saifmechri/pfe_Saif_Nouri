@@ -17,6 +17,40 @@ const badgeByUrgency = {
   FUTUR: "bg-blue-100 text-blue-700 border-blue-300",
 };
 
+const urgencyOrder = ["URGENT", "RECOMMANDÉ", "FUTUR"];
+
+function getRecommendationUrgency(kmActuel, kmRecommande) {
+  const current = Number(kmActuel);
+  const recommended = Number(kmRecommande);
+
+  if (!Number.isFinite(current) || !Number.isFinite(recommended) || recommended <= 0) {
+    return "FUTUR";
+  }
+
+  const remaining = Math.max(0, recommended - current);
+
+  if (current >= recommended) return "URGENT";
+  if (remaining <= 1000) return "RECOMMANDÉ";
+  return "FUTUR";
+}
+
+function normalizeRecommendationItem(item) {
+  const kmRecommande = Number(item?.intervention?.km_recommande ?? 0);
+  const kmActuel = Number(item?.intervention?.km_actuel ?? item?.vehicle?.kilometrage ?? 0);
+  const kmRestant = kmRecommande > 0 ? Math.max(0, kmRecommande - kmActuel) : null;
+
+  return {
+    ...item,
+    intervention: {
+      ...item?.intervention,
+      km_recommande: kmRecommande || null,
+      km_actuel: kmActuel,
+      km_restant: kmRestant,
+      urgence: getRecommendationUrgency(kmActuel, kmRecommande),
+    },
+  };
+}
+
 function formatDistance(value) {
   if (value === null || value === undefined) return "N/A";
   return `${Number(value).toFixed(1)} km`;
@@ -38,6 +72,11 @@ const Recommendations = () => {
     totalPages: 1,
     stats: { byUrgency: {} },
   });
+
+  const normalizedRecommendations = useMemo(
+    () => recommendations.map(normalizeRecommendationItem),
+    [recommendations]
+  );
 
   useEffect(() => {
     const fetchRecommendations = async () => {
@@ -80,11 +119,24 @@ const Recommendations = () => {
 
   const urgencyStats = useMemo(() => {
     const stats = meta?.stats?.byUrgency || {};
-    return ["URGENT", "RECOMMANDÉ", "FUTUR"].map((key) => ({
+    if (Object.keys(stats).length > 0) {
+      return urgencyOrder.map((key) => ({
+        key,
+        value: stats[key] || 0,
+      }));
+    }
+
+    const fallback = normalizedRecommendations.reduce((acc, item) => {
+      const key = item?.intervention?.urgence || "FUTUR";
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    return urgencyOrder.map((key) => ({
       key,
-      value: stats[key] || 0,
+      value: fallback[key] || 0,
     }));
-  }, [meta]);
+  }, [meta, normalizedRecommendations]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -115,23 +167,35 @@ const Recommendations = () => {
   const canGoNext = currentPage < totalPages;
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-800">Recommandations dynamiques</h1>
-            <p className="text-slate-600 mt-1">Interventions prioritaires selon vos vehicules et garages proches.</p>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_28%),linear-gradient(180deg,_#f8fbff_0%,_#eef4ff_100%)]">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-3xl space-y-2">
+              <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-blue-700">
+                Recommandations véhicule
+              </span>
+              <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+                Recommandations dynamiques
+              </h1>
+              <p className="text-sm leading-6 text-slate-600 sm:text-base">
+                Classement basé sur le kilométrage réel: URGENT si le véhicule a atteint le seuil, RECOMMANDÉ si le prochain entretien est proche, sinon FUTUR.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate("/automobiliste")}
+              className="inline-flex items-center justify-center rounded-full border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50"
+            >
+              Retour au dashboard
+            </button>
           </div>
-          <button
-            onClick={() => navigate("/automobiliste")}
-            className="w-full md:w-auto px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-          >
-            Retour au dashboard
-          </button>
         </div>
 
-        <form onSubmit={applyFilters} className="bg-white rounded-xl shadow p-4 border border-slate-200">
-          <h2 className="font-semibold text-slate-800 mb-4">Filtres et tri</h2>
+        <form onSubmit={applyFilters} className="rounded-[28px] border border-white/70 bg-white/90 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-slate-900">Filtres et tri</h2>
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Urgence, score, distance</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <select
               name="urgency"
@@ -207,50 +271,52 @@ const Recommendations = () => {
             </label>
           </div>
 
-          <div className="mt-4 flex gap-2">
-            <button type="submit" className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+            <button type="submit" className="inline-flex items-center justify-center rounded-full bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-blue-500">
               Appliquer
             </button>
             <button
               type="button"
               onClick={resetFilters}
-              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+              className="inline-flex items-center justify-center rounded-full border border-slate-300 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Reinitialiser
             </button>
           </div>
         </form>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {urgencyStats.map((item) => (
-            <div key={item.key} className="bg-white border border-slate-200 rounded-xl p-4">
-              <p className="text-sm text-slate-500">{item.key}</p>
-              <p className="text-2xl font-bold text-slate-800">{item.value}</p>
+            <div key={item.key} className="rounded-2xl border border-white/70 bg-white/90 p-4 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{item.key}</p>
+              <p className="mt-1 text-3xl font-black text-slate-900">{item.value}</p>
             </div>
           ))}
         </div>
 
-        {error && <div className="p-3 rounded-lg border border-red-300 bg-red-50 text-red-700">{error}</div>}
+        {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm">{error}</div>}
 
         {loading ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-8 text-slate-500">Chargement...</div>
+          <div className="rounded-2xl border border-white/70 bg-white/90 p-8 text-slate-500 shadow-sm">Chargement...</div>
         ) : recommendations.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-8 text-slate-500">
+          <div className="rounded-2xl border border-white/70 bg-white/90 p-8 text-slate-500 shadow-sm">
             Aucune recommandation trouvee pour les filtres actuels.
           </div>
         ) : (
           <div className="space-y-4">
-            {recommendations.map((item, index) => {
+            {normalizedRecommendations.map((item, index) => {
               const urgencyClass = badgeByUrgency[item.intervention?.urgence] || "bg-slate-100 text-slate-700 border-slate-300";
 
               return (
-                <article key={`${item.vehicle?.id || index}-${item.intervention?.id || index}`} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                <article key={`${item.vehicle?.id || index}-${item.intervention?.id || index}`} className="overflow-hidden rounded-[26px] border border-white/80 bg-white/95 shadow-[0_16px_45px_rgba(15,23,42,0.08)]">
+                  <div className={`h-1.5 ${item.intervention?.urgence === "URGENT" ? "bg-red-500" : item.intervention?.urgence === "RECOMMANDÉ" ? "bg-amber-500" : "bg-blue-500"}`} />
+                  <div className="p-5">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-800">
+                      <h3 className="text-lg font-bold text-slate-900">
                         {item.intervention?.type || "Intervention"} - {item.vehicle?.modele || "Vehicule"}
                       </h3>
-                      <p className="text-slate-600 text-sm mt-1">
+                      <p className="mt-1 text-sm text-slate-600">
                         {item.vehicle?.marque || "-"} | {item.vehicle?.matricule || "-"} | {item.vehicle?.kilometrage ?? "-"} km
                       </p>
                     </div>
@@ -259,43 +325,43 @@ const Recommendations = () => {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-sm">
-                    <div className="bg-slate-50 p-3 rounded-lg">
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+                    <div className="rounded-2xl bg-slate-50 p-3">
                       <p className="text-slate-500">Score</p>
-                      <p className="font-semibold text-slate-800">{item.intervention?.score ?? "-"}</p>
+                      <p className="font-semibold text-slate-900">{item.intervention?.score ?? "-"}</p>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg">
+                    <div className="rounded-2xl bg-slate-50 p-3">
                       <p className="text-slate-500">KM recommande</p>
-                      <p className="font-semibold text-slate-800">{item.intervention?.km_recommande ?? "-"}</p>
+                      <p className="font-semibold text-slate-900">{item.intervention?.km_recommande ?? "-"}</p>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg">
+                    <div className="rounded-2xl bg-slate-50 p-3">
                       <p className="text-slate-500">KM actuel</p>
-                      <p className="font-semibold text-slate-800">{item.intervention?.km_actuel ?? "-"}</p>
+                      <p className="font-semibold text-slate-900">{item.intervention?.km_actuel ?? "-"}</p>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-lg">
+                    <div className="rounded-2xl bg-slate-50 p-3">
                       <p className="text-slate-500">KM restant</p>
-                      <p className="font-semibold text-slate-800">{item.intervention?.km_restant ?? "-"}</p>
+                      <p className="font-semibold text-slate-900">{item.intervention?.km_restant ?? "-"}</p>
                     </div>
                   </div>
 
-                  <div className="mt-4">
-                    <p className="font-semibold text-slate-800 mb-2">Garages recommandes</p>
+                  <div className="mt-5">
+                    <p className="mb-2 font-semibold text-slate-900">Garages recommandes</p>
                     {Array.isArray(item.garages) && item.garages.length > 0 ? (
-                      <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                      <div className="overflow-x-auto rounded-2xl border border-slate-200">
                         <table className="w-full text-sm">
                           <thead className="bg-slate-50 text-slate-600">
                             <tr>
-                              <th className="text-left px-3 py-2">Nom</th>
-                              <th className="text-left px-3 py-2">Distance</th>
-                              <th className="text-left px-3 py-2">Rating</th>
-                              <th className="text-left px-3 py-2">Score</th>
-                              <th className="text-left px-3 py-2">Telephone</th>
+                              <th className="px-3 py-2 text-left">Nom</th>
+                              <th className="px-3 py-2 text-left">Distance</th>
+                              <th className="px-3 py-2 text-left">Rating</th>
+                              <th className="px-3 py-2 text-left">Score</th>
+                              <th className="px-3 py-2 text-left">Telephone</th>
                             </tr>
                           </thead>
                           <tbody>
                             {item.garages.map((garage) => (
                               <tr key={garage.id} className="border-t border-slate-100">
-                                <td className="px-3 py-2">{garage.name || "-"}</td>
+                                <td className="px-3 py-2 font-medium text-slate-900">{garage.name || "-"}</td>
                                 <td className="px-3 py-2">{formatDistance(garage.distance_km)}</td>
                                 <td className="px-3 py-2">{garage.rating ?? "-"}</td>
                                 <td className="px-3 py-2">{garage.score_global ?? "-"}</td>
@@ -306,8 +372,9 @@ const Recommendations = () => {
                         </table>
                       </div>
                     ) : (
-                      <p className="text-slate-500 text-sm">Aucun garage disponible pour cette recommandation.</p>
+                      <p className="text-sm text-slate-500">Aucun garage disponible pour cette recommandation.</p>
                     )}
+                  </div>
                   </div>
                 </article>
               );
@@ -315,7 +382,7 @@ const Recommendations = () => {
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white border border-slate-200 rounded-xl p-4">
+        <div className="flex flex-col gap-3 rounded-[24px] border border-white/70 bg-white/90 p-4 shadow-[0_14px_40px_rgba(15,23,42,0.08)] md:flex-row md:items-center md:justify-between">
           <p className="text-sm text-slate-600">
             Total: <span className="font-semibold text-slate-800">{meta?.total || 0}</span> recommandations
           </p>
@@ -323,7 +390,7 @@ const Recommendations = () => {
             <button
               onClick={() => canGoPrev && setPage((prev) => prev - 1)}
               disabled={!canGoPrev}
-              className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-50"
+              className="rounded-full border border-slate-300 px-3 py-2 disabled:opacity-50"
             >
               Precedent
             </button>
@@ -333,7 +400,7 @@ const Recommendations = () => {
             <button
               onClick={() => canGoNext && setPage((prev) => prev + 1)}
               disabled={!canGoNext}
-              className="px-3 py-2 rounded-lg border border-slate-300 disabled:opacity-50"
+              className="rounded-full border border-slate-300 px-3 py-2 disabled:opacity-50"
             >
               Suivant
             </button>

@@ -412,6 +412,12 @@ const AutomobilisteDashboard = () => {
               Historique
             </button>
             <button
+              onClick={() => navigate("/automobiliste/garages")}
+              className="rounded-lg px-4 py-2 font-semibold text-gray-600 hover:bg-white"
+            >
+              Garages
+            </button>
+            <button
               onClick={() => navigate("/automobiliste/recommandations")}
               className="vb-btn-primary ml-auto px-4 py-2 text-sm"
             >

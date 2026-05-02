@@ -17,6 +17,29 @@ import { formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/
 const getPayload = (response) => response?.data?.data ?? response?.data;
 const fallbackCenter = { lat: 35.8256, lng: 10.6369 };
 
+const featuredGarages = [
+  {
+    id: "featured-le-mecano-diag",
+    name: "LE MECANO DIAG",
+    adresse: "Sousse",
+    city: "Sousse",
+    latitude: 35.8256,
+    longitude: 10.6369,
+    rating: 4.7,
+    note: "Garage ajouté manuellement à la carte"
+  },
+  {
+    id: "featured-gargouri-auto",
+    name: "GARGOURI AUTO",
+    adresse: "Houmt Souk, Djerba",
+    city: "Houmt Souk, Djerba",
+    latitude: 33.875,
+    longitude: 10.857,
+    rating: 4.6,
+    note: "Garage ajouté manuellement à la carte"
+  }
+];
+
 const garageBrandsCatalog = [
   "Audi", "BMW", "BYD", "Changan", "Chery", "Chevrolet", "Citroen", "Cupra",
   "Daewoo", "Dacia", "DFM", "FAW", "Fiat", "Ford", "Foton", "Geely", "Great Wall",
@@ -665,11 +688,22 @@ const GaragesPage = () => {
   };
 
   const handleOpenDirections = () => {
-    if (!selectedGarage?.latitude || !selectedGarage?.longitude) {
+    if (!selectedGarage) {
       return;
     }
 
-    const destination = `${selectedGarage.latitude},${selectedGarage.longitude}`;
+    const destinationText = [selectedGarage.name, selectedGarage.adresse]
+      .filter(Boolean)
+      .join(", ")
+      .trim();
+    const destination = destinationText || (selectedGarage.latitude !== null && selectedGarage.longitude !== null
+      ? `${selectedGarage.latitude},${selectedGarage.longitude}`
+      : "");
+
+    if (!destination) {
+      return;
+    }
+
     const origin = userPosition ? `${userPosition.lat},${userPosition.lng}` : "";
     const url = origin
       ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`
@@ -1095,6 +1129,7 @@ const GaragesPage = () => {
                   center={mapCenter} 
                   userPosition={userPosition}
                   garages={garagesForMap}
+                  featuredGarages={featuredGarages}
                   selectedGarageId={selectedGarageId}
                   onMarkerClick={handleMarkerClick}
                 />

@@ -39,7 +39,7 @@ const Navbar = () => {
             <button
               type="button"
               onClick={openSidebar}
-              className="group inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+              className="group inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
               aria-label="Ouvrir le menu"
             >
               <span className="flex flex-col gap-1.5">
@@ -131,7 +131,7 @@ const Navbar = () => {
         {user ? (
           <button
             type="button"
-            className="mt-auto rounded-2xl bg-orange-500 px-4 py-3 font-bold text-white transition hover:-translate-y-0.5 hover:bg-orange-400"
+            className="mt-auto rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:-translate-y-0.5 hover:bg-blue-500"
             onClick={handleLogout}
           >
             Déconnexion

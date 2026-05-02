@@ -24,7 +24,7 @@ const formatTime = (value) => {
 const roleColors = {
   automobiliste: { bg: "bg-purple-50", border: "border-purple-200", text: "text-purple-700" },
   garage: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" },
-  vendeur: { bg: "bg-orange-50", border: "border-orange-200", text: "text-orange-700" }
+  vendeur: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-700" }
 };
 
 const roleLabels = {

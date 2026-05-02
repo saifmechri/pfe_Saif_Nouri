@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import PlatformLayout from "../../components/PlatformLayout";
 import { AuthContext } from "../../context/AuthContext";
 import {
@@ -36,8 +37,13 @@ const humanRole = {
 
 const ChatCenter = () => {
   const { user } = useContext(AuthContext);
+  const [searchParams] = useSearchParams();
   const realtimeUnsubscribeRef = useRef(null);
   const selectedConversationRef = useRef(null);
+  const requestedConversationId = useMemo(() => {
+    const value = Number.parseInt(searchParams.get("conversationId"), 10);
+    return Number.isInteger(value) && value > 0 ? value : null;
+  }, [searchParams]);
 
   const [contactsQuery, setContactsQuery] = useState("");
   const [contacts, setContacts] = useState([]);
@@ -46,7 +52,7 @@ const ChatCenter = () => {
 
   const [conversations, setConversations] = useState([]);
   const [messagesByConversation, setMessagesByConversation] = useState({});
-  const [selectedConversationId, setSelectedConversationId] = useState(null);
+  const [selectedConversationId, setSelectedConversationId] = useState(requestedConversationId);
   const [messageInput, setMessageInput] = useState("");
   const [chatError, setChatError] = useState("");
   const [isChatReady, setIsChatReady] = useState(false);
@@ -60,6 +66,12 @@ const ChatCenter = () => {
   useEffect(() => {
     selectedConversationRef.current = selectedConversation;
   }, [selectedConversation]);
+
+  useEffect(() => {
+    if (requestedConversationId) {
+      setSelectedConversationId(requestedConversationId);
+    }
+  }, [requestedConversationId]);
 
   const selectedMessages = useMemo(
     () => messagesByConversation[selectedConversationId] || [],
@@ -125,13 +137,13 @@ const ChatCenter = () => {
       const response = await fetchChatConversations({ limit: 50, offset: 0 });
       const items = extractItems(response);
       setConversations(items);
-      if (!selectedConversationId && items.length > 0) {
+      if (!requestedConversationId && !selectedConversationId && items.length > 0) {
         setSelectedConversationId(items[0].id);
       }
     } catch (error) {
       setChatError(error.message || "Impossible de recuperer les conversations.");
     }
-  }, [selectedConversationId]);
+  }, [requestedConversationId, selectedConversationId]);
 
   const loadMessagesForConversation = useCallback(
     async (conversationId, limit = 50) => {

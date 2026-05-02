@@ -125,7 +125,13 @@ const updatePiece = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  const piece = await pieceService.updatePiece(pieceId, req.body || {});
+  const payload = req.body || {};
+
+  if (req.file) {
+    payload.photo_url = `/uploads/pieces/${req.file.filename}`;
+  }
+
+  const piece = await pieceService.updatePiece(pieceId, payload);
 
   return sendApiResponse(res, {
     message: 'Piece mise a jour avec succes',

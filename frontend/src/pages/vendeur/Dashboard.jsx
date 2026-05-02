@@ -1,26 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
-import L from "leaflet";
 import PlatformLayout from "../../components/PlatformLayout";
 import { getPieceSellerLocations } from "../../services/pieces";
 import { getCompleteProfile } from "../../services/user";
 
 const fallbackCenter = [35.8256, 10.6369];
-
-const sellerIcon = L.divIcon({
-  className: "",
-  html: '<div style="background:#f97316;border:3px solid #ffffff;width:18px;height:18px;border-radius:9999px;box-shadow:0 0 0 5px rgba(249,115,22,.3)"></div>',
-  iconSize: [18, 18],
-  iconAnchor: [9, 9]
-});
-
-const nearbySellerIcon = L.divIcon({
-  className: "",
-  html: '<div style="background:#2563eb;border:2px solid #ffffff;width:16px;height:16px;border-radius:9999px;box-shadow:0 0 0 4px rgba(37,99,235,.25)"></div>',
-  iconSize: [16, 16],
-  iconAnchor: [8, 8]
-});
 
 const getPayload = (response) => response?.data?.data ?? response?.data;
 
@@ -35,16 +19,30 @@ const extractCoordinates = (profile) => {
   return null;
 };
 
-const RecenterMap = ({ center }) => {
-  const map = useMap();
+const buildGoogleMapsEmbedFromCoords = (coords, zoom = 11) => {
+  if (!Array.isArray(coords) || coords.length !== 2) {
+    return "";
+  }
 
-  useEffect(() => {
-    if (Array.isArray(center) && center.length === 2) {
-      map.setView(center, map.getZoom(), { animate: true });
-    }
-  }, [center, map]);
+  const [lat, lon] = coords;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return "";
+  }
 
-  return null;
+  return `https://maps.google.com/maps?q=${lat},${lon}&z=${zoom}&output=embed`;
+};
+
+const buildGoogleMapsSearchFromCoords = (coords) => {
+  if (!Array.isArray(coords) || coords.length !== 2) {
+    return "";
+  }
+
+  const [lat, lon] = coords;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return "";
+  }
+
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
 };
 
 const VendeurDashboard = () => {
@@ -80,6 +78,12 @@ const VendeurDashboard = () => {
       return first - second;
     })[0];
   }, [nearbySellers]);
+
+  const dashboardMapEmbedUrl = useMemo(() => buildGoogleMapsEmbedFromCoords(mapCenter, 11), [mapCenter]);
+  const myLocationSearchUrl = useMemo(
+    () => buildGoogleMapsSearchFromCoords(sellerPosition || mapCenter),
+    [sellerPosition, mapCenter]
+  );
 
   const goToStorePresentation = (ownerId) => {
     const parsedOwnerId = Number.parseInt(ownerId, 10);
@@ -206,63 +210,72 @@ const VendeurDashboard = () => {
                 </button>
               </div>
 
-              <MapContainer center={mapCenter} zoom={10} className="garage-map" scrollWheelZoom>
-                <RecenterMap center={mapCenter} />
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              <div className="overflow-hidden rounded-xl border border-[#d1dae8]">
+                <iframe
+                  title="Carte Google Maps vendeur"
+                  src={dashboardMapEmbedUrl}
+                  className="garage-map border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
                 />
+              </div>
 
-                {sellerPosition && (
-                  <Marker
-                    position={sellerPosition}
-                    icon={sellerIcon}
-                    eventHandlers={{
-                      click: () => goToStorePresentation(sellerUserId)
-                    }}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {myLocationSearchUrl && (
+                  <a
+                    href={myLocationSearchUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700"
                   >
-                    <Popup>
-                      <div className="space-y-2">
-                        <p className="font-semibold">Votre position vendeur</p>
-                        <button
-                          type="button"
-                          className="rounded-md bg-orange-500 px-2 py-1 text-xs font-semibold text-white"
-                          onClick={() => goToStorePresentation(sellerUserId)}
-                        >
-                          Ouvrir presentation
-                        </button>
-                      </div>
-                    </Popup>
-                  </Marker>
+                    Ouvrir ma position sur Google Maps
+                  </a>
                 )}
+                <button
+                  type="button"
+                  onClick={() => goToStorePresentation(sellerUserId)}
+                  className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700"
+                >
+                  Ouvrir ma presentation
+                </button>
+              </div>
 
-                {nearbySellers.map((seller) => (
-                  <Marker
-                    key={seller.user_id}
-                    position={[Number(seller.latitude), Number(seller.longitude)]}
-                    icon={nearbySellerIcon}
-                    eventHandlers={{
-                      click: () => goToStorePresentation(seller.user_id)
-                    }}
-                  >
-                    <Popup>
-                      <div className="space-y-1">
-                        <p className="font-semibold">{seller.store_name || seller.name || "Vendeur"}</p>
+              {nearbySellers.length > 0 && (
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {nearbySellers.map((seller) => {
+                    const sellerCoords = [Number(seller.latitude), Number(seller.longitude)];
+                    const sellerMapLink = buildGoogleMapsSearchFromCoords(sellerCoords);
+
+                    return (
+                      <div key={seller.user_id} className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                        <p className="font-semibold text-[#1a2b4b]">{seller.store_name || seller.name || "Vendeur"}</p>
                         <p className="text-xs text-[#617089]">{seller.store_address || "Adresse non disponible"}</p>
-                        <p className="text-xs">Distance: {seller.distance_km ? `${Number(seller.distance_km).toFixed(1)} km` : "N/A"}</p>
-                        <p className="text-xs">Pieces: {seller.pieces_count ?? 0}</p>
-                        <button
-                          type="button"
-                          className="mt-1 rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white"
-                          onClick={() => goToStorePresentation(seller.user_id)}
-                        >
-                          Voir presentation
-                        </button>
+                        <p className="mt-1 text-xs text-[#334155]">Distance: {seller.distance_km ? `${Number(seller.distance_km).toFixed(1)} km` : "N/A"}</p>
+                        <p className="text-xs text-[#334155]">Pieces: {seller.pieces_count ?? 0}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {sellerMapLink && (
+                            <a
+                              href={sellerMapLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-md border border-blue-200 bg-white px-2 py-1 text-xs font-semibold text-blue-700"
+                            >
+                              Ouvrir dans Maps
+                            </a>
+                          )}
+                          <button
+                            type="button"
+                            className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white"
+                            onClick={() => goToStorePresentation(seller.user_id)}
+                          >
+                            Voir presentation
+                          </button>
+                        </div>
                       </div>
-                    </Popup>
-                  </Marker>
-                ))}
-              </MapContainer>
+                    );
+                  })}
+                </div>
+              )}
 
               {mapError && <p className="mt-3 rounded-md border border-red-200 bg-red-50 p-2 text-sm text-red-700">{mapError}</p>}
             </div>

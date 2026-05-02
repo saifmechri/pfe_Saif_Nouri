@@ -1045,7 +1045,7 @@ const GarageDashboard = () => {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-2 rounded-full border border-[#dde3ec] bg-white px-4 py-2 text-sm font-semibold text-[#5e6d86] transition hover:border-orange-300 hover:text-orange-600"
+      className="inline-flex items-center gap-2 rounded-full border border-[#dde3ec] bg-white px-4 py-2 text-sm font-semibold text-[#5e6d86] transition hover:border-blue-300 hover:text-blue-600"
     >
       <Icon className="h-4 w-4" />
       {label}{count > 0 ? ` (${count})` : ""}
@@ -1054,20 +1054,17 @@ const GarageDashboard = () => {
 
   return (
     <PlatformLayout>
-      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(244,158,95,0.14),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(30,64,175,0.10),_transparent_30%),linear-gradient(180deg,_#f7f2ea_0%,_#fffdf9_100%)]">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.14),_transparent_24%),radial-gradient(circle_at_bottom_right,_rgba(30,64,175,0.10),_transparent_30%),linear-gradient(180deg,_#f6f9ff_0%,_#ffffff_100%)]">
         <div className="mx-auto max-w-[1400px] px-4 py-4 space-y-5 sm:px-6 sm:py-6">
-          <header className="relative overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.97)_0%,rgba(255,248,241,0.96)_100%)] px-5 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] sm:px-6 sm:py-6">
-            <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-orange-100/70 blur-3xl" />
+          <header className="relative overflow-hidden rounded-[30px] border border-white/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.97)_0%,rgba(243,248,255,0.96)_100%)] px-5 py-5 shadow-[0_18px_45px_rgba(15,23,42,0.08)] sm:px-6 sm:py-6">
+            <div className="absolute -right-10 -top-12 h-36 w-36 rounded-full bg-blue-100/70 blur-3xl" />
             <div className="absolute -bottom-12 left-1/3 h-32 w-32 rounded-full bg-sky-100/70 blur-3xl" />
             <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
               <div className="flex items-start gap-4">
-                <button type="button" className="mt-1 rounded-2xl border border-orange-200 bg-white p-2.5 text-orange-500 shadow-sm transition hover:border-orange-300 hover:shadow">
+                <button type="button" className="mt-1 rounded-2xl border border-blue-200 bg-white p-2.5 text-blue-500 shadow-sm transition hover:border-blue-300 hover:shadow">
                   <Menu className="h-6 w-6" />
                 </button>
                 <div className="space-y-2">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-orange-600">
-                    Mecaways Garage
-                  </div>
                   <div>
                     <h1 className="text-3xl font-black tracking-tight text-[#10243f] sm:text-4xl">Gestion du garage</h1>
                     <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500 sm:text-[15px]">
@@ -1075,8 +1072,8 @@ const GarageDashboard = () => {
                     </p>
                   </div>
                   <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-orange-100 bg-white/90 px-4 py-3 shadow-sm">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-orange-500">Services actifs</p>
+                    <div className="rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 shadow-sm">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-500">Services actifs</p>
                       <p className="mt-1 text-2xl font-black text-[#10243f]">{activeServicesCount}</p>
                     </div>
                     <div className="rounded-2xl border border-sky-100 bg-white/90 px-4 py-3 shadow-sm">
@@ -1091,20 +1088,6 @@ const GarageDashboard = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 xl:items-end">
-                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/90 px-3 py-2 text-slate-500 shadow-sm">
-                  <Home className="h-5 w-5 text-orange-500" />
-                  <Heart className="h-5 w-5 text-orange-500" />
-                  <div className="relative pl-1">
-                    <Bell className="h-5 w-5 text-orange-500" />
-                    <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">1</span>
-                  </div>
-                </div>
-                <button type="button" onClick={() => setActivePanel("garage")} className="inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white px-4 py-2.5 text-sm font-semibold text-orange-600 shadow-sm transition hover:border-orange-300 hover:bg-orange-50">
-                  <Search className="h-4 w-4" />
-                  Rechercher
-                </button>
-              </div>
             </div>
 
             <div className="relative mt-5 grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
@@ -1150,9 +1133,9 @@ const GarageDashboard = () => {
                         key={brand}
                         type="button"
                         onClick={() => toggleSelection(brand, setSelectedBrands)}
-                        className={`overflow-hidden rounded-[22px] border bg-white p-2 text-center transition ${active ? "border-orange-300 shadow-[0_0_0_2px_rgba(249,115,22,0.16)]" : "border-slate-200"}`}
+                        className={`overflow-hidden rounded-[22px] border bg-white p-2 text-center transition ${active ? "border-blue-300 shadow-[0_0_0_2px_rgba(59,130,246,0.16)]" : "border-slate-200"}`}
                       >
-                        <div className={`flex h-[112px] items-center justify-center rounded-[16px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3 ${active ? "ring-1 ring-orange-300/40" : ""}`}>
+                        <div className={`flex h-[112px] items-center justify-center rounded-[16px] border border-slate-100 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-3 ${active ? "ring-1 ring-blue-300/40" : ""}`}>
                           <img
                             src={logoUrl || fallbackImage}
                             alt={brand}
@@ -1197,7 +1180,7 @@ const GarageDashboard = () => {
                         key={specialty}
                         type="button"
                         onClick={() => toggleSelection(specialty, setSelectedSpecialties)}
-                        className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${active ? "border-orange-300 bg-orange-50 text-orange-700" : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-slate-50"}`}
+                        className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${active ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}
                       >
                         {specialty}
                       </button>
@@ -1221,7 +1204,7 @@ const GarageDashboard = () => {
                     <button
                       type="button"
                       onClick={() => setServiceModalSpecialty("")}
-                      className={`rounded-full px-3 py-1 font-semibold ${serviceModalSpecialty === "" ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600"}`}
+                      className={`rounded-full px-3 py-1 font-semibold ${serviceModalSpecialty === "" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"}`}
                     >
                       Toutes
                     </button>
@@ -1230,7 +1213,7 @@ const GarageDashboard = () => {
                         key={specialty}
                         type="button"
                         onClick={() => setServiceModalSpecialty(specialty)}
-                        className={`rounded-full px-3 py-1 font-semibold ${serviceModalSpecialty === specialty ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-600"}`}
+                        className={`rounded-full px-3 py-1 font-semibold ${serviceModalSpecialty === specialty ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"}`}
                       >
                         {specialty}
                       </button>
@@ -1245,7 +1228,7 @@ const GarageDashboard = () => {
                           key={service}
                           type="button"
                           onClick={() => toggleSelection(service, setSelectedServices)}
-                          className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${active ? "border-orange-300 bg-orange-50 text-orange-700" : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-slate-50"}`}
+                          className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${active ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}
                         >
                           {service}
                         </button>
@@ -1272,7 +1255,7 @@ const GarageDashboard = () => {
                         key={option}
                         type="button"
                         onClick={() => toggleSelection(option, setSelectedOpenModes)}
-                        className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${active ? "border-orange-300 bg-orange-50 text-orange-700" : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-slate-50"}`}
+                        className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${active ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}
                       >
                         {option}
                       </button>
@@ -1298,7 +1281,7 @@ const GarageDashboard = () => {
                         key={option}
                         type="button"
                         onClick={() => setSelectedDeplacement(option)}
-                        className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${active ? "border-orange-300 bg-orange-50 text-orange-700" : "border-slate-200 bg-white text-slate-700 hover:border-orange-200 hover:bg-slate-50"}`}
+                        className={`rounded-2xl border px-4 py-4 text-left text-sm font-semibold transition ${active ? "border-blue-300 bg-blue-50 text-blue-700" : "border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-slate-50"}`}
                       >
                         {option}
                       </button>
@@ -1320,7 +1303,7 @@ const GarageDashboard = () => {
                 <button
                   type="button"
                   onClick={handleLocateMe}
-                  className="rounded-full bg-orange-500 px-6 py-3 text-sm font-bold text-white shadow hover:bg-orange-600"
+                  className="rounded-full bg-blue-600 px-6 py-3 text-sm font-bold text-white shadow hover:bg-blue-500"
                 >
                   {isLocating ? "Localisation..." : "Position GPS"}
                 </button>
@@ -1357,7 +1340,7 @@ const GarageDashboard = () => {
                 <article className="vb-card p-6">
                   <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-500">Espace garage</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-500">Espace garage</p>
                       <h2 className="text-3xl font-black text-[#1a2b4b]">Gérer le garage</h2>
                     </div>
                     <p className="max-w-xl text-sm leading-6 text-[#617089]">
@@ -1381,14 +1364,14 @@ const GarageDashboard = () => {
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
                         <div className="mb-2 flex items-center justify-between">
                           <p className="text-sm font-semibold text-[#334155]">Choisir spécialité</p>
-                          <button type="button" onClick={() => setShowSpecialtiesModal(true)} className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-600">Sélectionner</button>
+                          <button type="button" onClick={() => setShowSpecialtiesModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Sélectionner</button>
                         </div>
                         {selectedSpecialties.length === 0 ? (
                           <p className="text-xs text-[#6d7482]">Aucune spécialité choisie.</p>
                         ) : (
                           <div className="flex flex-wrap gap-2">
                             {selectedSpecialties.map((item) => (
-                              <span key={item} className="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">{item}</span>
+                              <span key={item} className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{item}</span>
                             ))}
                           </div>
                         )}
@@ -1397,7 +1380,7 @@ const GarageDashboard = () => {
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
                         <div className="mb-2 flex items-center justify-between gap-3">
                           <p className="text-sm font-semibold text-[#334155]">Services de la spécialité</p>
-                          <button type="button" onClick={() => openServicesModal()} className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-600">Sélectionner</button>
+                          <button type="button" onClick={() => openServicesModal()} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Sélectionner</button>
                         </div>
                         {selectedSpecialties.length === 0 ? (
                           <p className="text-xs text-[#6d7482]">Choisis d'abord une spécialité pour afficher ses services.</p>
@@ -1410,8 +1393,8 @@ const GarageDashboard = () => {
                               return (
                                 <div key={specialty} className="rounded-2xl border border-white bg-white p-4 shadow-sm">
                                   <div className="mb-3 flex items-center justify-between gap-3">
-                                    <p className="text-sm font-bold text-orange-600">{specialty}</p>
-                                    <button type="button" onClick={() => openServicesModal(specialty)} className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-600">
+                                    <p className="text-sm font-bold text-blue-600">{specialty}</p>
+                                    <button type="button" onClick={() => openServicesModal(specialty)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">
                                       Voir services
                                     </button>
                                   </div>
@@ -1452,7 +1435,7 @@ const GarageDashboard = () => {
                           <button
                             type="button"
                             onClick={() => photoFileInputRef.current?.click()}
-                            className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-600"
+                            className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600"
                           >
                             Choisir des photos
                           </button>
@@ -1490,7 +1473,7 @@ const GarageDashboard = () => {
                                     onClick={() => photoFileInputRef.current?.click()}
                                     className="flex h-full w-full items-center justify-center"
                                   >
-                                    <ImagePlus className="h-8 w-8 text-orange-400" />
+                                    <ImagePlus className="h-8 w-8 text-blue-400" />
                                   </button>
                                 )}
                               </div>
@@ -1502,7 +1485,7 @@ const GarageDashboard = () => {
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
                         <div className="mb-2 flex items-center justify-between">
                           <p className="text-sm font-semibold text-[#334155]">Horaire de travail</p>
-                          <button type="button" onClick={() => updateScheduleRow(setWorkSchedule, 0, { enabled: true })} className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-600">
+                          <button type="button" onClick={() => updateScheduleRow(setWorkSchedule, 0, { enabled: true })} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">
                             Remplir par défaut
                           </button>
                         </div>
@@ -1513,7 +1496,7 @@ const GarageDashboard = () => {
                                 type="checkbox"
                                 checked={row.enabled}
                                 onChange={(event) => updateScheduleRow(setWorkSchedule, index, { enabled: event.target.checked })}
-                                className="h-6 w-6 accent-orange-500"
+                                className="h-6 w-6 accent-blue-500"
                               />
                               <span className="text-2xl font-semibold text-[#1f2937]">{row.day}</span>
                               <input
@@ -1521,14 +1504,14 @@ const GarageDashboard = () => {
                                 value={row.start}
                                 onChange={(event) => updateScheduleRow(setWorkSchedule, index, { start: event.target.value })}
                                 disabled={!row.enabled}
-                                className="rounded-2xl border-2 border-orange-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
+                                className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
                               />
                               <input
                                 type="time"
                                 value={row.end}
                                 onChange={(event) => updateScheduleRow(setWorkSchedule, index, { end: event.target.value })}
                                 disabled={!row.enabled}
-                                className="rounded-2xl border-2 border-orange-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
+                                className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
                               />
                             </div>
                           ))}
@@ -1538,7 +1521,7 @@ const GarageDashboard = () => {
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
                         <div className="mb-2 flex items-center justify-between">
                           <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement (jour)</p>
-                          <button type="button" onClick={() => setShowOpenModal(true)} className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-600">Choisir jours</button>
+                          <button type="button" onClick={() => setShowOpenModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir jours</button>
                         </div>
                         {selectedOpenModes.length === 0 ? (
                           <p className="text-xs text-[#6d7482]">Aucun jour sélectionné.</p>
@@ -1554,7 +1537,7 @@ const GarageDashboard = () => {
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
                         <div className="mb-2 flex items-center justify-between">
                           <p className="text-sm font-semibold text-[#334155]">Déplacement</p>
-                          <button type="button" onClick={() => setShowDeplacementModal(true)} className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-600">Choisir</button>
+                          <button type="button" onClick={() => setShowDeplacementModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir</button>
                         </div>
                         <p className="text-xs font-semibold text-[#334155]">Sélection actuelle: {selectedDeplacement || "-"}</p>
                       </div>
@@ -1562,7 +1545,7 @@ const GarageDashboard = () => {
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
                         <div className="mb-3 flex items-center justify-between">
                           <p className="text-sm font-semibold text-[#334155]">Véhicules (marques avec logo)</p>
-                          <button type="button" onClick={() => setShowBrandsModal(true)} className="rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-600">Choisir marques</button>
+                          <button type="button" onClick={() => setShowBrandsModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir marques</button>
                         </div>
                         {selectedBrands.length === 0 ? (
                           <p className="text-xs text-[#6d7482]">Aucune marque sélectionnée.</p>
@@ -1604,7 +1587,7 @@ const GarageDashboard = () => {
                       <div className="rounded-[22px] border border-[#ebedf2] bg-[linear-gradient(180deg,#f8f9fb_0%,#ffffff_100%)] p-5 shadow-[0_10px_26px_rgba(15,23,42,0.04)]">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-orange-500">Publier point d'interet</p>
+                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-500">Publier point d'interet</p>
                             <h3 className="mt-1 text-lg font-black text-[#1a2b4b]">Informations avancées</h3>
                             <p className="mt-2 max-w-xl text-sm leading-6 text-[#64748b]">
                               Utilise la carte pour placer ton point d'intérêt avec précision, puis publie-le quand tout est prêt.
@@ -1618,7 +1601,7 @@ const GarageDashboard = () => {
                         </div>
 
                         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          <button type="button" onClick={handleLocateMe} className="rounded-2xl border border-orange-200 bg-white px-4 py-3 text-sm font-bold text-orange-600 transition hover:bg-orange-50">
+                          <button type="button" onClick={handleLocateMe} className="rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-blue-600 transition hover:bg-blue-50">
                             Utiliser ma position GPS
                           </button>
                           <button type="button" onClick={handleFocusMap} className="rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-blue-700 transition hover:bg-blue-50">

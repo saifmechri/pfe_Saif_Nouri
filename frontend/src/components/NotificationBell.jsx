@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, Check, CheckCheck, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { AuthContext } from "../context/AuthContext";
 import {
   deleteNotification,
   fetchNotifications,
@@ -50,7 +52,15 @@ const formatNotificationDate = (rawDate) => {
   });
 };
 
+const chatRouteByRole = {
+  automobiliste: "/automobiliste/messages",
+  garage: "/garage/messages",
+  vendeur: "/vendeur/messages"
+};
+
 const NotificationBell = () => {
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -126,6 +136,21 @@ const NotificationBell = () => {
     }
   };
 
+  const handleNotificationOpen = (item) => {
+    const conversationId = Number(item?.metadata?.conversationId || item?.reference_id);
+
+    if (item?.type === "message" && Number.isInteger(conversationId) && conversationId > 0) {
+      void handleMarkAsRead(item.id);
+
+      const targetPath = chatRouteByRole[user?.role];
+      if (targetPath) {
+        navigate(`${targetPath}?conversationId=${conversationId}`);
+      }
+    }
+
+    setIsOpen(false);
+  };
+
   useEffect(() => {
     loadNotifications();
 
@@ -166,7 +191,7 @@ const NotificationBell = () => {
       <button
         type="button"
         onClick={togglePanel}
-        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400 hover:text-amber-600 hover:shadow-md"
+        className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:text-blue-600 hover:shadow-md"
         aria-label="Ouvrir les notifications"
         title="Notifications"
       >
@@ -227,16 +252,29 @@ const NotificationBell = () => {
                   return (
                     <li
                       key={item.id}
+                      role={item.type === "message" ? "button" : undefined}
+                      tabIndex={item.type === "message" ? 0 : undefined}
+                      onClick={() => handleNotificationOpen(item)}
+                      onKeyDown={(event) => {
+                        if (item.type !== "message") {
+                          return;
+                        }
+
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handleNotificationOpen(item);
+                        }
+                      }}
                       className={`rounded-xl border px-3 py-3 transition ${
                         item.is_read
                           ? "border-slate-200 bg-white"
-                          : "border-amber-200 bg-amber-50/55 shadow-[0_0_0_1px_rgba(251,191,36,0.12)]"
-                      }`}
+                          : "border-blue-200 bg-blue-50/55 shadow-[0_0_0_1px_rgba(59,130,246,0.12)]"
+                      } ${item.type === "message" ? "cursor-pointer hover:border-blue-300 hover:bg-blue-50" : ""}`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            {!item.is_read && <span className="h-2 w-2 rounded-full bg-amber-500" />}
+                            {!item.is_read && <span className="h-2 w-2 rounded-full bg-blue-500" />}
                             <p className="truncate text-sm font-semibold text-slate-900">{item.title || "Nouvelle notification"}</p>
                           </div>
                           <p className="mt-1 line-clamp-3 text-xs text-slate-600">{item.body || "Mise a jour disponible."}</p>
@@ -250,7 +288,10 @@ const NotificationBell = () => {
                           {!item.is_read && (
                             <button
                               type="button"
-                              onClick={() => handleMarkAsRead(item.id)}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleMarkAsRead(item.id);
+                              }}
                               disabled={isProcessing}
                               className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
                               title="Marquer comme lue"
@@ -261,7 +302,10 @@ const NotificationBell = () => {
 
                           <button
                             type="button"
-                            onClick={() => handleDelete(item.id)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleDelete(item.id);
+                            }}
                             disabled={isProcessing}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
                             title="Supprimer"

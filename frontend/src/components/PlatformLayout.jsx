@@ -37,7 +37,7 @@ const PlatformLayout = ({ children }) => {
     { label: "Catalogue pièces", to: "/vendeur/catalogue" }
   ];
 
-  if (user?.role === "automobiliste") {
+  if (user?.role === "automobiliste" || user?.role === "vendeur") {
     navItems.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
     navItems.push({ label: "Garages", to: "/automobiliste/garages" });
   }

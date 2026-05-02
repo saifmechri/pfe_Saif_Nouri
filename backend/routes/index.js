@@ -1,4 +1,5 @@
 let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, recommendationRoutes, garageRoutes, chatRoutes;
+let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes;
 
 try {
   authRoutes = require('./auth');
@@ -42,6 +43,24 @@ try {
   console.error('[routes/index] Error loading chat:', e.message);
 }
 
+try {
+  notificationRoutes = require('./notifications');
+} catch (e) {
+  console.error('[routes/index] Error loading notifications:', e.message);
+}
+
+try {
+  appointmentRoutes = require('./appointments');
+} catch (e) {
+  console.error('[routes/index] Error loading appointments:', e.message);
+}
+
+try {
+  maintenanceAlertRoutes = require('./maintenanceAlerts');
+} catch (e) {
+  console.error('[routes/index] Error loading maintenanceAlerts:', e.message);
+}
+
 const registerRoutes = (app) => {
   console.log('[registerRoutes] CALLED - debug mode', process.env.DEBUG_ROUTES ? 'ON' : 'OFF');
   const debug = process.env.DEBUG_ROUTES;
@@ -72,6 +91,18 @@ const registerRoutes = (app) => {
     console.log('[registerRoutes] ✓ /api/chat mounted');
   } else {
     console.log('[registerRoutes] ✗ chatRoutes is undefined or falsy');
+  }
+  if (notificationRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/notifications');
+    app.use('/api/notifications', notificationRoutes);
+  }
+  if (appointmentRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/appointments');
+    app.use('/api/appointments', appointmentRoutes);
+  }
+  if (maintenanceAlertRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/maintenance-alerts');
+    app.use('/api/maintenance-alerts', maintenanceAlertRoutes);
   }
   if (interventionRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/vehicules/:vehicleId/interventions');

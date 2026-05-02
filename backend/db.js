@@ -549,6 +549,64 @@ const initDatabase = async () => {
 
   await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_created ON chat_messages (conversation_id, created_at DESC, id DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_created ON chat_messages (sender_user_id, created_at DESC)');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      type VARCHAR(50) NOT NULL,
+      reference_id BIGINT,
+      title VARCHAR(255),
+      body TEXT,
+      is_read BOOLEAN DEFAULT false,
+      metadata JSONB,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications (user_id, created_at DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications (is_read)');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS appointments (
+      id BIGSERIAL PRIMARY KEY,
+      automobiliste_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      garage_id BIGINT NOT NULL REFERENCES garages(id) ON DELETE CASCADE,
+      appointment_date DATE NOT NULL,
+      appointment_time TIME,
+      status VARCHAR(50) DEFAULT 'pending',
+      description TEXT,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT chk_appointment_status CHECK (status IN ('pending', 'confirmed', 'cancelled', 'done'))
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_appointments_automobiliste ON appointments (automobiliste_user_id, appointment_date DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_appointments_garage ON appointments (garage_id, appointment_date DESC)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments (status)');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS maintenance_alerts (
+      id BIGSERIAL PRIMARY KEY,
+      vehicle_id BIGINT NOT NULL REFERENCES vehicules(id) ON DELETE CASCADE,
+      user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      alert_type VARCHAR(50) NOT NULL,
+      km_trigger INTEGER,
+      days_trigger INTEGER,
+      last_km INTEGER,
+      last_date DATE,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT chk_maintenance_alert_type CHECK (alert_type IN ('oil_change', 'tire_rotation', 'brake_check', 'filter_change', 'inspection', 'custom'))
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_maintenance_alerts_vehicle_user ON maintenance_alerts (vehicle_id, user_id)');
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_maintenance_alerts_active ON maintenance_alerts (is_active)');
 };
 
 module.exports = {

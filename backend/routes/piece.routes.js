@@ -1,8 +1,8 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
-const { verifyToken } = require('../middlwares/authMiddleware');
-const { isVendeurOrAdmin } = require('../middlwares/roleMiddleware');
-const { uploadPiecePhoto } = require('../middlwares/uploadPiecePhoto');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const { isVendeurOrAdmin } = require('../middlewares/roleMiddleware');
+const { uploadPiecePhoto } = require('../middlewares/uploadPiecePhoto');
 const { validateRequest } = require('../middlewares/validateRequest');
 const pieceController = require('../controllers/piece.controller');
 
@@ -24,21 +24,16 @@ const createPieceValidation = [
 
 const updatePieceValidation = [
   param('id').isInt({ min: 1 }).withMessage('Identifiant de piece invalide'),
-  body().custom((_, { req }) => {
-    const hasAtLeastOneField = ['nom', 'reference', 'description', 'prix_unitaire', 'stock']
-      .some((field) => req.body[field] !== undefined);
-
-    if (!hasAtLeastOneField) {
-      throw new Error('Au moins un champ doit etre fourni');
-    }
-
-    return true;
-  }),
   body('nom').optional().trim().isLength({ min: 1, max: 255 }).withMessage('Le nom doit contenir entre 1 et 255 caracteres'),
   body('reference').optional().trim().isLength({ min: 1, max: 255 }).withMessage('La reference doit contenir entre 1 et 255 caracteres'),
   body('description').optional({ nullable: true }).isString().withMessage('La description doit etre une chaine de caracteres'),
   body('prix_unitaire').optional({ nullable: true }).isFloat({ gt: 0 }).withMessage('Le prix unitaire doit etre superieur a 0'),
-  body('stock').optional({ nullable: true }).isInt({ min: 0 }).withMessage('Le stock doit etre superieur ou egal a 0')
+  body('stock').optional({ nullable: true }).isInt({ min: 0 }).withMessage('Le stock doit etre superieur ou egal a 0'),
+  body('condition').optional().isString().withMessage('La condition doit etre une chaine de caracteres'),
+  body('zone_geographique').optional({ nullable: true }).isString().withMessage('La zone geographique doit etre une chaine de caracteres'),
+  body('marque').optional({ nullable: true }).isString().withMessage('La marque doit etre une chaine de caracteres'),
+  body('modele').optional({ nullable: true }).isString().withMessage('Le modele doit etre une chaine de caracteres'),
+  body('categorie').optional({ nullable: true }).isString().withMessage('La categorie doit etre une chaine de caracteres')
 ];
 
 const getPieceValidation = [
@@ -152,7 +147,7 @@ router.get('/:id/stock/movements', verifyToken, isVendeurOrAdmin, stockMovements
 router.post('/', verifyToken, isVendeurOrAdmin, uploadPiecePhoto.single('photo_piece'), createPieceValidation, validateRequest, pieceController.createPiece);
 router.post('/:id/stock/adjust', verifyToken, isVendeurOrAdmin, adjustStockValidation, validateRequest, pieceController.adjustPieceStock);
 router.put('/:id/stock', verifyToken, isVendeurOrAdmin, setStockValidation, validateRequest, pieceController.setPieceStock);
-router.put('/:id', verifyToken, isVendeurOrAdmin, updatePieceValidation, validateRequest, pieceController.updatePiece);
+router.put('/:id', verifyToken, isVendeurOrAdmin, uploadPiecePhoto.single('photo_piece'), updatePieceValidation, validateRequest, pieceController.updatePiece);
 router.delete('/:id', verifyToken, isVendeurOrAdmin, getPieceValidation, validateRequest, pieceController.deletePiece);
 
 module.exports = router;

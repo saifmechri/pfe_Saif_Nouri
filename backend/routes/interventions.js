@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true }); // pour récupérer vehicleId depuis l'URL parent
 const interventionController = require('../controllers/interventionController');
-const { verifyToken } = require('../middlwares/authMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
 const { body } = require('express-validator');
 
 // Toutes les routes nécessitent une authentification

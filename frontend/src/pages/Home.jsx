@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import ChatModal from "../components/ChatModal";
 import { MessageCircle } from "lucide-react";
+import NotificationBell from "../components/NotificationBell";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -38,7 +39,7 @@ const Navbar = () => {
             <button
               type="button"
               onClick={openSidebar}
-              className="group inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+              className="group inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md"
               aria-label="Ouvrir le menu"
             >
               <span className="flex flex-col gap-1.5">
@@ -80,15 +81,18 @@ const Navbar = () => {
               )}
             </div>
             {isAuthenticated && (
-              <button
-                type="button"
-                onClick={() => setIsChatOpen(true)}
-                className="inline-flex items-center justify-center h-10 w-10 rounded-full border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md hover:text-blue-600"
-                aria-label="Ouvrir la messagerie"
-                title="Messagerie"
-              >
-                <MessageCircle className="h-5 w-5" />
-              </button>
+              <>
+                <NotificationBell />
+                <button
+                  type="button"
+                  onClick={() => setIsChatOpen(true)}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md hover:text-blue-600"
+                  aria-label="Ouvrir la messagerie"
+                  title="Messagerie"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -127,7 +131,7 @@ const Navbar = () => {
         {user ? (
           <button
             type="button"
-            className="mt-auto rounded-2xl bg-orange-500 px-4 py-3 font-bold text-white transition hover:-translate-y-0.5 hover:bg-orange-400"
+            className="mt-auto rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:-translate-y-0.5 hover:bg-blue-500"
             onClick={handleLogout}
           >
             Déconnexion

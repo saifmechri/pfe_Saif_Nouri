@@ -5,8 +5,8 @@ const { sendApiResponse } = require("../utils/apiResponse");
 
 const { register, login } = require("../controllers/authController");
 const { updateProfile, deleteProfile, changePassword } = require("../controllers/profileController");
-const { verifyToken } = require("../middlwares/authMiddleware");
-const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste } = require("../middlwares/roleMiddleware");
+const { verifyToken } = require("../middlewares/authMiddleware");
+const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste } = require("../middlewares/roleMiddleware");
 
 // Authentification (public)
 router.post("/register", register);

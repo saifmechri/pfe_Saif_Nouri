@@ -125,11 +125,24 @@ function calculateGarageScore(userLat, userLon, garage) {
 }
 
 /**
- * ✅ DÉTERMINER URGENCE basé sur score
+ * ✅ DÉTERMINER URGENCE basé sur le kilométrage
+ * Règles:
+ * - km_actuel >= km_recommande => URGENT
+ * - km_restant <= 1000 => RECOMMANDÉ
+ * - sinon => FUTUR
  */
-function getUrgency(score) {
-  if (score >= 80) return 'URGENT';
-  if (score >= 60) return 'RECOMMANDÉ';
+function getUrgency(kmActuel, kmRecommande) {
+  const current = Number(kmActuel);
+  const recommended = Number(kmRecommande);
+
+  if (!Number.isFinite(current) || !Number.isFinite(recommended) || recommended <= 0) {
+    return 'FUTUR';
+  }
+
+  const remaining = Math.max(0, recommended - current);
+
+  if (current >= recommended) return 'URGENT';
+  if (remaining <= 1000) return 'RECOMMANDÉ';
   return 'FUTUR';
 }
 

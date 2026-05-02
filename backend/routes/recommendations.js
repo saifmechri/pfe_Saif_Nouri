@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { verifyToken } = require('../middlwares/authMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
 const { getRecommendations } = require('../controllers/recommendationController');
 
 router.get('/classees', verifyToken, getRecommendations);

@@ -1,12 +1,12 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
-const { verifyToken } = require('../middlwares/authMiddleware');
-const { checkRole, isAutomobiliste } = require('../middlwares/roleMiddleware');
+const { verifyToken } = require('../middlewares/authMiddleware');
+const { checkRole, isAutomobiliste } = require('../middlewares/roleMiddleware');
 const { validateRequest } = require('../middlewares/validateRequest');
 const garageController = require('../controllers/garage.controller');
 const garageServiceController = require('../controllers/garageService.controller');
 const garageReviewController = require('../controllers/garageReview.controller');
-const { uploadGaragePhoto } = require('../middlwares/uploadGaragePhoto');
+const { uploadGaragePhoto } = require('../middlewares/uploadGaragePhoto');
 
 const router = express.Router();
 

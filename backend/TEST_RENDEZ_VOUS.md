@@ -1,0 +1,96 @@
+# Tests - Gestion Rendez‑vous
+
+But
+- Fournir des étapes et exemples pour tester les endpoints CRUD rendez‑vous et la disponibilité des garages.
+
+Pré-requis
+- Avoir une base Postgres accessible et les variables d'environnement du backend configurées.
+- Installer les dépendances et lancer le serveur depuis le dossier `backend`:
+
+```bash
+npm install
+npm start
+```
+
+Authentification
+- Tous les endpoints protégés attendent un header `Authorization: Bearer <token>`.
+- Utiliser un token d'un utilisateur avec le rôle `automobiliste` pour créer des RDV, et `garage`/`admin` pour certaines opérations.
+
+Endpoints principaux à tester
+
+- Lister les RDV (pour l'utilisateur connecté)
+
+```
+GET /api/appointments?limit=20&offset=0
+Headers: Authorization: Bearer <token>
+```
+
+- Créer un RDV (automobiliste)
+
+```
+POST /api/appointments
+Headers: Authorization: Bearer <automobiliste-token>
+Body JSON:
+{
+  "garageId": 123,
+  "appointmentDate": "2026-05-10",
+  "appointmentTime": "10:00",
+  "description": "Controle freins"
+}
+```
+
+Réponse attendue: statut `201` et objet `appointment` dans `data`.
+
+- Mettre à jour un RDV
+
+```
+PATCH /api/appointments/:id
+Headers: Authorization: Bearer <token>
+Body JSON: { "status": "confirmed" }
+```
+
+- Supprimer un RDV
+
+```
+DELETE /api/appointments/:id
+Headers: Authorization: Bearer <token>
+```
+
+- Vérifier disponibilités d'un garage
+
+```
+GET /api/garages/:id/availability?date=2026-05-10&slotMinutes=60
+Headers: Authorization: Bearer <any-token-or-public>
+```
+
+Réponse attendue: `data.slots` tableau d'objets `{ start, end, available }`.
+
+Vérifications DB utiles
+- Vérifier la table `appointments`:
+
+```sql
+SELECT id, automobiliste_user_id, garage_id, appointment_date, appointment_time, status
+FROM appointments
+WHERE garage_id = 123 AND appointment_date = '2026-05-10';
+```
+
+- Vérifier notifications liées (si applicable):
+
+```sql
+SELECT * FROM notifications WHERE reference_id = <appointmentId> ORDER BY created_at DESC;
+```
+
+Cas de test recommandés
+- Création simple (slot libre) → `201`, notification créée pour le garage.
+- Création sur créneau déjà pris → comportement actuel: création autorisée (vérifier règle métier souhaitée).
+- Annulation → `status = cancelled` et notification d'annulation.
+- Disponibilités: garage avec `work_hours` invalide → fallback `09:00-17:00`.
+- Validation: requête sans `date` pour disponibilité → `400`.
+
+Automatisation (optionnel)
+- Ajouter des tests d'intégration avec `jest` + `supertest` dans `backend/tests`.
+- Exemple de commande: `npm run test:integration` (ajouter script si nécessaire).
+
+Notes
+- Le controller de disponibilité utilise un parsing simple de `work_hours` au format `HH:MM-HH:MM`.
+- Si vous voulez que la création de RDV bloque réellement un créneau, il faut ajouter une vérification côté `appointmentService` avant la création.

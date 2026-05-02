@@ -4,6 +4,7 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 const { checkRole, isAutomobiliste } = require('../middlewares/roleMiddleware');
 const { validateRequest } = require('../middlewares/validateRequest');
 const garageController = require('../controllers/garage.controller');
+const availabilityController = require('../controllers/availability.controller');
 const garageServiceController = require('../controllers/garageService.controller');
 const garageReviewController = require('../controllers/garageReview.controller');
 const { uploadGaragePhoto } = require('../middlewares/uploadGaragePhoto');
@@ -145,6 +146,7 @@ router.get('/me', verifyToken, checkRole('garage', 'admin'), garageController.ge
 router.get('/me/services', verifyToken, checkRole('garage', 'admin'), garageServiceController.listMyGarageServices);
 router.get('/me/reviews', verifyToken, checkRole('garage', 'admin'), garageReviewController.listMyGarageReviews);
 router.get('/:id', garageIdValidation, validateRequest, garageController.getGarageById);
+router.get('/:id/availability', garageIdValidation, validateRequest, availabilityController.getAvailability);
 router.get('/:id/services', listGarageServicesValidation, validateRequest, garageServiceController.listGarageServices);
 router.get('/:id/reviews', listGarageReviewsValidation, validateRequest, garageReviewController.listGarageReviews);
 

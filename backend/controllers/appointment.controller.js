@@ -1,5 +1,6 @@
 const appointmentService = require('../services/appointmentService');
 const notificationService = require('../services/notificationService');
+const { findGarageIdentityByUserId } = require('../models/garage.model');
 
 const listAppointments = async (req, res) => {
   try {
@@ -13,9 +14,8 @@ const listAppointments = async (req, res) => {
     if (role === 'automobiliste') {
       items = await appointmentService.listForAutomobiliste(userId, { limit, offset, status });
     } else if (role === 'garage') {
-      // Get garage_id from user's garage profile (assumption: user.garage_id set by middleware, or lookup needed)
-      // For now, we'll need the garage_id from query or headers
-      const garageId = Number(req.query.garageId);
+      const resolvedGarage = await findGarageIdentityByUserId(userId);
+      const garageId = Number(req.query.garageId || resolvedGarage?.id);
       if (!garageId) {
         return res.status(400).json({ success: false, message: 'garageId required for garage users', data: null });
       }

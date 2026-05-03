@@ -6,6 +6,7 @@ import {
   createGarageReview,
   deleteGarageReview,
   getGarageById,
+  getFilterOptions,
   getReviewsByGarage,
   getServicesByGarage,
   listGarages,
@@ -381,11 +382,8 @@ const GaragesPage = () => {
   // Fetch filter options from backend API on component mount
   const fetchFilterOptions = async () => {
     try {
-      const response = await fetch(FILTER_OPTIONS_ENDPOINT);
-      if (!response.ok) {
-        throw new Error("Failed to fetch filter options");
-      }
-      const data = await response.json();
+      const response = await getFilterOptions();
+      const data = response?.data;
       const payload = data?.data || data;
       
       setFilterOptions({

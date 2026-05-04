@@ -7,6 +7,8 @@ import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
 import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
 import GaragesPage from "../pages/automobiliste/Garages";
+import AutomobilisteAppointments from "../pages/automobiliste/Appointments";
+import AppointmentDetail from "../pages/AppointmentDetail";
 import CataloguePieces from "../pages/vendeur/CataloguePieces";
 import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
 import ChatCenter from "../pages/chat/ChatCenter";
@@ -14,6 +16,7 @@ import ChatCenter from "../pages/chat/ChatCenter";
 // Import des pages spécifiques aux rôles
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
 import GarageDashboard from "../pages/garage/Dashboard";                 // exemple
+import GarageAppointments from "../pages/garage/Appointments";
 import VendeurDashboard from "../pages/vendeur/Dashboard";               // exemple
 import AdminDashboard from "../pages/admin/Dashboard";                   // exemple
 
@@ -62,6 +65,14 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/automobiliste/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
+              <AutomobilisteAppointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/automobiliste/messages"
           element={
             <ProtectedRoute allowedRoles={["automobiliste"]}>
@@ -90,6 +101,30 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["garage"]}>
               <ChatCenter />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/garage/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["garage"]}>
+              <GarageAppointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/appointments/:appointmentId"
+          element={
+            <ProtectedRoute allowedRoles={["garage", "automobiliste", "admin"]}>
+              <AppointmentDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/garage/appointments/:appointmentId"
+          element={
+            <ProtectedRoute allowedRoles={["garage"]}>
+              <AppointmentDetail />
             </ProtectedRoute>
           }
         />

@@ -584,6 +584,12 @@ const initDatabase = async () => {
     )
   `);
 
+  await pool.query('ALTER TABLE appointments ADD COLUMN IF NOT EXISTS proposed_date DATE');
+  await pool.query('ALTER TABLE appointments ADD COLUMN IF NOT EXISTS proposed_time TIME');
+  await pool.query('ALTER TABLE appointments ADD COLUMN IF NOT EXISTS proposed_note TEXT');
+  await pool.query('ALTER TABLE appointments DROP CONSTRAINT IF EXISTS chk_appointment_status');
+  await pool.query("ALTER TABLE appointments ADD CONSTRAINT chk_appointment_status CHECK (status IN ('pending', 'confirmed', 'cancelled', 'done', 'proposed'))");
+
   await pool.query('CREATE INDEX IF NOT EXISTS idx_appointments_automobiliste ON appointments (automobiliste_user_id, appointment_date DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_appointments_garage ON appointments (garage_id, appointment_date DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments (status)');

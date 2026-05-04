@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Bell, ChevronDown, ChevronRight, Clock3, Heart, Home, ImagePlus, Lock, MapPin, Menu, MinusCircle, PlusCircle, Search, Settings, Truck, Wrench } from "lucide-react";
+import { Link } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
@@ -14,6 +15,7 @@ import {
   updateGarageReview,
   updateGarageService
 } from "../../services/garage";
+import GarageDashboardAppointments from "../../components/dashboard/GarageDashboardAppointments";
 import { calculateDistance, formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
 const emptyGarageForm = {
@@ -1713,7 +1715,39 @@ const GarageDashboard = () => {
                         <p className="text-3xl font-black text-slate-900">{reviewSummary.reviews_count}</p>
                       </div>
                     </div>
+                    <div className="mt-4 rounded-2xl border border-blue-100 bg-[linear-gradient(135deg,rgba(239,246,255,1)_0%,rgba(219,234,254,0.8)_100%)] p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
+                            Réception de RDV
+                          </p>
+                          <h4 className="mt-1 text-lg font-black text-slate-900">
+                            Recevoir RDV
+                          </h4>
+                          <p className="mt-1 text-sm text-slate-600">
+                            Ouvre l’interface pour recevoir, valider ou refuser les demandes de rendez-vous.
+                          </p>
+                        </div>
+                        <Link
+                          to="/garage/appointments"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                        >
+                          Recevoir RDV
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Appointments panel: receive and handle incoming requests */}
+                  {hasGarageProfile && (
+                    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
+                      <h3 className="text-2xl font-black text-slate-900">Demandes de rendez-vous</h3>
+                      <div className="mt-4">
+                        <GarageDashboardAppointments garageId={garage.id} />
+                      </div>
+                    </div>
+                  )}
 
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <h3 className="text-2xl font-black text-slate-900">Spécialités</h3>

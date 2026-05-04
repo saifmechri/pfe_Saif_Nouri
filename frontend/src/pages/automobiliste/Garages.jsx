@@ -1,16 +1,20 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CalendarCheck2, Clock3, MapPin, Navigation, Share2, Star } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import GoogleMapGarages from "../../components/GoogleMapGarages";
+import QuickAppointmentModal from "../../components/appointments/QuickAppointmentModal";
 import {
   createGarageReview,
   deleteGarageReview,
   getGarageById,
+  getFilterOptions,
   getReviewsByGarage,
   getServicesByGarage,
   listGarages,
   updateGarageReview
 } from "../../services/garage";
+import { getVehicules } from "../../services/vehicule";
 import { AuthContext } from "../../context/AuthContext";
 import { formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
@@ -309,6 +313,7 @@ const parseScheduleText = (value) => {
 
 const GaragesPage = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   // Filter options state - fetched from API
   const [filterOptions, setFilterOptions] = useState({
@@ -353,6 +358,10 @@ const GaragesPage = () => {
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Appointment modal state
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [vehicules, setVehicules] = useState([]);
+
   const getApiErrorMessage = (err, fallback) => {
     const data = err?.response?.data;
     const details = Array.isArray(data?.error?.details) ? data.error.details : [];
@@ -381,11 +390,8 @@ const GaragesPage = () => {
   // Fetch filter options from backend API on component mount
   const fetchFilterOptions = async () => {
     try {
-      const response = await fetch(FILTER_OPTIONS_ENDPOINT);
-      if (!response.ok) {
-        throw new Error("Failed to fetch filter options");
-      }
-      const data = await response.json();
+      const response = await getFilterOptions();
+      const data = response?.data;
       const payload = data?.data || data;
       
       setFilterOptions({
@@ -469,7 +475,19 @@ const GaragesPage = () => {
   // Fetch filter options when component mounts
   useEffect(() => {
     fetchFilterOptions();
+    // Fetch user's vehicules
+    (async () => {
+      try {
+        const res = await getVehicules();
+        const list = res.data?.vehicules || res.data || [];
+        setVehicules(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error('Error fetching vehicules:', err);
+      }
+    })();
   }, []);
+
+
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -713,11 +731,10 @@ const GaragesPage = () => {
   };
 
   const handleBookAppointment = () => {
-    if (!selectedGarage?.telephone) {
+    if (!selectedGarage) {
       return;
     }
-
-    window.location.href = `tel:${selectedGarage.telephone}`;
+    setShowAppointmentModal(true);
   };
 
   const handleShareGarage = async () => {
@@ -1059,11 +1076,15 @@ const GaragesPage = () => {
                     
                     return (
                       <li key={garage.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectGarage(garage)}
-                          className={`w-full rounded-lg border px-3 py-3 text-left transition ${selectedGarageId === garage.id ? "border-blue-400 bg-blue-50" : "border-[#dbe2ec] bg-white hover:bg-slate-50"}`}
+                        <div
+                          className={`relative w-full rounded-lg border px-3 py-3 text-left transition ${selectedGarageId === garage.id ? "border-blue-400 bg-blue-50" : "border-[#dbe2ec] bg-white hover:bg-slate-50"}`}
                         >
+                          <button
+                            type="button"
+                            onClick={() => handleSelectGarage(garage)}
+                            className="absolute inset-0 w-full h-full opacity-0"
+                            aria-hidden
+                          />
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <p className="font-bold text-[#1a2b4b] truncate">{garage.name}</p>
@@ -1085,7 +1106,8 @@ const GaragesPage = () => {
                               <span className="text-xs text-[#617089] italic">{distanceLabel}</span>
                             )}
                           </div>
-                        </button>
+
+                        </div>
                       </li>
                     );
                   })}
@@ -1353,6 +1375,17 @@ const GaragesPage = () => {
           </div>
         </div>
       </div>
+
+      <QuickAppointmentModal
+        isOpen={showAppointmentModal}
+        onClose={() => setShowAppointmentModal(false)}
+        garage={selectedGarage}
+        vehicules={vehicules}
+        onAppointmentCreated={() => {
+          setSuccessMessage("✓ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
+          setShowAppointmentModal(false);
+        }}
+      />
     </PlatformLayout>
   );
 };

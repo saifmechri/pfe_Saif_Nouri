@@ -10,6 +10,11 @@ import {
 } from "../../services/vehicule";
 import { useNavigate } from "react-router-dom";
 import PlatformLayout from "../../components/PlatformLayout";
+import { listAppointments, deleteAppointment } from "../../services/appointments";
+import { Calendar, Clock, MapPin, Trash2, Plus, ChevronRight } from "lucide-react";
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
+dayjs.locale("fr");
 
 const AutomobilisteDashboard = () => {
   const navigate = useNavigate();
@@ -61,6 +66,9 @@ const AutomobilisteDashboard = () => {
   const [editingId, setEditingId] = useState(null);
   const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState("");
+  const [appointments, setAppointments] = useState([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  const [appointmentsError, setAppointmentsError] = useState("");
   const [formData, setFormData] = useState({
     modele_voiture: "",
     matricule_voiture: "",
@@ -68,10 +76,42 @@ const AutomobilisteDashboard = () => {
     photo_voiture: ""
   });
 
+  // Fetch appointments
+  const fetchAppointments = async () => {
+    setAppointmentsLoading(true);
+    setAppointmentsError("");
+    try {
+      const res = await listAppointments({ limit: 50 });
+      const items = res.data?.data?.items || res.data?.data || res.data || [];
+      const nextItems = Array.isArray(items) ? items : [];
+      setAppointments(nextItems);
+    } catch (err) {
+      setAppointmentsError(err.response?.data?.message || "Erreur lors du chargement des rendez-vous");
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  const handleDeleteAppointment = async (id) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
+    try {
+      await deleteAppointment(id);
+      await fetchAppointments();
+    } catch (err) {
+      alert(err.response?.data?.message || "Erreur lors de la suppression");
+    }
+  };
+
   // Charger les véhicules au montage
   useEffect(() => {
     fetchVehicules();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === "rendezvous") {
+      fetchAppointments();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab === "historique" && !historiqueLoaded) {
@@ -563,32 +603,108 @@ const AutomobilisteDashboard = () => {
 
           {activeTab === "rendezvous" && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Rendez-vous à venir</h2>
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2">Garage</th>
-                    <th>Date</th>
-                    <th>Heure</th>
-                    <th>Service</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rendezVous.map((rdv) => (
-                    <tr key={rdv.id} className="border-b">
-                      <td className="py-2">{rdv.garage}</td>
-                      <td>{rdv.date}</td>
-                      <td>{rdv.heure}</td>
-                      <td>{rdv.service}</td>
-                      <td>
-                        <button className="text-blue-600 hover:underline mr-2">Détails</button>
-                        <button className="text-red-600 hover:underline">Annuler</button>
-                      </td>
-                    </tr>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900">Mes rendez-vous</h2>
+                  <p className="mt-1 text-sm text-slate-600">Consultez et gérez vos rendez-vous avec les garages.</p>
+                </div>
+                <button
+                  onClick={() => navigate("/automobiliste/appointments")}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700"
+                >
+                  <Plus className="h-5 w-5" />
+                  Réserver
+                </button>
+              </div>
+
+              {appointmentsError && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {appointmentsError}
+                </div>
+              )}
+
+              {appointmentsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-slate-600">Chargement des rendez-vous...</p>
+                </div>
+              ) : appointments.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 py-12 text-center">
+                  <Calendar className="mx-auto h-12 w-12 text-slate-400 mb-3" />
+                  <p className="text-sm text-slate-600">Aucun rendez-vous.</p>
+                  <button
+                    onClick={() => navigate("/automobiliste/appointments")}
+                    className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                  >
+                    Réserver votre premier rendez-vous
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+                  {appointments.map((apt) => (
+                    <div
+                      key={apt.id}
+                      className={`rounded-2xl border p-4 transition ${
+                        apt.status === "confirmed"
+                          ? "border-emerald-200 bg-emerald-50"
+                          : apt.status === "cancelled"
+                          ? "border-rose-200 bg-rose-50"
+                          : "border-amber-200 bg-amber-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-5 w-5 text-slate-600" />
+                            <span className="font-bold text-slate-900">
+                              {dayjs(apt.appointment_date).format("dddd D MMMM YYYY")}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2 text-sm text-slate-700">
+                            <Clock className="h-4 w-4" />
+                            {apt.appointment_time ? apt.appointment_time : "À définir"}
+                          </div>
+                          {apt.description && (
+                            <p className="mt-3 text-sm text-slate-700">
+                              <strong>Service:</strong> {apt.description}
+                            </p>
+                          )}
+                          {apt.notes && (
+                            <p className="mt-2 text-xs text-slate-600">
+                              <strong>Notes:</strong> {apt.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap ${
+                              apt.status === "confirmed"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : apt.status === "cancelled"
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {apt.status === "confirmed"
+                              ? "✓ Confirmé"
+                              : apt.status === "cancelled"
+                              ? "✕ Annulé"
+                              : "⏳ En attente"}
+                          </span>
+                          {apt.status === "pending" && (
+                            <button
+                              onClick={() => handleDeleteAppointment(apt.id)}
+                              className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
           )}
 

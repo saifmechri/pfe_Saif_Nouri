@@ -8,6 +8,7 @@ import Profil from '../pages/profil/profil';
 import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
 import GaragesPage from "../pages/automobiliste/Garages";
 import AutomobilisteAppointments from "../pages/automobiliste/Appointments";
+import AppointmentDetail from "../pages/AppointmentDetail";
 import CataloguePieces from "../pages/vendeur/CataloguePieces";
 import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
 import ChatCenter from "../pages/chat/ChatCenter";
@@ -108,6 +109,22 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["garage"]}>
               <GarageAppointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/appointments/:appointmentId"
+          element={
+            <ProtectedRoute allowedRoles={["garage", "automobiliste", "admin"]}>
+              <AppointmentDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/garage/appointments/:appointmentId"
+          element={
+            <ProtectedRoute allowedRoles={["garage"]}>
+              <AppointmentDetail />
             </ProtectedRoute>
           }
         />

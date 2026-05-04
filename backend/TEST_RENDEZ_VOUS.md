@@ -25,6 +25,16 @@ GET /api/appointments?limit=20&offset=0
 Headers: Authorization: Bearer <token>
 ```
 
+- Voir le détail d'un RDV depuis une notification
+
+```
+GET /api/appointments/:id
+Headers: Authorization: Bearer <token>
+```
+
+Réponse attendue: `data.appointment`, `data.automobiliste`, `data.garage`.
+Ce point sert au parcours: clic sur une notification -> ouverture de la page détail RDV -> confirmation ou refus.
+
 - Créer un RDV (automobiliste)
 
 ```
@@ -48,6 +58,12 @@ PATCH /api/appointments/:id
 Headers: Authorization: Bearer <token>
 Body JSON: { "status": "confirmed" }
 ```
+
+Pour le garage:
+- `status = confirmed` pour valider la réservation.
+- `status = cancelled` pour refuser/annuler la réservation.
+
+Réponse attendue: `200` avec le RDV mis à jour.
 
 - Supprimer un RDV
 
@@ -83,6 +99,12 @@ SELECT * FROM notifications WHERE reference_id = <appointmentId> ORDER BY create
 Cas de test recommandés
 - Création simple (slot libre) → `201`, notification créée pour le garage.
 - Création sur créneau déjà pris → comportement actuel: création autorisée (vérifier règle métier souhaitée).
+- Notification RDV → clic sur la notification, ouverture de la page détail, affichage du RDV en grand format.
+- Acceptation garage → `PATCH /api/appointments/:id` avec `status = confirmed`.
+- Refus garage → `PATCH /api/appointments/:id` avec `status = cancelled`.
+- Proposition de nouvelle date par le garage → `PATCH /api/appointments/:id` avec `status = proposed`, `proposed_date`, `proposed_time`, `proposed_note`.
+- Acceptation par l'automobiliste de la date proposée → `PATCH /api/appointments/:id` avec `status = confirmed` et notification envoyée au garage pour lui demander de confirmer ou refuser la réservation.
+- Refus par l'automobiliste de la date proposée → `PATCH /api/appointments/:id` avec `status = cancelled` et notification dédiée envoyée au garage pour proposer une autre date si nécessaire.
 - Annulation → `status = cancelled` et notification d'annulation.
 - Disponibilités: garage avec `work_hours` invalide → fallback `09:00-17:00`.
 - Validation: requête sans `date` pour disponibilité → `400`.

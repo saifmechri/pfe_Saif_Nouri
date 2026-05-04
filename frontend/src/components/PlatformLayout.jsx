@@ -79,7 +79,7 @@ const PlatformLayout = ({ children }) => {
             const isActive = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
             return (
               <Link
-                key={item.to}
+                key={`${item.to}-${item.label}`}
                 to={item.to}
                 onClick={closeSidebar}
                 className={`rounded-lg px-4 py-3 font-semibold text-white/90 transition hover:translate-x-1 hover:bg-white/10 ${isActive ? "bg-blue-500/30 shadow-[inset_0_0_0_1px_rgba(147,197,253,0.9)]" : ""}`}

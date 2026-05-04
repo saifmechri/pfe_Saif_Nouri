@@ -3,10 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import "dayjs/locale/fr";
-import PlatformLayout from "../../components/PlatformLayout";
-import TopBar from "../../components/TopBar";
-import { listAppointments, updateAppointment } from "../../services/appointments";
-import { getCompleteProfileById } from "../../services/user";
+import PlatformLayout from "../components/PlatformLayout";
+import TopBar from "../components/TopBar";
+import { getAppointment, listAppointments, updateAppointment } from "../services/appointments";
 import { ArrowLeft, Send, CheckCircle, AlertCircle, Calendar, Clock, MapPin, User, MessageSquare } from "lucide-react";
 
 dayjs.extend(localizedFormat);
@@ -34,21 +33,33 @@ const AppointmentDetail = () => {
     const fetchAppointmentDetail = async () => {
       try {
         setLoading(true);
-        const res = await listAppointments({ limit: 100 });
-        const items = res.data?.data?.items || res.data?.data || [];
-        const apt = Array.isArray(items) ? items.find(a => Number(a.id) === Number(appointmentId)) : null;
-        
+        let apt = null;
+        let payload = {};
+
+        try {
+          const res = await getAppointment(appointmentId);
+          payload = res.data?.data || res.data || {};
+          apt = payload?.appointment || null;
+        } catch (err) {
+          if (err?.response?.status === 404) {
+            const res = await listAppointments({ limit: 100 });
+            const items = res.data?.data?.items || res.data?.data || [];
+            const list = Array.isArray(items) ? items : [];
+            apt = list.find((item) => Number(item.id) === Number(appointmentId)) || null;
+          } else {
+            throw err;
+          }
+        }
+
         if (apt) {
           setAppointment(apt);
-          
-          // Fetch automobiliste name
-          try {
-            const profileRes = await getCompleteProfileById(Number(apt.automobiliste_user_id));
-            const profileData = profileRes.data?.data || profileRes.data || {};
-            setAutomobilisteName(profileData?.name || profileData?.nom || `Automobiliste #${apt.automobiliste_user_id}`);
-          } catch (err) {
-            console.error("Error fetching profile:", err);
-          }
+          const garageProfile = payload?.automobiliste || null;
+          setAutomobilisteName(
+            garageProfile?.name ||
+              garageProfile?.nom ||
+              garageProfile?.prenom ||
+              `Automobiliste #${apt.automobiliste_user_id}`
+          );
 
           // Parse notes for messages if they exist
           if (apt.notes) {

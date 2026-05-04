@@ -4,6 +4,10 @@ export const listAppointments = (params = {}) => {
   return API.get("/appointments", { params });
 };
 
+export const getAppointment = (id) => {
+  return API.get(`/appointments/${id}`);
+};
+
 export const createAppointment = (payload = {}) => {
   return API.post("/appointments", payload);
 };
@@ -18,6 +22,7 @@ export const deleteAppointment = (id) => {
 
 export default {
   listAppointments,
+  getAppointment,
   createAppointment,
   updateAppointment,
   deleteAppointment,

@@ -6,6 +6,9 @@ const appointmentController = require('../controllers/appointment.controller');
 // List appointments for current user
 router.get('/', verifyToken, appointmentController.listAppointments);
 
+// Get single appointment (with access checks)
+router.get('/:id', verifyToken, appointmentController.getAppointment);
+
 // Create new appointment
 router.post('/', verifyToken, appointmentController.createAppointment);
 

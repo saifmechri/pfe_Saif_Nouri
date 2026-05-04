@@ -22,12 +22,12 @@ export const deleteVehicule = (vehiculeId) => {
 
 // GET - Historique des interventions d'un véhicule
 export const getInterventionsByVehicle = (vehiculeId) => {
-  return API.get(`/vehicules/${vehiculeId}/interventions`);
+  return API.get(`/vehicules/${vehiculeId}/interventions`).then((res) => res.data?.data ?? res.data ?? []);
 };
 
 // POST - Créer une intervention pour un véhicule
 export const createIntervention = (vehiculeId, interventionData) => {
-  return API.post(`/vehicules/${vehiculeId}/interventions`, interventionData);
+  return API.post(`/vehicules/${vehiculeId}/interventions`, interventionData).then((res) => res.data?.data ?? res.data);
 };
 
 // GET - Récupérer la liste des pièces disponibles

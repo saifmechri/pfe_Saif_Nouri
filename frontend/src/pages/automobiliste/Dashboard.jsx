@@ -160,10 +160,10 @@ const AutomobilisteDashboard = () => {
 
       const historiquePromises = vehiculesList.map(async (vehicule) => {
         try {
-          const res = await getInterventionsByVehicle(vehicule.id);
+          const interventions = await getInterventionsByVehicle(vehicule.id);
           return {
             vehicule,
-            interventions: Array.isArray(res.data) ? res.data : [],
+            interventions: Array.isArray(interventions) ? interventions : [],
             error: ""
           };
         } catch (err) {

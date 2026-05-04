@@ -11,6 +11,18 @@ import GarageRequestsPanel from "../../components/appointments/GarageRequestsPan
 import AppointmentNotificationModal from "../../components/appointments/AppointmentNotificationModal";
 import { Calendar, ListChecks } from "lucide-react";
 
+const normalizeAppointmentDate = (item) => item.appointment_date || item.appointmentDate || item.date || "";
+
+const formatAppointmentDate = (value) => {
+  if (!value) return "Date inconnue";
+
+  const parsed = dayjs(value);
+  if (parsed.isValid()) return parsed.format("dddd D MMMM YYYY");
+
+  const fallback = dayjs(String(value).split(" ")[0]);
+  return fallback.isValid() ? fallback.format("dddd D MMMM YYYY") : String(value);
+};
+
 const GarageAppointments = () => {
   const navigate = useNavigate();
   const [garageId, setGarageId] = useState(null);
@@ -60,7 +72,7 @@ const GarageAppointments = () => {
       const enriched = nextItems.map((a) => ({ ...a, automobiliste_name: usersMap[Number(a.automobiliste_user_id)] || undefined }));
       setAppointments(enriched);
       if (!selectedDate && enriched.length > 0) {
-        setSelectedDate(enriched[0].appointment_date || dayjs().format("YYYY-MM-DD"));
+        setSelectedDate(normalizeAppointmentDate(enriched[0]) || dayjs().format("YYYY-MM-DD"));
       }
     } catch (err) {
       console.error(err);
@@ -109,14 +121,44 @@ const GarageAppointments = () => {
     }
   };
 
+  const handleProposalAction = async (decision, appointmentId, proposalData) => {
+    try {
+      const apt = appointments.find((a) => a.id === appointmentId);
+      if (decision === "propose" && proposalData) {
+        setNotification({
+          type: "appointment",
+          title: "📅 Proposition de date envoyée",
+          body: `Une alternative pour ${proposalData.proposalDate} à ${proposalData.proposalTime} a été proposée à l'automobiliste.`
+        });
+      } else if (decision === "accept") {
+        setNotification({
+          type: "appointment",
+          title: "✓ Rendez-vous confirmé",
+          body: `Confirmé pour ${apt?.appointment_date} à ${apt?.appointment_time || 'sans heure spécifiée'}`
+        });
+      } else if (decision === "reject") {
+        setNotification({
+          type: "appointment",
+          title: "✕ Rendez-vous refusé",
+          body: `Refusé pour ${apt?.appointment_date}`
+        });
+      }
+      
+      setSelectedAppointment(apt);
+      fetchAppointments(garageId);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleSelectDate = (dateKey) => {
     setSelectedDate(dateKey);
   };
 
 
   const selectedDayLabel = selectedDate
-    ? dayjs(selectedDate).format("dddd D MMMM YYYY")
-    : "Sélectionnez un jour dans le calendrier";
+    ? formatAppointmentDate(selectedDate)
+    : "Aucune date sélectionnée";
 
   return (
     <PlatformLayout>
@@ -134,7 +176,7 @@ const GarageAppointments = () => {
                 </p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
-                {selectedDate ? dayjs(selectedDate).format("dddd D MMMM YYYY") : "Aucune date sélectionnée"}
+                {selectedDayLabel}
               </div>
             </div>
           </div>
@@ -246,7 +288,7 @@ const GarageAppointments = () => {
                   items={appointments}
                   selectedDate={selectedDate}
                   onSelectDate={setSelectedDate}
-                  getItemDate={(item) => item.appointment_date}
+                  getItemDate={(item) => normalizeAppointmentDate(item)}
                   getItemStatus={(item) => item.status}
                   getItemLabel={(item) =>
                     `${item.appointment_time ? `${item.appointment_time} · ` : ""}${item.description || "Demande"}`
@@ -287,7 +329,7 @@ const GarageAppointments = () => {
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
                             <div className="font-bold text-slate-900">
-                              {a.appointment_date}
+                              {formatAppointmentDate(a.appointment_date)}
                               {a.appointment_time && ` à ${a.appointment_time}`}
                             </div>
                             <div className="mt-1 text-sm font-medium text-slate-700">
@@ -346,6 +388,8 @@ const GarageAppointments = () => {
         onClose={() => setNotification(null)}
         notification={notification}
         appointment={selectedAppointment}
+        userRole="garage"
+        onAction={handleProposalAction}
       />
     </PlatformLayout>
   );

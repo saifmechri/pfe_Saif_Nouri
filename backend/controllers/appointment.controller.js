@@ -1,6 +1,7 @@
 const appointmentService = require('../services/appointmentService');
 const notificationService = require('../services/notificationService');
 const { findGarageIdentityByUserId } = require('../models/garage.model');
+const { validateAppointmentCreation, validateAppointmentUpdate, APPOINTMENT_CONSTANTS } = require('../utils/appointmentValidator');
 
 const listAppointments = async (req, res) => {
   try {
@@ -17,11 +18,11 @@ const listAppointments = async (req, res) => {
       const resolvedGarage = await findGarageIdentityByUserId(userId);
       const garageId = Number(req.query.garageId || resolvedGarage?.id);
       if (!garageId) {
-        return res.status(400).json({ success: false, message: 'garageId required for garage users', data: null });
+        return res.status(400).json({ success: false, message: 'garageId requis pour les utilisateurs garage', data: null });
       }
       items = await appointmentService.listForGarage(garageId, { limit, offset, status });
     } else {
-      return res.status(403).json({ success: false, message: 'Acces refusé', data: null });
+      return res.status(403).json({ success: false, message: 'Accès refusé', data: null });
     }
 
     return res.json({ success: true, message: 'Rendez-vous', data: { items } });
@@ -36,12 +37,26 @@ const createAppointment = async (req, res) => {
     const userId = Number(req.user.id);
     const { garageId, appointmentDate, appointmentTime, description, notes } = req.body;
 
-    if (!garageId || !appointmentDate) {
-      return res.status(400).json({ success: false, message: 'garageId et appointmentDate requis', data: null });
+    // Authorization check: only automobilistes can create
+    if (req.user.role !== 'automobiliste') {
+      return res.status(403).json({ success: false, message: 'Seuls les automobilistes peuvent créer des rendez-vous', data: null });
     }
 
-    if (req.user.role !== 'automobiliste') {
-      return res.status(403).json({ success: false, message: 'Seuls les automobilistes peuvent créer des RDV', data: null });
+    // Validate appointment data
+    const validation = validateAppointmentCreation({
+      garageId,
+      automobilisteUserId: userId,
+      appointmentDate,
+      appointmentTime,
+      description
+    });
+
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Données de rendez-vous invalides', 
+        data: { errors: validation.errors } 
+      });
     }
 
     const appointment = await appointmentService.create({
@@ -50,10 +65,11 @@ const createAppointment = async (req, res) => {
       appointmentDate,
       appointmentTime: appointmentTime || null,
       description,
-      notes
+      notes,
+      status: APPOINTMENT_CONSTANTS.STATUS_PENDING
     });
 
-    // Génération automatique d'une notification pour le garage
+    // Generate notification for garage owner
     try {
       const garageResult = await require('../models/garage.model').findGarageIdentityById(Number(garageId));
       if (garageResult && garageResult.user_id) {
@@ -85,26 +101,46 @@ const createAppointment = async (req, res) => {
 const updateAppointment = async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const userId = Number(req.user.id);
+    const role = req.user.role;
     const updates = req.body;
 
     const existing = await appointmentService.getById(id);
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'RDV non trouvé', data: null });
+      return res.status(404).json({ success: false, message: 'Rendez-vous non trouvé', data: null });
+    }
+
+    // Authorization check: verify ownership
+    const isAutomobiliste = role === 'automobiliste' && Number(existing.automobiliste_user_id) === userId;
+    const isGarageOwner = role === 'garage' && Number(existing.garage_id) === (await findGarageIdentityByUserId(userId))?.id;
+    
+    if (!isAutomobiliste && !isGarageOwner) {
+      return res.status(403).json({ success: false, message: 'Vous n\'avez pas les droits de modifier ce rendez-vous', data: null });
+    }
+
+    // Validate updates
+    const validation = validateAppointmentUpdate(existing, updates);
+    if (!validation.valid) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Données de mise à jour invalides', 
+        data: { errors: validation.errors } 
+      });
     }
 
     const updated = await appointmentService.update(id, updates);
     if (!updated) {
-      return res.status(404).json({ success: false, message: 'RDV non trouvé', data: null });
+      return res.status(404).json({ success: false, message: 'Rendez-vous non trouvé', data: null });
     }
 
-    // Notifications on status change (confirmed / cancelled)
+    // Send notifications on status change
     try {
       if (updates.status && updates.status !== existing.status) {
         const newStatus = String(updates.status).toLowerCase();
-        if (newStatus === 'confirmed' || newStatus === 'cancelled') {
-          const actorUserId = Number(req.user?.id) || null;
+        if (newStatus === 'confirmed' || newStatus === 'cancelled' || newStatus === 'proposed') {
+          const actorUserId = userId;
 
-          // resolve garage owner user id
+          // Resolve garage owner user id
           let garageUserId = null;
           try {
             const garageResult = await require('../models/garage.model').findGarageIdentityById(Number(updated.garage_id));
@@ -113,20 +149,29 @@ const updateAppointment = async (req, res) => {
             console.error('Failed to lookup garage owner for notification:', err && err.message ? err.message : err);
           }
 
-          // determine recipient: notify the other party
+          // Determine recipient: notify the other party
           let recipientUserId = null;
-          if (req.user && (req.user.role === 'garage' || req.user.role === 'admin')) {
+          if (role === 'garage' || role === 'admin') {
             recipientUserId = Number(updated.automobiliste_user_id);
-          } else {
+          } else if (role === 'automobiliste') {
             recipientUserId = garageUserId;
           }
 
           if (recipientUserId) {
-            const title = newStatus === 'confirmed'
-              ? `Rendez-vous confirmé`
-              : `Rendez-vous annulé`;
-
-            const body = `${updated.appointment_date}${updated.appointment_time ? ` à ${updated.appointment_time}` : ''} - ${updated.description || ''}`;
+            let title, body;
+            
+            if (newStatus === 'confirmed') {
+              title = `✓ Rendez-vous confirmé`;
+              body = `${updated.appointment_date}${updated.appointment_time ? ` à ${updated.appointment_time}` : ''} - ${updated.description || ''}`;
+            } else if (newStatus === 'cancelled') {
+              title = `✕ Rendez-vous annulé`;
+              body = `${updated.appointment_date}${updated.appointment_time ? ` à ${updated.appointment_time}` : ''} - ${updated.description || ''}`;
+            } else if (newStatus === 'proposed') {
+              title = `📅 Contre-proposition de date`;
+              const proposedDate = updates.proposed_date || updated.proposed_date || 'date à déterminer';
+              const proposedTime = updates.proposed_time || updated.proposed_time || '';
+              body = `Le garage propose: ${proposedDate}${proposedTime ? ` à ${proposedTime}` : ''} ${updates.proposed_note ? `- ${updates.proposed_note}` : ''}`;
+            }
 
             await notificationService.createForUser({
               userId: recipientUserId,
@@ -135,7 +180,13 @@ const updateAppointment = async (req, res) => {
               referenceId: Number(updated.id),
               title,
               body,
-              metadata: { appointmentId: Number(updated.id), garageId: Number(updated.garage_id) }
+              metadata: { 
+                appointmentId: Number(updated.id), 
+                garageId: Number(updated.garage_id),
+                proposed_date: updates.proposed_date,
+                proposed_time: updates.proposed_time,
+                proposed_note: updates.proposed_note
+              }
             });
           }
         }
@@ -144,7 +195,7 @@ const updateAppointment = async (req, res) => {
       console.error('Failed to create status-change notification:', err && err.message ? err.message : err);
     }
 
-    return res.json({ success: true, message: 'RDV mis à jour', data: { appointment: updated } });
+    return res.json({ success: true, message: 'Rendez-vous mis à jour', data: { appointment: updated } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Erreur serveur', data: null });
@@ -154,17 +205,28 @@ const updateAppointment = async (req, res) => {
 const deleteAppointment = async (req, res) => {
   try {
     const id = Number(req.params.id);
+    const userId = Number(req.user.id);
+    const role = req.user.role;
+
     const existing = await appointmentService.getById(id);
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'RDV non trouvé', data: null });
+      return res.status(404).json({ success: false, message: 'Rendez-vous non trouvé', data: null });
     }
 
-    // remove
+    // Authorization check: verify ownership
+    const isAutomobiliste = role === 'automobiliste' && Number(existing.automobiliste_user_id) === userId;
+    const isGarageOwner = role === 'garage' && Number(existing.garage_id) === (await findGarageIdentityByUserId(userId))?.id;
+    
+    if (!isAutomobiliste && !isGarageOwner) {
+      return res.status(403).json({ success: false, message: 'Vous n\'avez pas les droits de supprimer ce rendez-vous', data: null });
+    }
+
+    // Delete appointment
     await appointmentService.remove(id);
 
-    // notify the other party about cancellation
+    // Notify the other party about deletion
     try {
-      const actorUserId = Number(req.user?.id) || null;
+      const actorUserId = userId;
 
       let garageUserId = null;
       try {
@@ -175,14 +237,14 @@ const deleteAppointment = async (req, res) => {
       }
 
       let recipientUserId = null;
-      if (req.user && (req.user.role === 'garage' || req.user.role === 'admin')) {
+      if (role === 'garage' || role === 'admin') {
         recipientUserId = Number(existing.automobiliste_user_id);
-      } else {
+      } else if (role === 'automobiliste') {
         recipientUserId = garageUserId;
       }
 
       if (recipientUserId) {
-        const title = `Rendez-vous annulé`;
+        const title = `✕ Rendez-vous annulé`;
         const body = `${existing.appointment_date}${existing.appointment_time ? ` à ${existing.appointment_time}` : ''} - ${existing.description || ''}`;
 
         await notificationService.createForUser({
@@ -199,7 +261,7 @@ const deleteAppointment = async (req, res) => {
       console.error('Failed to create deletion notification:', err && err.message ? err.message : err);
     }
 
-    return res.json({ success: true, message: 'RDV supprimé', data: null });
+    return res.json({ success: true, message: 'Rendez-vous supprimé', data: null });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Erreur serveur', data: null });

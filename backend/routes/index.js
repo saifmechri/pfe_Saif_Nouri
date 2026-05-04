@@ -1,5 +1,5 @@
 let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, recommendationRoutes, garageRoutes, chatRoutes;
-let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes;
+let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes, maintenanceRoutes;
 
 try {
   authRoutes = require('./auth');
@@ -61,6 +61,12 @@ try {
   console.error('[routes/index] Error loading maintenanceAlerts:', e.message);
 }
 
+try {
+  maintenanceRoutes = require('./maintenance.routes');
+} catch (e) {
+  console.error('[routes/index] Error loading maintenance:', e.message);
+}
+
 const registerRoutes = (app) => {
   console.log('[registerRoutes] CALLED - debug mode', process.env.DEBUG_ROUTES ? 'ON' : 'OFF');
   const debug = process.env.DEBUG_ROUTES;
@@ -107,6 +113,10 @@ const registerRoutes = (app) => {
   if (interventionRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/vehicules/:vehicleId/interventions');
     app.use('/api/vehicules/:vehicleId/interventions', interventionRoutes);
+  }
+  if (maintenanceRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/maintenance');
+    app.use('/api/maintenance', maintenanceRoutes);
   }
   
   if (debug) console.log('[registerRoutes] All routes registered. App router stack length:', app._router?.stack?.length || 0);

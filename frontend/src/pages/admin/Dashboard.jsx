@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, Package, TriangleAlert, Trash2 } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, Package, TriangleAlert, Trash2, BarChart3, Users, CalendarRange, Award } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
   dismissReport,
@@ -13,18 +13,37 @@ import {
   approveGarage,
   rejectGarage,
   approvePiece,
-  rejectPiece
+  rejectPiece,
+  getDashboardStats
 } from "../../services/admin";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
 
 const INITIAL_COUNTS = {
   totalGarages: 0,
   totalPieces: 0,
   pendingReports: 0,
-  resolvedReports: 0
+  resolvedReports: 0,
+  totalUsers: 0,
+  totalAppointments: 0,
+  pendingAppointments: 0
 };
 
+const CHART_COLORS = ["#2563eb", "#7c3aed", "#f59e0b", "#10b981", "#ef4444", "#14b8a6"];
+
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState("garages");
+  const [activeTab, setActiveTab] = useState("stats");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({ type: null, id: null });
   const [error, setError] = useState("");
@@ -33,17 +52,22 @@ const AdminDashboard = () => {
   const [pendingReports, setPendingReports] = useState([]);
   const [reportNoteById, setReportNoteById] = useState({});
   const [counts, setCounts] = useState(INITIAL_COUNTS);
+  const [dashboardStats, setDashboardStats] = useState(null);
 
   const loadDashboard = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const [garagesResponse, piecesResponse, reportsResponse] = await Promise.all([
+      const [statsResponse, garagesResponse, piecesResponse, reportsResponse] = await Promise.all([
+        getDashboardStats(),
         getGarages(),
         getPieces(),
         getPendingReports()
       ]);
+
+      const statsData = statsResponse?.data?.data || statsResponse?.data || null;
+      setDashboardStats(statsData);
 
       const garagesList = garagesResponse?.data?.data?.items || garagesResponse?.data?.items || garagesResponse?.data || [];
       const piecesList = piecesResponse?.data?.data?.items || piecesResponse?.data?.items || piecesResponse?.data || [];
@@ -56,7 +80,10 @@ const AdminDashboard = () => {
         totalGarages: Array.isArray(garagesList) ? garagesList.length : 0,
         totalPieces: Array.isArray(piecesList) ? piecesList.length : 0,
         pendingReports: Array.isArray(reportsList) ? reportsList.length : 0,
-        resolvedReports: Array.isArray(reportsList) ? reportsList.filter((item) => item.status === "resolved").length : 0
+        resolvedReports: Array.isArray(reportsList) ? reportsList.filter((item) => item.status === "resolved").length : 0,
+        totalUsers: Number(statsData?.users?.totalUsers || 0),
+        totalAppointments: Number(statsData?.appointments?.totalAppointments || 0),
+        pendingAppointments: Number(statsData?.appointments?.pendingAppointments || 0)
       });
     } catch (fetchError) {
       setError(fetchError?.response?.data?.message || "Impossible de charger le tableau de bord admin.");
@@ -75,6 +102,32 @@ const AdminDashboard = () => {
     { label: "Signalements ouverts", value: counts.pendingReports, icon: TriangleAlert, tone: "from-amber-500 to-orange-500" },
     { label: "Signalements résolus", value: counts.resolvedReports, icon: CheckCircle2, tone: "from-emerald-500 to-teal-500" }
   ]), [counts]);
+
+  const kpiCards = useMemo(() => ([
+    { label: "Utilisateurs", value: counts.totalUsers, icon: Users, note: `${dashboardStats?.users?.pendingUsers || 0} en attente de profil`, tone: "from-sky-500 to-blue-600" },
+    { label: "RDV total", value: counts.totalAppointments, icon: CalendarRange, note: `${dashboardStats?.appointments?.appointmentsLast30Days || 0} ces 30 derniers jours`, tone: "from-violet-500 to-fuchsia-600" },
+    { label: "RDV en attente", value: counts.pendingAppointments, icon: TriangleAlert, note: `${dashboardStats?.appointments?.confirmedAppointments || 0} confirmés`, tone: "from-amber-500 to-orange-600" },
+    { label: "Top garage", value: dashboardStats?.garages?.topGarages?.[0]?.appointmentsCount || 0, icon: Award, note: dashboardStats?.garages?.topGarages?.[0]?.name || "Aucun garage", tone: "from-emerald-500 to-teal-600" }
+  ]), [counts, dashboardStats]);
+
+  const userRoleChartData = useMemo(() => {
+    const roles = dashboardStats?.users?.byRole || [];
+    return roles.map((item) => ({ name: item.role, value: item.total }));
+  }, [dashboardStats]);
+
+  const appointmentStatusChartData = useMemo(() => {
+    const statuses = dashboardStats?.appointments?.byStatus || [];
+    return statuses.map((item) => ({ name: item.status, value: item.total }));
+  }, [dashboardStats]);
+
+  const topGaragesChartData = useMemo(() => {
+    const topGarages = dashboardStats?.garages?.topGarages || [];
+    return topGarages.map((garage) => ({
+      name: garage.name,
+      RDV: garage.appointmentsCount,
+      Note: garage.averageRating
+    }));
+  }, [dashboardStats]);
 
   const handleGarageAction = async (garageId, action) => {
     setActionLoading({ type: "garage", id: garageId });
@@ -190,8 +243,25 @@ const AdminDashboard = () => {
             })}
           </div>
 
+          <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {kpiCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div key={card.label} className="overflow-hidden rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+                  <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.tone} text-white`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <p className="text-sm font-medium text-[#6b7a90]">{card.label}</p>
+                  <p className="mt-2 text-3xl font-black text-[#13243f]">{loading ? "..." : card.value}</p>
+                  <p className="mt-2 text-xs font-medium text-[#8090a8]">{card.note}</p>
+                </div>
+              );
+            })}
+          </div>
+
           <div className="mb-6 flex flex-wrap gap-3 rounded-2xl border border-[#dbe5f1] bg-white/70 p-2 shadow-[0_10px_24px_rgba(26,43,75,0.05)] backdrop-blur">
             {[
+              { key: "stats", label: "Statistiques" },
               { key: "garages", label: "Garages" },
               { key: "pieces", label: "Pièces" },
               { key: "reports", label: "Signalements" },
@@ -242,6 +312,94 @@ const AdminDashboard = () => {
                   <p>• Gérer les pièces depuis l'onglet pièces.</p>
                   <p>• Traiter les signalements via le tab signalements.</p>
                   <p>• Rafraîchir les données après chaque décision.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "stats" && (
+            <div className="space-y-6">
+              <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#64748b]">Statistiques & KPI</p>
+                    <h2 className="mt-2 text-2xl font-black text-[#13243f]">Vue analytique du dashboard admin</h2>
+                    <p className="mt-2 text-sm text-[#5f6f87]">Synthèse des utilisateurs, RDV et garages les plus actifs.</p>
+                  </div>
+                  <div className="rounded-2xl bg-[#f8fbff] px-4 py-3 text-sm text-[#5f6f87]">
+                    <span className="font-bold text-[#13243f]">{dashboardStats?.garages?.newGaragesLast30Days || 0}</span> nouveaux garages sur 30 jours
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4 xl:grid-cols-2">
+                  <div className="rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-[#13243f]">Utilisateurs par rôle</h3>
+                      <BarChart3 className="h-5 w-5 text-[#5b6b84]" />
+                    </div>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={userRoleChartData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e6edf6" />
+                          <XAxis dataKey="name" tick={{ fill: '#5f6f87', fontSize: 12 }} />
+                          <YAxis tick={{ fill: '#5f6f87', fontSize: 12 }} allowDecimals={false} />
+                          <Tooltip />
+                          <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                            {userRoleChartData.map((entry, index) => (
+                              <Cell key={`user-role-cell-${entry.name}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-[#13243f]">RDV par statut</h3>
+                      <CalendarRange className="h-5 w-5 text-[#5b6b84]" />
+                    </div>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={appointmentStatusChartData}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={110}
+                            label
+                          >
+                            {appointmentStatusChartData.map((entry, index) => (
+                              <Cell key={`appointment-status-cell-${entry.name}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5 xl:col-span-2">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-[#13243f]">Top garages par nombre de RDV</h3>
+                      <Award className="h-5 w-5 text-[#5b6b84]" />
+                    </div>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topGaragesChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e6edf6" />
+                          <XAxis type="number" tick={{ fill: '#5f6f87', fontSize: 12 }} allowDecimals={false} />
+                          <YAxis type="category" dataKey="name" width={160} tick={{ fill: '#5f6f87', fontSize: 12 }} />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="RDV" fill="#2563eb" radius={[0, 8, 8, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

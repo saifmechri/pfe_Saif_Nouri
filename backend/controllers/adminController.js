@@ -214,4 +214,116 @@ const rejectPiece = async (req, res) => {
   }
 };
 
-module.exports = { login, listPendingUsers, approveUser, rejectUser, listGarages, deactivateGarage, deleteGarageAdmin, approveGarage, rejectGarage, listPieces, deletePieceAdmin, approvePiece, rejectPiece };
+// KPI and statistics for the admin dashboard.
+const getDashboardStats = async (req, res) => {
+  try {
+    const [usersResult, usersByRoleResult, appointmentsResult, appointmentsByStatusResult, topGaragesResult, recentActivityResult] = await Promise.all([
+      pool.query(`
+        SELECT COUNT(*)::int AS total_users,
+               COALESCE(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'), 0)::int AS new_users_last_30_days,
+               COALESCE(COUNT(*) FILTER (WHERE COALESCE(is_validated, false) = true), 0)::int AS validated_users,
+               COALESCE(COUNT(*) FILTER (WHERE COALESCE(is_validated, false) = false), 0)::int AS pending_users
+        FROM users
+      `),
+      pool.query(`
+        SELECT r.id AS role_id,
+               r.name AS role,
+               COUNT(u.id)::int AS total
+        FROM roles r
+        LEFT JOIN users u ON u.role_id = r.id
+        GROUP BY r.id, r.name
+        ORDER BY r.id
+      `),
+      pool.query(`
+        SELECT COUNT(*)::int AS total_appointments,
+               COALESCE(COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '30 days'), 0)::int AS appointments_last_30_days,
+               COALESCE(COUNT(*) FILTER (WHERE status = 'pending'), 0)::int AS pending_appointments,
+               COALESCE(COUNT(*) FILTER (WHERE status = 'confirmed'), 0)::int AS confirmed_appointments,
+               COALESCE(COUNT(*) FILTER (WHERE status = 'done'), 0)::int AS done_appointments,
+               COALESCE(COUNT(*) FILTER (WHERE status = 'cancelled'), 0)::int AS cancelled_appointments,
+               COALESCE(COUNT(*) FILTER (WHERE status = 'proposed'), 0)::int AS proposed_appointments
+        FROM appointments
+      `),
+      pool.query(`
+        SELECT status, COUNT(*)::int AS total
+        FROM appointments
+        GROUP BY status
+        ORDER BY total DESC, status ASC
+      `),
+      pool.query(`
+        SELECT g.id,
+               g.name,
+               g.adresse,
+               COALESCE(g.is_validated, false) AS is_validated,
+               COALESCE(g.is_open, true) AS is_open,
+               COUNT(a.id)::int AS appointments_count,
+               COALESCE(ROUND(AVG(g.rating)::numeric, 2), 0) AS average_rating,
+               g.created_at
+        FROM garages g
+        LEFT JOIN appointments a ON a.garage_id = g.id
+        GROUP BY g.id, g.name, g.adresse, g.is_validated, g.is_open, g.created_at
+        ORDER BY appointments_count DESC, average_rating DESC, g.created_at DESC
+        LIMIT 5
+      `),
+      pool.query(`
+        SELECT
+          (SELECT COUNT(*)::int FROM garages WHERE created_at >= NOW() - INTERVAL '30 days') AS new_garages_last_30_days,
+          (SELECT COUNT(*)::int FROM pieces WHERE created_at >= NOW() - INTERVAL '30 days' AND COALESCE(is_validated, false) = true) AS new_validated_pieces_last_30_days,
+          (SELECT COUNT(*)::int FROM pieces WHERE COALESCE(is_validated, false) = false) AS pending_pieces
+      `)
+    ]);
+
+    const usersSummary = usersResult.rows[0] || {};
+    const activitySummary = recentActivityResult.rows[0] || {};
+
+    return sendApiResponse(res, {
+      message: 'Statistiques du tableau de bord recuperees avec succes',
+      data: {
+        users: {
+          totalUsers: Number(usersSummary.total_users || 0),
+          newUsersLast30Days: Number(usersSummary.new_users_last_30_days || 0),
+          validatedUsers: Number(usersSummary.validated_users || 0),
+          pendingUsers: Number(usersSummary.pending_users || 0),
+          byRole: usersByRoleResult.rows.map((row) => ({
+            role: row.role,
+            total: Number(row.total || 0)
+          }))
+        },
+        appointments: {
+          totalAppointments: Number((appointmentsResult.rows[0] || {}).total_appointments || 0),
+          appointmentsLast30Days: Number((appointmentsResult.rows[0] || {}).appointments_last_30_days || 0),
+          pendingAppointments: Number((appointmentsResult.rows[0] || {}).pending_appointments || 0),
+          confirmedAppointments: Number((appointmentsResult.rows[0] || {}).confirmed_appointments || 0),
+          doneAppointments: Number((appointmentsResult.rows[0] || {}).done_appointments || 0),
+          cancelledAppointments: Number((appointmentsResult.rows[0] || {}).cancelled_appointments || 0),
+          proposedAppointments: Number((appointmentsResult.rows[0] || {}).proposed_appointments || 0),
+          byStatus: appointmentsByStatusResult.rows.map((row) => ({
+            status: row.status,
+            total: Number(row.total || 0)
+          }))
+        },
+        garages: {
+          topGarages: topGaragesResult.rows.map((row) => ({
+            id: Number(row.id),
+            name: row.name,
+            adresse: row.adresse,
+            isValidated: Boolean(row.is_validated),
+            isOpen: Boolean(row.is_open),
+            appointmentsCount: Number(row.appointments_count || 0),
+            averageRating: Number(row.average_rating || 0)
+          })),
+          newGaragesLast30Days: Number(activitySummary.new_garages_last_30_days || 0)
+        },
+        pieces: {
+          newValidatedPiecesLast30Days: Number(activitySummary.new_validated_pieces_last_30_days || 0),
+          pendingPieces: Number(activitySummary.pending_pieces || 0)
+        }
+      }
+    });
+  } catch (err) {
+    console.error('getDashboardStats error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+module.exports = { login, getDashboardStats, listPendingUsers, approveUser, rejectUser, listGarages, deactivateGarage, deleteGarageAdmin, approveGarage, rejectGarage, listPieces, deletePieceAdmin, approvePiece, rejectPiece };

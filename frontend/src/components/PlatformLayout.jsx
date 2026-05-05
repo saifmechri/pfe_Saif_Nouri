@@ -63,6 +63,10 @@ const PlatformLayout = ({ children }) => {
     navItems.push({ label: "Gestion garage", to: "/garage" });
   }
 
+  if (user?.role === "admin") {
+    navItems.push({ label: "Garages", to: "/automobiliste/garages" });
+  }
+
   if (user?.role === "vendeur") {
     // Messagerie accessible via navbar/chat modal — removed from sidebar
   }

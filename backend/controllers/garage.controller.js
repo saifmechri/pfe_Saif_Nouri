@@ -315,6 +315,8 @@ const listGarages = asyncHandler(async (req, res) => {
   if (!includeClosed) {
     whereClauses.push('g.is_open = true');
   }
+  // Only show admin-validated garages in public listings
+  whereClauses.push('COALESCE(g.is_validated, false) = true');
 
   if (search) {
     params.push(`%${search}%`);

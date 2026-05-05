@@ -117,29 +117,25 @@ const login = async (req, res) => {
       });
     }
 
+    console.log('[LOGIN ATTEMPT] Email:', email);
+
     // Récupérer l'utilisateur ET son rôle
     const user = await findUserByEmail(email);
     
     if (!user) {
+      console.log('[LOGIN FAIL] Utilisateur non trouvé:', email);
       return sendApiResponse(res, {
-        statusCode: 400,
+        statusCode: 401,
         success: false,
-        message: "User not found",
-        error: { code: 'USER_NOT_FOUND' }
+        message: "Email ou mot de passe incorrect",
+        error: { code: 'INVALID_PASSWORD' }
       });
     }
 
-    // Refuser la connexion si le compte n'a pas ete valide par l'administrateur
-    if (user.is_validated === false) {
-      return sendApiResponse(res, {
-        statusCode: 403,
-        success: false,
-        message: "Compte en attente de validation par l'administrateur",
-        error: { code: 'ACCOUNT_NOT_VALIDATED' }
-      });
-    }
+    console.log('[LOGIN] Utilisateur trouvé:', user.id, 'Email:', user.email);
 
     if (!user.password || !isValidBcryptHash(user.password)) {
+      console.log('[LOGIN FAIL] Mot de passe invalide/absent:', user.id);
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
@@ -151,11 +147,14 @@ const login = async (req, res) => {
     // Comparer le mot de passe avec bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.password);
     
+    console.log('[LOGIN] Comparaison password:', isPasswordValid ? 'VALID' : 'INVALID');
+    
     if (!isPasswordValid) {
+      console.log('[LOGIN FAIL] Mot de passe incorrect pour ID:', user.id);
       return sendApiResponse(res, {
-        statusCode: 400,
+        statusCode: 401,
         success: false,
-        message: "Wrong password",
+        message: "Email ou mot de passe incorrect",
         error: { code: 'INVALID_PASSWORD' }
       });
     }

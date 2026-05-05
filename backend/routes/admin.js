@@ -18,4 +18,17 @@ router.get('/reports/:id', verifyAdminToken, reportController.getReport);
 router.post('/reports/:id/resolve', verifyAdminToken, reportController.resolveReport);
 router.post('/reports/:id/dismiss', verifyAdminToken, reportController.dismissReport);
 
+// Protected routes for garage management
+router.get('/garages', verifyAdminToken, adminController.listGarages);
+router.post('/garages/:id/deactivate', verifyAdminToken, adminController.deactivateGarage);
+router.delete('/garages/:id', verifyAdminToken, adminController.deleteGarageAdmin);
+router.post('/garages/:id/approve', verifyAdminToken, adminController.approveGarage);
+router.post('/garages/:id/reject', verifyAdminToken, adminController.rejectGarage);
+
+// Protected routes for piece management
+router.get('/pieces', verifyAdminToken, adminController.listPieces);
+router.delete('/pieces/:id', verifyAdminToken, adminController.deletePieceAdmin);
+router.post('/pieces/:id/approve', verifyAdminToken, adminController.approvePiece);
+router.post('/pieces/:id/reject', verifyAdminToken, adminController.rejectPiece);
+
 module.exports = router;

@@ -277,7 +277,7 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
     FROM pieces p
     LEFT JOIN users u ON u.id = p.user_id
     LEFT JOIN roles r ON r.id = u.role_id
-    WHERE p.deleted_at IS NULL${searchClause.sql}
+    WHERE p.deleted_at IS NULL AND COALESCE(p.is_validated, false) = true${searchClause.sql}
     ORDER BY ${orderByClause}
     LIMIT $${searchClause.params.length + 1}
     OFFSET $${searchClause.params.length + 2}

@@ -62,7 +62,7 @@ const AppRouter = () => {
         <Route
           path="/automobiliste/garages"
           element={
-            <ProtectedRoute allowedRoles={["automobiliste", "vendeur"]}>
+            <ProtectedRoute allowedRoles={["automobiliste", "vendeur", "admin"]}>
               <GaragesPage />
             </ProtectedRoute>
           }

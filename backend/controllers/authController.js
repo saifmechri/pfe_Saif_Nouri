@@ -129,6 +129,16 @@ const login = async (req, res) => {
       });
     }
 
+    // Refuser la connexion si le compte n'a pas ete valide par l'administrateur
+    if (user.is_validated === false) {
+      return sendApiResponse(res, {
+        statusCode: 403,
+        success: false,
+        message: "Compte en attente de validation par l'administrateur",
+        error: { code: 'ACCOUNT_NOT_VALIDATED' }
+      });
+    }
+
     if (!user.password || !isValidBcryptHash(user.password)) {
       return sendApiResponse(res, {
         statusCode: 400,

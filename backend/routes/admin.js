@@ -7,6 +7,9 @@ const { verifyAdminToken } = require('../middlewares/adminAuthMiddleware');
 // Public admin login route: only the predefined admin can authenticate here.
 router.post('/login', adminController.login);
 
+// Dashboard KPI stats for admin.
+router.get('/stats', verifyAdminToken, adminController.getDashboardStats);
+
 // Protected validation routes for user accounts.
 router.get('/users/pending', verifyAdminToken, adminController.listPendingUsers);
 router.post('/users/:id/approve', verifyAdminToken, adminController.approveUser);

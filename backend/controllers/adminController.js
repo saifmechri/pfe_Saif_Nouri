@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { pool } = require('../db');
 const { sendApiResponse } = require('../utils/apiResponse');
+const { logAction } = require('../services/auditService');
 
 const SECRET = process.env.JWT_SECRET || 'jwt_secret_key';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin123@gmail.com';
@@ -45,7 +46,21 @@ const approveUser = async (req, res) => {
     const result = await pool.query('UPDATE users SET is_validated = true, updated_at = NOW() WHERE id = $1 RETURNING id, name, email, role_id', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Utilisateur introuvable', error: { code: 'USER_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Utilisateur approuve', data: { user: result.rows[0] } });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'approve_user',
+          entity: 'user',
+          entityId: id,
+          details: result.rows[0],
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) {
+        console.error('audit log failed', e);
+      }
+
+      return sendApiResponse(res, { message: 'Utilisateur approuve', data: { user: result.rows[0] } });
   } catch (err) {
     console.error('approveUser', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
@@ -61,7 +76,21 @@ const rejectUser = async (req, res) => {
     const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Utilisateur introuvable', error: { code: 'USER_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Utilisateur rejete et supprime', data: null });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'reject_user',
+          entity: 'user',
+          entityId: id,
+          details: null,
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) {
+        console.error('audit log failed', e);
+      }
+
+      return sendApiResponse(res, { message: 'Utilisateur rejete et supprime', data: null });
   } catch (err) {
     console.error('rejectUser', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
@@ -94,7 +123,19 @@ const deactivateGarage = async (req, res) => {
     const result = await pool.query('UPDATE garages SET is_open = false, updated_at = NOW() WHERE id = $1 RETURNING id, name, is_open', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Garage désactivé', data: { garage: result.rows[0] } });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'deactivate_garage',
+          entity: 'garage',
+          entityId: id,
+          details: result.rows[0],
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) { console.error('audit log failed', e); }
+
+      return sendApiResponse(res, { message: 'Garage désactivé', data: { garage: result.rows[0] } });
   } catch (err) {
     console.error('deactivateGarage error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
@@ -110,7 +151,19 @@ const deleteGarageAdmin = async (req, res) => {
     const result = await pool.query('DELETE FROM garages WHERE id = $1 RETURNING id', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Garage supprimé', data: null });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'delete_garage',
+          entity: 'garage',
+          entityId: id,
+          details: null,
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) { console.error('audit log failed', e); }
+
+      return sendApiResponse(res, { message: 'Garage supprimé', data: null });
   } catch (err) {
     console.error('deleteGarageAdmin error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
@@ -126,7 +179,19 @@ const approveGarage = async (req, res) => {
     const result = await pool.query('UPDATE garages SET is_validated = true, updated_at = NOW() WHERE id = $1 RETURNING id, name, is_validated', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Garage approuvé', data: { garage: result.rows[0] } });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'approve_garage',
+          entity: 'garage',
+          entityId: id,
+          details: result.rows[0],
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) { console.error('audit log failed', e); }
+
+      return sendApiResponse(res, { message: 'Garage approuvé', data: { garage: result.rows[0] } });
   } catch (err) {
     console.error('approveGarage error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
@@ -142,7 +207,19 @@ const rejectGarage = async (req, res) => {
     const result = await pool.query('DELETE FROM garages WHERE id = $1 RETURNING id', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Garage rejeté et supprimé', data: null });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'reject_garage',
+          entity: 'garage',
+          entityId: id,
+          details: null,
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) { console.error('audit log failed', e); }
+
+      return sendApiResponse(res, { message: 'Garage rejeté et supprimé', data: null });
   } catch (err) {
     console.error('rejectGarage error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
@@ -175,7 +252,19 @@ const deletePieceAdmin = async (req, res) => {
     const result = await pool.query('DELETE FROM pieces WHERE id = $1 RETURNING id', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Piece introuvable', error: { code: 'PIECE_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Piece supprimée', data: null });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'delete_piece',
+          entity: 'piece',
+          entityId: id,
+          details: null,
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) { console.error('audit log failed', e); }
+
+      return sendApiResponse(res, { message: 'Piece supprimée', data: null });
   } catch (err) {
     console.error('deletePieceAdmin error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
@@ -191,7 +280,19 @@ const approvePiece = async (req, res) => {
     const result = await pool.query('UPDATE pieces SET is_validated = true, updated_at = NOW() WHERE id = $1 RETURNING id, nom, is_validated', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Piece introuvable', error: { code: 'PIECE_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Piece approuvée', data: { piece: result.rows[0] } });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'approve_piece',
+          entity: 'piece',
+          entityId: id,
+          details: result.rows[0],
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) { console.error('audit log failed', e); }
+
+      return sendApiResponse(res, { message: 'Piece approuvée', data: { piece: result.rows[0] } });
   } catch (err) {
     console.error('approvePiece error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
@@ -207,7 +308,19 @@ const rejectPiece = async (req, res) => {
     const result = await pool.query('DELETE FROM pieces WHERE id = $1 RETURNING id', [id]);
     if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Piece introuvable', error: { code: 'PIECE_NOT_FOUND' } });
 
-    return sendApiResponse(res, { message: 'Piece rejetée et supprimée', data: null });
+      try {
+        await logAction({
+          adminEmail: req.admin?.email || null,
+          action: 'reject_piece',
+          entity: 'piece',
+          entityId: id,
+          details: null,
+          ip: req.ip || null,
+          userAgent: req.headers['user-agent'] || null
+        });
+      } catch (e) { console.error('audit log failed', e); }
+
+      return sendApiResponse(res, { message: 'Piece rejetée et supprimée', data: null });
   } catch (err) {
     console.error('rejectPiece error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });

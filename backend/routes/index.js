@@ -1,5 +1,6 @@
 let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, recommendationRoutes, garageRoutes, chatRoutes;
 let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes, maintenanceRoutes;
+let adminRoutes;
 
 try {
   authRoutes = require('./auth');
@@ -62,6 +63,12 @@ try {
 }
 
 try {
+  adminRoutes = require('./admin');
+} catch (e) {
+  console.error('[routes/index] Error loading admin routes:', e.message);
+}
+
+try {
   maintenanceRoutes = require('./maintenance.routes');
 } catch (e) {
   console.error('[routes/index] Error loading maintenance:', e.message);
@@ -109,6 +116,10 @@ const registerRoutes = (app) => {
   if (maintenanceAlertRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/maintenance-alerts');
     app.use('/api/maintenance-alerts', maintenanceAlertRoutes);
+  }
+  if (adminRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/admin');
+    app.use('/api/admin', adminRoutes);
   }
   if (interventionRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/vehicules/:vehicleId/interventions');

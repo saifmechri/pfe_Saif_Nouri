@@ -286,6 +286,7 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS store_services TEXT');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_validated BOOLEAN DEFAULT false');
 
   await pool.query('ALTER TABLE vehicules ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE vehicules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');

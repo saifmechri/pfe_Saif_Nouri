@@ -226,11 +226,12 @@ const getDashboardStats = async (req, res) => {
         FROM users
       `),
       pool.query(`
-        SELECT r.name AS role,
+        SELECT r.id AS role_id,
+               r.name AS role,
                COUNT(u.id)::int AS total
         FROM roles r
         LEFT JOIN users u ON u.role_id = r.id
-        GROUP BY r.name
+        GROUP BY r.id, r.name
         ORDER BY r.id
       `),
       pool.query(`
@@ -256,10 +257,11 @@ const getDashboardStats = async (req, res) => {
                COALESCE(g.is_validated, false) AS is_validated,
                COALESCE(g.is_open, true) AS is_open,
                COUNT(a.id)::int AS appointments_count,
-               COALESCE(ROUND(AVG(g.rating)::numeric, 2), 0) AS average_rating
+               COALESCE(ROUND(AVG(g.rating)::numeric, 2), 0) AS average_rating,
+               g.created_at
         FROM garages g
         LEFT JOIN appointments a ON a.garage_id = g.id
-        GROUP BY g.id
+        GROUP BY g.id, g.name, g.adresse, g.is_validated, g.is_open, g.created_at
         ORDER BY appointments_count DESC, average_rating DESC, g.created_at DESC
         LIMIT 5
       `),

@@ -5,6 +5,11 @@ export const adminLogin = (email, password) => {
   return API.post('/admin/login', { email, password });
 };
 
+// Get dashboard KPI stats
+export const getDashboardStats = () => {
+  return API.get('/admin/stats');
+};
+
 // Get pending users (requires admin token)
 export const getPendingUsers = () => {
   return API.get('/admin/users/pending');

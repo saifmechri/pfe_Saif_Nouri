@@ -580,6 +580,12 @@ const AutomobilisteDashboard = () => {
                     {v.kilometrage_voiture !== null && <p className="text-gray-600">Kilometrage : {v.kilometrage_voiture} km</p>}
                     <div className="mt-3 flex space-x-2">
                       <button 
+                        onClick={() => navigate(`/vehicules/${v.id}/alerts`)}
+                        className="flex-1 px-2 py-1 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded disabled:text-gray-400"
+                      >
+                        Alertes
+                      </button>
+                      <button 
                         onClick={() => handleEditClick(v)}
                         disabled={loading}
                         className="flex-1 text-blue-600 hover:underline disabled:text-gray-400"

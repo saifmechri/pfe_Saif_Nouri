@@ -7,6 +7,7 @@ const garageController = require('../controllers/garage.controller');
 const availabilityController = require('../controllers/availability.controller');
 const garageServiceController = require('../controllers/garageService.controller');
 const garageReviewController = require('../controllers/garageReview.controller');
+const garageMatchingController = require('../controllers/garageMatchingController');
 const { uploadGaragePhoto } = require('../middlewares/uploadGaragePhoto');
 
 const router = express.Router();
@@ -140,6 +141,11 @@ const updateGarageReviewValidation = [
   body('is_published').optional().isBoolean().withMessage('is_published doit etre booleen')
 ];
 
+const matchGaragesValidation = [
+  param('vehicleId').isInt({ min: 1 }).withMessage('vehicleId doit etre un entier superieur a 0'),
+  query('maxDistance').optional().isInt({ min: 1, max: 500 }).withMessage('maxDistance doit etre entre 1 et 500')
+];
+
 router.get('/filter-options', garageController.getFilterOptions);
 router.get('/', listGaragesValidation, validateRequest, garageController.listGarages);
 router.get('/me', verifyToken, checkRole('garage', 'admin'), garageController.getMyGarage);
@@ -160,5 +166,8 @@ router.put('/:id/reviews/:reviewId', verifyToken, updateGarageReviewValidation, 
 router.delete('/:id', verifyToken, checkRole('garage', 'admin'), garageIdValidation, validateRequest, garageController.deleteGarage);
 router.delete('/:id/services/:serviceId', verifyToken, checkRole('garage', 'admin'), [...garageIdValidation, ...serviceIdValidation], validateRequest, garageServiceController.deleteGarageService);
 router.delete('/:id/reviews/:reviewId', verifyToken, reviewIdValidation, [...garageIdValidation, ...reviewIdValidation], validateRequest, garageReviewController.deleteGarageReview);
+
+// Matching garages for a vehicle
+router.get('/match/:vehicleId', matchGaragesValidation, validateRequest, verifyToken, garageMatchingController.matchGarages);
 
 module.exports = router;

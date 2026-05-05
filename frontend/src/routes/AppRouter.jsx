@@ -11,6 +11,7 @@ import AutomobilisteAppointments from "../pages/automobiliste/Appointments";
 import AppointmentDetail from "../pages/AppointmentDetail";
 import VehicleHistory from "../pages/automobiliste/VehicleHistory";
 import InterventionDetail from "../pages/automobiliste/InterventionDetail";
+import AlertsPage from "../pages/automobiliste/AlertsPage";
 import CataloguePieces from "../pages/vendeur/CataloguePieces";
 import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
 import ChatCenter from "../pages/chat/ChatCenter";
@@ -136,6 +137,14 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["automobiliste", "garage", "admin"]}>
               <InterventionDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vehicules/:vehicleId/alerts"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste", "admin"]}>
+              <AlertsPage />
             </ProtectedRoute>
           }
         />

@@ -75,6 +75,11 @@ export const getPieces = () => {
   return API.get('/admin/pieces');
 };
 
+// Get audit logs (paginated)
+export const getAuditLogs = (params) => {
+  return API.get('/admin/audit-logs', { params });
+};
+
 // Delete a piece
 export const deletePiece = (pieceId) => {
   return API.delete(`/admin/pieces/${pieceId}`);

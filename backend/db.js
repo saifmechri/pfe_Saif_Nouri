@@ -399,6 +399,20 @@ const initDatabase = async () => {
   await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id BIGSERIAL PRIMARY KEY,
+      admin_email VARCHAR(255),
+      action VARCHAR(150) NOT NULL,
+      entity VARCHAR(100),
+      entity_id BIGINT,
+      details JSONB,
+      ip VARCHAR(100),
+      user_agent TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
     DO $$
     BEGIN
       IF EXISTS (

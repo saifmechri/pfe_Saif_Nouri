@@ -286,6 +286,7 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS store_services TEXT');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION');
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION');
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS is_validated BOOLEAN DEFAULT false');
 
   await pool.query('ALTER TABLE vehicules ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE vehicules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
@@ -304,6 +305,7 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE SET NULL');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS condition VARCHAR(50) DEFAULT \'Neuf\'');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS zone_geographique VARCHAR(100)');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS is_validated BOOLEAN DEFAULT false');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION');
     await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS marque VARCHAR(100)');
@@ -325,6 +327,7 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS vehicle_brands TEXT');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS is_validated BOOLEAN DEFAULT false');
 
   await pool.query('ALTER TABLE garage_services ADD COLUMN IF NOT EXISTS garage_id BIGINT REFERENCES garages(id) ON DELETE CASCADE');
   await pool.query('ALTER TABLE garage_services ADD COLUMN IF NOT EXISTS name VARCHAR(255)');
@@ -564,6 +567,25 @@ const initDatabase = async () => {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reports (
+      id BIGSERIAL PRIMARY KEY,
+      reporter_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      reported_entity_type VARCHAR(50) NOT NULL,
+      reported_entity_id BIGINT,
+      reason VARCHAR(255),
+      details TEXT,
+      status VARCHAR(20) DEFAULT 'pending',
+      action_taken TEXT,
+      handled_by VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT chk_reports_status CHECK (status IN ('pending', 'resolved', 'dismissed'))
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_reports_status ON reports (status)');
 
   await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications (user_id, created_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications (is_read)');

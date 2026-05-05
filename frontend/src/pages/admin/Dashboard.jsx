@@ -1,131 +1,504 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, Package, TriangleAlert, Trash2 } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
+import {
+  dismissReport,
+  getGarages,
+  getPendingReports,
+  getPieces,
+  deleteGarage,
+  deactivateGarage,
+  deletePiece,
+  resolveReport,
+  approveGarage,
+  rejectGarage,
+  approvePiece,
+  rejectPiece
+} from "../../services/admin";
+
+const INITIAL_COUNTS = {
+  totalGarages: 0,
+  totalPieces: 0,
+  pendingReports: 0,
+  resolvedReports: 0
+};
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState("utilisateurs");
+  const [activeTab, setActiveTab] = useState("garages");
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState({ type: null, id: null });
+  const [error, setError] = useState("");
+  const [garages, setGarages] = useState([]);
+  const [pieces, setPieces] = useState([]);
+  const [pendingReports, setPendingReports] = useState([]);
+  const [reportNoteById, setReportNoteById] = useState({});
+  const [counts, setCounts] = useState(INITIAL_COUNTS);
 
-  // Données fictives
-  const utilisateurs = [
-    { id: 1, nom: "Dupont", prenom: "Jean", email: "jean@example.com", role: "automobiliste" },
-    { id: 2, nom: "Martin", prenom: "Marie", email: "marie@example.com", role: "garage" },
-    { id: 3, nom: "Durand", prenom: "Paul", email: "paul@example.com", role: "vendeur" },
-  ];
+  const loadDashboard = async () => {
+    setLoading(true);
+    setError("");
 
-  const stats = {
-    utilisateurs: 120,
-    garages: 15,
-    annonces: 45,
-    rendezVous: 230,
+    try {
+      const [garagesResponse, piecesResponse, reportsResponse] = await Promise.all([
+        getGarages(),
+        getPieces(),
+        getPendingReports()
+      ]);
+
+      const garagesList = garagesResponse?.data?.data?.items || garagesResponse?.data?.items || garagesResponse?.data || [];
+      const piecesList = piecesResponse?.data?.data?.items || piecesResponse?.data?.items || piecesResponse?.data || [];
+      const reportsList = reportsResponse?.data?.data || reportsResponse?.data || [];
+
+      setGarages(Array.isArray(garagesList) ? garagesList : []);
+      setPieces(Array.isArray(piecesList) ? piecesList : []);
+      setPendingReports(Array.isArray(reportsList) ? reportsList : []);
+      setCounts({
+        totalGarages: Array.isArray(garagesList) ? garagesList.length : 0,
+        totalPieces: Array.isArray(piecesList) ? piecesList.length : 0,
+        pendingReports: Array.isArray(reportsList) ? reportsList.length : 0,
+        resolvedReports: Array.isArray(reportsList) ? reportsList.filter((item) => item.status === "resolved").length : 0
+      });
+    } catch (fetchError) {
+      setError(fetchError?.response?.data?.message || "Impossible de charger le tableau de bord admin.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const overviewCards = useMemo(() => ([
+    { label: "Garages", value: counts.totalGarages, icon: Store, tone: "from-blue-500 to-cyan-500" },
+    { label: "Pièces", value: counts.totalPieces, icon: Package, tone: "from-purple-500 to-pink-500" },
+    { label: "Signalements ouverts", value: counts.pendingReports, icon: TriangleAlert, tone: "from-amber-500 to-orange-500" },
+    { label: "Signalements résolus", value: counts.resolvedReports, icon: CheckCircle2, tone: "from-emerald-500 to-teal-500" }
+  ]), [counts]);
+
+  const handleGarageAction = async (garageId, action) => {
+    setActionLoading({ type: "garage", id: garageId });
+    setError("");
+
+    try {
+      if (action === "deactivate") {
+        await deactivateGarage(garageId);
+      } else if (action === "delete") {
+        await deleteGarage(garageId);
+      } else if (action === "approve") {
+        await approveGarage(garageId);
+      } else if (action === "reject") {
+        await rejectGarage(garageId);
+      }
+
+      setGarages((current) => current.filter((garage) => garage.id !== garageId));
+      setCounts((current) => ({ ...current, totalGarages: Math.max(0, current.totalGarages - 1) }));
+    } catch (actionError) {
+      setError(actionError?.response?.data?.message || "Action sur le garage impossible.");
+    } finally {
+      setActionLoading({ type: null, id: null });
+    }
+  };
+
+  const handlePieceAction = async (pieceId, action) => {
+    setActionLoading({ type: "piece", id: pieceId });
+    setError("");
+
+    try {
+      if (action === "delete") {
+        await deletePiece(pieceId);
+      } else if (action === "approve") {
+        await approvePiece(pieceId);
+      } else if (action === "reject") {
+        await rejectPiece(pieceId);
+      }
+
+      setPieces((current) => current.filter((piece) => piece.id !== pieceId));
+      setCounts((current) => ({ ...current, totalPieces: Math.max(0, current.totalPieces - 1) }));
+    } catch (actionError) {
+      setError(actionError?.response?.data?.message || "Action sur la pièce impossible.");
+    } finally {
+      setActionLoading({ type: null, id: null });
+    }
+  };
+
+  const handleReportDecision = async (reportId, decision) => {
+    setActionLoading({ type: "report", id: reportId });
+    setError("");
+
+    try {
+      const note = reportNoteById[reportId] || "";
+
+      if (decision === "resolve") {
+        await resolveReport(reportId, note);
+      } else {
+        await dismissReport(reportId, note);
+      }
+
+      setPendingReports((current) => current.filter((report) => Number(report.id) !== Number(reportId)));
+      setCounts((current) => ({ ...current, pendingReports: Math.max(0, current.pendingReports - 1) }));
+    } catch (decisionError) {
+      setError(decisionError?.response?.data?.message || "Action signalement impossible.");
+    } finally {
+      setActionLoading({ type: null, id: null });
+    }
   };
 
   return (
     <PlatformLayout>
       <div className="min-h-screen bg-transparent">
-        <div className="mx-auto max-w-7xl px-4 py-8">
-          <h1 className="mb-2 text-3xl font-extrabold text-[#1a2b4b]">Administration</h1>
-          <p className="mb-6 text-sm text-[#617089]">Vision globale de la plateforme, moderations et pilotage metier.</p>
+        <div className="mx-auto max-w-7xl px-4 py-8 lg:px-8">
+          <div className="mb-8 flex flex-col gap-4 rounded-3xl border border-white/70 bg-white/75 p-6 shadow-[0_18px_50px_rgba(26,43,75,0.08)] backdrop-blur">
+            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#64748b]">Dashboard admin</p>
+                <h1 className="mt-2 text-3xl font-black text-[#13243f] md:text-4xl">Gestion du contenu et modération</h1>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-[#5f6f87]">
+                  Consulter le dashboard global • Valider ou refuser les garages ajoutés • Valider ou refuser les pièces ajoutées • Supprimer ou désactiver du contenu • Gérer les signalements utilisateurs
+                </p>
+              </div>
 
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="vb-card p-4">
-            <p className="text-sm text-gray-600">Utilisateurs</p>
-            <p className="text-2xl font-bold">{stats.utilisateurs}</p>
-          </div>
-          <div className="vb-card p-4">
-            <p className="text-sm text-gray-600">Garages</p>
-            <p className="text-2xl font-bold">{stats.garages}</p>
-          </div>
-          <div className="vb-card p-4">
-            <p className="text-sm text-gray-600">Annonces</p>
-            <p className="text-2xl font-bold">{stats.annonces}</p>
-          </div>
-          <div className="vb-card p-4">
-            <p className="text-sm text-gray-600">Rendez-vous</p>
-            <p className="text-2xl font-bold">{stats.rendezVous}</p>
-          </div>
-        </div>
+              <button
+                type="button"
+                onClick={loadDashboard}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#13243f] px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(19,36,63,0.18)] transition hover:-translate-y-0.5 hover:bg-[#0f1d35]"
+              >
+                <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Actualiser
+              </button>
+            </div>
 
-        {/* Onglets */}
-        <div className="mb-6 flex flex-wrap gap-3 border-b border-[#d5deec] pb-2">
-          <button
-            onClick={() => setActiveTab("utilisateurs")}
-            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "utilisateurs" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
-          >
-            Utilisateurs
-          </button>
-          <button
-            onClick={() => setActiveTab("garages")}
-            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "garages" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
-          >
-            Garages
-          </button>
-          <button
-            onClick={() => setActiveTab("annonces")}
-            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "annonces" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
-          >
-            Annonces
-          </button>
-          <button
-            onClick={() => setActiveTab("parametres")}
-            className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "parametres" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
-          >
-            Paramètres
-          </button>
-        </div>
+            {error && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </div>
+            )}
+          </div>
 
-        <div className="vb-card p-6">
-          {activeTab === "utilisateurs" && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Gestion des utilisateurs</h2>
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2">Nom</th>
-                    <th>Prénom</th>
-                    <th>Email</th>
-                    <th>Rôle</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {utilisateurs.map((u) => (
-                    <tr key={u.id} className="border-b">
-                      <td className="py-2">{u.nom}</td>
-                      <td>{u.prenom}</td>
-                      <td>{u.email}</td>
-                      <td>{u.role}</td>
-                      <td>
-                        <button className="text-blue-600 hover:underline mr-2">Éditer</button>
-                        <button className="text-red-600 hover:underline">Bloquer</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {overviewCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div key={card.label} className="overflow-hidden rounded-3xl border border-white/70 bg-white/80 p-5 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+                  <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${card.tone} text-white`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <p className="text-sm font-medium text-[#6b7a90]">{card.label}</p>
+                  <p className="mt-2 text-3xl font-black text-[#13243f]">{loading ? "..." : card.value}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mb-6 flex flex-wrap gap-3 rounded-2xl border border-[#dbe5f1] bg-white/70 p-2 shadow-[0_10px_24px_rgba(26,43,75,0.05)] backdrop-blur">
+            {[
+              { key: "garages", label: "Garages" },
+              { key: "pieces", label: "Pièces" },
+              { key: "reports", label: "Signalements" },
+              { key: "overview", label: "Vue globale" }
+            ].map((tab) => {
+              const isActive = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${isActive ? "bg-[#13243f] text-white shadow-lg" : "text-[#5b6981] hover:bg-[#edf3fb] hover:text-[#13243f]"}`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {activeTab === "overview" && (
+            <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+                <h2 className="text-xl font-black text-[#13243f]">Priorités du jour</h2>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl bg-[#f3f7fd] p-4">
+                    <p className="text-sm text-[#607089]">Garages à gérer</p>
+                    <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : garages.length}</p>
+                  </div>
+                  <div className="rounded-2xl bg-[#fef6e8] p-4">
+                    <p className="text-sm text-[#7a6330]">Signalements à traiter</p>
+                    <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pendingReports.length}</p>
+                  </div>
+                  <div className="rounded-2xl bg-[#f5f3ff] p-4">
+                    <p className="text-sm text-[#6b5b95]">Pièces à gérer</p>
+                    <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pieces.length}</p>
+                  </div>
+                  <div className="rounded-2xl bg-[#f0fdf4] p-4">
+                    <p className="text-sm text-[#347a34]">Actions rapides</p>
+                    <p className="mt-2 text-sm text-[#5f6f87]">Gérer garages, pièces et signalements</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+                <h2 className="text-xl font-black text-[#13243f]">Guide rapide</h2>
+                <div className="mt-5 space-y-3 text-sm text-[#5f6f87]">
+                  <p>• Gérer les garages depuis l'onglet garages.</p>
+                  <p>• Gérer les pièces depuis l'onglet pièces.</p>
+                  <p>• Traiter les signalements via le tab signalements.</p>
+                  <p>• Rafraîchir les données après chaque décision.</p>
+                </div>
+              </div>
             </div>
           )}
 
           {activeTab === "garages" && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Gestion des garages</h2>
-              <p className="text-gray-500">Liste des garages avec validation...</p>
+            <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-[#13243f]">Gestion des garages</h2>
+                  <p className="mt-1 text-sm text-[#66758d]">Tous les garages ajoutés par les utilisateurs.</p>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-blue-700">
+                  {garages.length} garages
+                </span>
+              </div>
+
+              <div className="mt-6 overflow-hidden rounded-2xl border border-[#e6edf6]">
+                <table className="min-w-full divide-y divide-[#e6edf6] text-left text-sm">
+                  <thead className="bg-[#f8fbff] text-[#5f6f87]">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Nom</th>
+                      <th className="px-4 py-3 font-semibold">Adresse</th>
+                      <th className="px-4 py-3 font-semibold">Email</th>
+                      <th className="px-4 py-3 font-semibold">Propriétaire</th>
+                      <th className="px-4 py-3 font-semibold">Statut</th>
+                      <th className="px-4 py-3 font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#eef3f8] bg-white">
+                    {!loading && garages.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-6 text-[#6b7a90]" colSpan={6}>
+                          Aucun garage pour le moment.
+                        </td>
+                      </tr>
+                    )}
+                    {garages.map((garage) => (
+                      <tr key={garage.id} className="align-top hover:bg-[#f8fbff]">
+                        <td className="px-4 py-4 font-semibold text-[#13243f]">{garage.name || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{garage.adresse || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{garage.email || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{garage.user_name || "-"}</td>
+                        <td className="px-4 py-4">
+                          <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] ${garage.is_open ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                            {garage.is_open ? "Actif" : "Inactif"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex flex-wrap gap-2">
+                            {garage.is_validated === false && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleGarageAction(garage.id, "approve")}
+                                  disabled={actionLoading.type === "garage" && actionLoading.id === garage.id}
+                                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                  Valider
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleGarageAction(garage.id, "reject")}
+                                  disabled={actionLoading.type === "garage" && actionLoading.id === garage.id}
+                                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                  Refuser
+                                </button>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleGarageAction(garage.id, "deactivate")}
+                              disabled={actionLoading.type === "garage" && actionLoading.id === garage.id}
+                              className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                              Désactiver
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleGarageAction(garage.id, "delete")}
+                              disabled={actionLoading.type === "garage" && actionLoading.id === garage.id}
+                              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
-          {activeTab === "annonces" && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Annonces signalées</h2>
-              <p className="text-gray-500">Modération des annonces...</p>
+          {activeTab === "pieces" && (
+            <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-[#13243f]">Gestion des pièces</h2>
+                  <p className="mt-1 text-sm text-[#66758d]">Toutes les pièces ajoutées par les vendeurs.</p>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-purple-700">
+                  {pieces.length} pièces
+                </span>
+              </div>
+
+              <div className="mt-6 overflow-hidden rounded-2xl border border-[#e6edf6]">
+                <table className="min-w-full divide-y divide-[#e6edf6] text-left text-sm">
+                  <thead className="bg-[#f8fbff] text-[#5f6f87]">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Nom</th>
+                      <th className="px-4 py-3 font-semibold">Référence</th>
+                      <th className="px-4 py-3 font-semibold">Prix</th>
+                      <th className="px-4 py-3 font-semibold">Stock</th>
+                      <th className="px-4 py-3 font-semibold">Vendeur</th>
+                      <th className="px-4 py-3 font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#eef3f8] bg-white">
+                    {!loading && pieces.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-6 text-[#6b7a90]" colSpan={6}>
+                          Aucune pièce pour le moment.
+                        </td>
+                      </tr>
+                    )}
+                    {pieces.map((piece) => (
+                      <tr key={piece.id} className="align-top hover:bg-[#f8fbff]">
+                        <td className="px-4 py-4 font-semibold text-[#13243f]">{piece.nom || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{piece.reference || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87]">{piece.prix_unitaire ? `${piece.prix_unitaire} DT` : "-"}</td>
+                        <td className="px-4 py-4">
+                          <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] ${piece.stock > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                            {piece.stock || 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{piece.user_name || "-"}</td>
+                        <td className="px-4 py-4">
+                          <button
+                            type="button"
+                            onClick={() => handlePieceAction(piece.id, "delete")}
+                            disabled={actionLoading.type === "piece" && actionLoading.id === piece.id}
+                            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {actionLoading.type === "piece" && actionLoading.id === piece.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            Supprimer
+                          </button>
+                          {piece.is_validated === false && (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                onClick={() => handlePieceAction(piece.id, "approve")}
+                                disabled={actionLoading.type === "piece" && actionLoading.id === piece.id}
+                                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {actionLoading.type === "piece" && actionLoading.id === piece.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                Valider
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handlePieceAction(piece.id, "reject")}
+                                disabled={actionLoading.type === "piece" && actionLoading.id === piece.id}
+                                className="inline-flex items-center gap-2 ml-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {actionLoading.type === "piece" && actionLoading.id === piece.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                Refuser
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
-          {activeTab === "parametres" && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Paramètres généraux</h2>
-              <p className="text-gray-500">Configuration de la plateforme...</p>
+          {activeTab === "reports" && (
+            <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-[#13243f]">Gestion des signalements</h2>
+                  <p className="mt-1 text-sm text-[#66758d]">Liste des signalements en attente de traitement.</p>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-amber-700">
+                  {pendingReports.length} ouverts
+                </span>
+              </div>
+
+              <div className="mt-6 grid gap-4">
+                {!loading && pendingReports.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-[#d9e4f1] bg-[#fbfdff] px-5 py-8 text-sm text-[#6b7a90]">
+                    Aucun signalement à traiter.
+                  </div>
+                )}
+
+                {pendingReports.map((report) => (
+                  <div key={report.id} className="rounded-2xl border border-[#e6edf6] bg-[#fbfdff] p-5">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-lg font-bold text-[#13243f]">Signalement #{report.id}</h3>
+                          <span className="rounded-full bg-[#eef4ff] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#315ea8]">
+                            {report.status || "pending"}
+                          </span>
+                        </div>
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5f6f87]">
+                          {report.description || report.message || report.reason || "Aucun détail fourni."}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleReportDecision(report.id, "resolve")}
+                          disabled={actionLoading.type === "report" && actionLoading.id === report.id}
+                          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {actionLoading.type === "report" && actionLoading.id === report.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                          Résoudre
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleReportDecision(report.id, "dismiss")}
+                          disabled={actionLoading.type === "report" && actionLoading.id === report.id}
+                          className="inline-flex items-center gap-2 rounded-xl bg-slate-700 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-70"
+                        >
+                          {actionLoading.type === "report" && actionLoading.id === report.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                          Ignorer
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                      <label className="block">
+                        <span className="mb-2 block text-xs font-bold uppercase tracking-[0.14em] text-[#6b7a90]">Note d'action</span>
+                        <textarea
+                          rows={3}
+                          value={reportNoteById[report.id] || ""}
+                          onChange={(event) => setReportNoteById((current) => ({ ...current, [report.id]: event.target.value }))}
+                          className="w-full rounded-2xl border border-[#dce6f1] bg-white px-4 py-3 text-sm text-[#13243f] outline-none transition placeholder:text-[#a0afc1] focus:border-[#3b82f6]"
+                          placeholder="Décris l'action prise ou le motif du rejet"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-        </div>
         </div>
       </div>
     </PlatformLayout>

@@ -1,4 +1,4 @@
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import ChatModal from "./ChatModal";
@@ -23,6 +23,23 @@ const PlatformLayout = ({ children }) => {
     return roleDashboardMap[user.role] || "/dashboard";
   }, [user?.role]);
 
+  useEffect(() => {
+    closeSidebar();
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const isMobileViewport = window.matchMedia("(max-width: 1023px)").matches;
+    if (isSidebarOpen && isMobileViewport) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isSidebarOpen]);
+
   const closeSidebar = () => setIsSidebarOpen(false);
 
   const handleLogout = () => {
@@ -46,12 +63,16 @@ const PlatformLayout = ({ children }) => {
     navItems.push({ label: "Gestion garage", to: "/garage" });
   }
 
+  if (user?.role === "admin") {
+    navItems.push({ label: "Garages", to: "/automobiliste/garages" });
+  }
+
   if (user?.role === "vendeur") {
     // Messagerie accessible via navbar/chat modal — removed from sidebar
   }
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(145deg,#eef3fb_0%,#f7f9fe_50%,#edf2fb_100%)] text-[#12223d]">
+    <div className="min-h-screen overflow-x-hidden bg-[linear-gradient(145deg,#eef3fb_0%,#f7f9fe_50%,#edf2fb_100%)] text-[#12223d]">
       <button
         type="button"
         className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-lg bg-[#1a2b4b] text-white shadow-[0_8px_24px_rgba(26,43,75,0.28)] transition hover:bg-[#13243f] lg:hidden"
@@ -66,7 +87,7 @@ const PlatformLayout = ({ children }) => {
       </button>
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[300px] flex-col gap-5 bg-[linear-gradient(170deg,#1a2b4b_0%,#16315c_100%)] px-5 py-7 text-white shadow-[8px_0_26px_rgba(0,0,0,0.18)] transition-transform duration-200 lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-[86vw] max-w-[300px] flex-col gap-5 bg-[linear-gradient(170deg,#1a2b4b_0%,#16315c_100%)] px-5 py-7 text-white shadow-[8px_0_26px_rgba(0,0,0,0.18)] transition-transform duration-200 lg:w-[300px] lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="rounded-lg border border-white/20 bg-white/5 px-4 py-4">
           <div className="text-[1.25rem] font-extrabold tracking-wide">AutoBot</div>
@@ -108,7 +129,7 @@ const PlatformLayout = ({ children }) => {
         />
       )}
 
-      <main className="min-h-screen lg:ml-[300px] lg:w-[calc(100%-300px)]" onClick={closeSidebar}>
+      <main className="min-h-screen overflow-x-hidden lg:ml-[300px] lg:w-[calc(100%-300px)]" onClick={closeSidebar}>
         {children}
       </main>
     </div>

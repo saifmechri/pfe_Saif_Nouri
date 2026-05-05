@@ -1,0 +1,217 @@
+const jwt = require('jsonwebtoken');
+const { pool } = require('../db');
+const { sendApiResponse } = require('../utils/apiResponse');
+
+const SECRET = process.env.JWT_SECRET || 'jwt_secret_key';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin123@gmail.com';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@admin0';
+
+// Admin login: checks the predefined credentials and returns a JWT reserved for admin routes.
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Email et mot de passe requis', error: { code: 'VALIDATION_ERROR' } });
+
+    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+      return sendApiResponse(res, { statusCode: 401, success: false, message: 'Identifiants admin invalides', error: { code: 'INVALID_ADMIN_CREDENTIALS' } });
+    }
+
+    const token = jwt.sign({ admin: true, email: ADMIN_EMAIL }, SECRET, { expiresIn: '7d' });
+
+    return sendApiResponse(res, { message: 'Admin login success', data: { token } , extra: { token } });
+  } catch (err) {
+    console.error('Admin login error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Returns all user accounts that are still waiting for admin validation.
+const listPendingUsers = async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT u.id, u.name, u.email, u.phone, u.created_at, r.name as role FROM users u JOIN roles r ON u.role_id = r.id WHERE coalesce(u.is_validated,false) = false ORDER BY u.created_at DESC`);
+    return sendApiResponse(res, { message: 'Utilisateurs en attente', data: { items: result.rows } });
+  } catch (err) {
+    console.error('listPendingUsers', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Approves a user account by switching the validation flag to true.
+const approveUser = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('UPDATE users SET is_validated = true, updated_at = NOW() WHERE id = $1 RETURNING id, name, email, role_id', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Utilisateur introuvable', error: { code: 'USER_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Utilisateur approuve', data: { user: result.rows[0] } });
+  } catch (err) {
+    console.error('approveUser', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Rejects a user account by deleting it from the users table.
+const rejectUser = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Utilisateur introuvable', error: { code: 'USER_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Utilisateur rejete et supprime', data: null });
+  } catch (err) {
+    console.error('rejectUser', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Returns all garages for admin management
+const listGarages = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT g.id, g.name, g.adresse, g.email, g.telephone, g.is_open, COALESCE(g.is_validated,false) as is_validated, u.email as user_email, u.name as user_name, g.created_at, g.updated_at 
+      FROM garages g 
+      LEFT JOIN users u ON g.user_id = u.id 
+      ORDER BY g.created_at DESC 
+      LIMIT 100
+    `);
+    return sendApiResponse(res, { message: 'Garages list', data: { items: result.rows } });
+  } catch (err) {
+    console.error('listGarages error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Deactivate a garage
+const deactivateGarage = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('UPDATE garages SET is_open = false, updated_at = NOW() WHERE id = $1 RETURNING id, name, is_open', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Garage désactivé', data: { garage: result.rows[0] } });
+  } catch (err) {
+    console.error('deactivateGarage error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Delete a garage
+const deleteGarageAdmin = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('DELETE FROM garages WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Garage supprimé', data: null });
+  } catch (err) {
+    console.error('deleteGarageAdmin error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Approve a garage (mark is_validated = true)
+const approveGarage = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('UPDATE garages SET is_validated = true, updated_at = NOW() WHERE id = $1 RETURNING id, name, is_validated', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Garage approuvé', data: { garage: result.rows[0] } });
+  } catch (err) {
+    console.error('approveGarage error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Reject a garage (delete)
+const rejectGarage = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('DELETE FROM garages WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Garage rejeté et supprimé', data: null });
+  } catch (err) {
+    console.error('rejectGarage error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Returns all pieces for admin management
+const listPieces = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT p.id, p.nom, p.reference, p.prix_unitaire, p.stock, p.condition, p.marque, p.modele, COALESCE(p.is_validated,false) as is_validated, u.email as user_email, u.name as user_name, p.created_at, p.updated_at 
+      FROM pieces p 
+      LEFT JOIN users u ON p.user_id = u.id 
+      ORDER BY p.created_at DESC 
+      LIMIT 100
+    `);
+    return sendApiResponse(res, { message: 'Pieces list', data: { items: result.rows } });
+  } catch (err) {
+    console.error('listPieces error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Delete a piece
+const deletePieceAdmin = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('DELETE FROM pieces WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Piece introuvable', error: { code: 'PIECE_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Piece supprimée', data: null });
+  } catch (err) {
+    console.error('deletePieceAdmin error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Approve a piece (mark is_validated = true)
+const approvePiece = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('UPDATE pieces SET is_validated = true, updated_at = NOW() WHERE id = $1 RETURNING id, nom, is_validated', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Piece introuvable', error: { code: 'PIECE_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Piece approuvée', data: { piece: result.rows[0] } });
+  } catch (err) {
+    console.error('approvePiece error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Reject a piece (delete)
+const rejectPiece = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+
+    const result = await pool.query('DELETE FROM pieces WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) return sendApiResponse(res, { statusCode: 404, success: false, message: 'Piece introuvable', error: { code: 'PIECE_NOT_FOUND' } });
+
+    return sendApiResponse(res, { message: 'Piece rejetée et supprimée', data: null });
+  } catch (err) {
+    console.error('rejectPiece error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+module.exports = { login, listPendingUsers, approveUser, rejectUser, listGarages, deactivateGarage, deleteGarageAdmin, approveGarage, rejectGarage, listPieces, deletePieceAdmin, approvePiece, rejectPiece };

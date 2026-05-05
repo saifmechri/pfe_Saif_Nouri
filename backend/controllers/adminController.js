@@ -6,6 +6,7 @@ const SECRET = process.env.JWT_SECRET || 'jwt_secret_key';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin123@gmail.com';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin@admin0';
 
+// Admin login: checks the predefined credentials and returns a JWT reserved for admin routes.
 const login = async (req, res) => {
   try {
     const { email, password } = req.body || {};
@@ -24,6 +25,7 @@ const login = async (req, res) => {
   }
 };
 
+// Returns all user accounts that are still waiting for admin validation.
 const listPendingUsers = async (req, res) => {
   try {
     const result = await pool.query(`SELECT u.id, u.name, u.email, u.phone, u.created_at, r.name as role FROM users u JOIN roles r ON u.role_id = r.id WHERE coalesce(u.is_validated,false) = false ORDER BY u.created_at DESC`);
@@ -34,6 +36,7 @@ const listPendingUsers = async (req, res) => {
   }
 };
 
+// Approves a user account by switching the validation flag to true.
 const approveUser = async (req, res) => {
   try {
     const id = Number(req.params.id);
@@ -49,6 +52,7 @@ const approveUser = async (req, res) => {
   }
 };
 
+// Rejects a user account by deleting it from the users table.
 const rejectUser = async (req, res) => {
   try {
     const id = Number(req.params.id);

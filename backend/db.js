@@ -566,6 +566,25 @@ const initDatabase = async () => {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reports (
+      id BIGSERIAL PRIMARY KEY,
+      reporter_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+      reported_entity_type VARCHAR(50) NOT NULL,
+      reported_entity_id BIGINT,
+      reason VARCHAR(255),
+      details TEXT,
+      status VARCHAR(20) DEFAULT 'pending',
+      action_taken TEXT,
+      handled_by VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT chk_reports_status CHECK (status IN ('pending', 'resolved', 'dismissed'))
+    )
+  `);
+
+  await pool.query('CREATE INDEX IF NOT EXISTS idx_reports_status ON reports (status)');
+
   await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications (user_id, created_at DESC)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications (is_read)');
 

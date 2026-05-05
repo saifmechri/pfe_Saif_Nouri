@@ -439,4 +439,59 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-module.exports = { login, getDashboardStats, listPendingUsers, approveUser, rejectUser, listGarages, deactivateGarage, deleteGarageAdmin, approveGarage, rejectGarage, listPieces, deletePieceAdmin, approvePiece, rejectPiece };
+// List audit logs with optional filters and pagination
+const listAuditLogs = async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+    const offset = (page - 1) * limit;
+
+    const { action, entity, adminEmail } = req.query || {};
+
+    const where = [];
+    const params = [];
+
+    if (action) {
+      params.push(action);
+      where.push(`action = $${params.length}`);
+    }
+    if (entity) {
+      params.push(entity);
+      where.push(`entity = $${params.length}`);
+    }
+    if (adminEmail) {
+      params.push(adminEmail);
+      where.push(`admin_email = $${params.length}`);
+    }
+
+    const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
+
+    const countQuery = `SELECT COUNT(*)::int AS total FROM audit_logs ${whereSql}`;
+    const countResult = await pool.query(countQuery, params);
+    const total = Number(countResult.rows[0]?.total || 0);
+
+    params.push(limit);
+    params.push(offset);
+
+    const dataQuery = `SELECT id, admin_email, action, entity, entity_id, details, ip, user_agent, created_at FROM audit_logs ${whereSql} ORDER BY created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+    const dataResult = await pool.query(dataQuery, params);
+
+    return sendApiResponse(res, {
+      message: 'Audit logs retrieved',
+      data: {
+        items: dataResult.rows,
+        meta: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (err) {
+    console.error('listAuditLogs error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+module.exports = { login, getDashboardStats, listPendingUsers, approveUser, rejectUser, listGarages, deactivateGarage, deleteGarageAdmin, approveGarage, rejectGarage, listPieces, deletePieceAdmin, approvePiece, rejectPiece, listAuditLogs };

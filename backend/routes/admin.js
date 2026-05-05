@@ -23,6 +23,7 @@ router.post('/reports/:id/dismiss', verifyAdminToken, reportController.dismissRe
 
 // Protected routes for garage management
 router.get('/garages', verifyAdminToken, adminController.listGarages);
+router.get('/audit-logs', verifyAdminToken, adminController.listAuditLogs);
 router.post('/garages/:id/deactivate', verifyAdminToken, adminController.deactivateGarage);
 router.delete('/garages/:id', verifyAdminToken, adminController.deleteGarageAdmin);
 router.post('/garages/:id/approve', verifyAdminToken, adminController.approveGarage);

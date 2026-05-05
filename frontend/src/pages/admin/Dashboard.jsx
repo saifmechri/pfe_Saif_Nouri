@@ -14,7 +14,8 @@ import {
   rejectGarage,
   approvePiece,
   rejectPiece,
-  getDashboardStats
+  getDashboardStats,
+  getAuditLogs
 } from "../../services/admin";
 import {
   Bar,
@@ -53,6 +54,97 @@ const AdminDashboard = () => {
   const [reportNoteById, setReportNoteById] = useState({});
   const [counts, setCounts] = useState(INITIAL_COUNTS);
   const [dashboardStats, setDashboardStats] = useState(null);
+  // Audit log state
+  const [auditItems, setAuditItems] = useState([]);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditPages, setAuditPages] = useState(1);
+  const [auditLimit] = useState(25);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [actionFilter, setActionFilter] = useState("");
+  const [entityFilter, setEntityFilter] = useState("");
+  const [adminEmailFilter, setAdminEmailFilter] = useState("");
+
+  const loadAudit = async ({ page = 1, limit = auditLimit, action = null, entity = null, adminEmail = null } = {}) => {
+    setLoadingAudit(true);
+    try {
+      const params = { page, limit };
+      if (action) params.action = action;
+      if (entity) params.entity = entity;
+      if (adminEmail) params.adminEmail = adminEmail;
+      const res = await getAuditLogs(params);
+      const data = res?.data?.data || res?.data || {};
+      setAuditItems(Array.isArray(data.items) ? data.items : []);
+      setAuditPage(data.meta?.page || page);
+      setAuditPages(data.meta?.pages || 1);
+    } catch (err) {
+      console.error('loadAudit error', err);
+    } finally {
+      setLoadingAudit(false);
+    }
+  };
+
+  const AuditTable = () => (
+    <div className="mt-6 overflow-hidden rounded-2xl border border-[#e6edf6] bg-gradient-to-br from-white to-sky-50 p-4 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-extrabold text-sky-900">Journal d'audit</h3>
+          <p className="text-sm text-slate-500">Historique des actions administrateur (approbations, suppressions, etc.).</p>
+        </div>
+        <div className="text-sm text-slate-600">Page <span className="font-medium">{auditPage}</span> / <span className="font-medium">{auditPages}</span></div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl bg-white">
+        <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+          <thead className="bg-gradient-to-r from-sky-50 to-white text-slate-600">
+            <tr>
+              <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide">Horodatage</th>
+              <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide">Admin</th>
+              <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide">Action</th>
+              <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide">Entité</th>
+              <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide">ID</th>
+              <th className="px-4 py-3 font-semibold text-xs uppercase tracking-wide">Détails</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {loadingAudit && (
+              <tr><td className="px-4 py-6 text-slate-500" colSpan={6}>Chargement...</td></tr>
+            )}
+            {!loadingAudit && auditItems.length === 0 && (
+              <tr><td className="px-4 py-6 text-slate-500" colSpan={6}>Aucun journal disponible.</td></tr>
+            )}
+            {auditItems.map((row, idx) => (
+              <tr key={row.id} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'} align-top hover:bg-sky-100`}>
+                <td className="px-4 py-3 text-xs text-slate-500 font-mono">{new Date(row.created_at).toLocaleString()}</td>
+                <td className="px-4 py-3 text-xs text-slate-700">{row.admin_email || '-'}</td>
+                <td className="px-4 py-3">
+                  <span className="inline-block rounded-full bg-blue-50 text-blue-700 px-2 py-1 text-xs font-semibold">{row.action}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="inline-block rounded-full bg-purple-50 text-purple-700 px-2 py-1 text-xs font-semibold">{row.entity || '-'}</span>
+                </td>
+                <td className="px-4 py-3 text-xs text-slate-600">{row.entity_id || '-'}</td>
+                <td className="px-4 py-3 text-xs text-slate-600">
+                  {row.details ? (
+                    <pre className="max-h-20 overflow-auto whitespace-pre-wrap break-words text-xs text-slate-700">{JSON.stringify(row.details)}</pre>
+                  ) : (
+                    <span className="text-slate-400">-</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between px-2">
+        <div className="text-sm text-slate-600">Total: <span className="font-medium">{auditItems.length}</span></div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { if (auditPage > 1) { loadAudit({ page: auditPage - 1, limit: auditLimit, action: actionFilter || null, entity: entityFilter || null, adminEmail: adminEmailFilter || null }); } }} className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-50">Préc</button>
+          <button onClick={() => { if (auditPage < auditPages) { loadAudit({ page: auditPage + 1, limit: auditLimit, action: actionFilter || null, entity: entityFilter || null, adminEmail: adminEmailFilter || null }); } }} className="rounded-lg bg-sky-600 px-3 py-1 text-sm font-semibold text-white hover:bg-sky-700">Suiv</button>
+        </div>
+      </div>
+    </div>
+  );
 
   const loadDashboard = async () => {
     setLoading(true);
@@ -95,6 +187,12 @@ const AdminDashboard = () => {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'audit') {
+      loadAudit({ page: auditPage, limit: auditLimit, action: actionFilter || null, entity: entityFilter || null, adminEmail: adminEmailFilter || null });
+    }
+  }, [activeTab]);
 
   const overviewCards = useMemo(() => ([
     { label: "Garages", value: counts.totalGarages, icon: Store, tone: "from-blue-500 to-cyan-500" },
@@ -265,6 +363,7 @@ const AdminDashboard = () => {
               { key: "garages", label: "Garages" },
               { key: "pieces", label: "Pièces" },
               { key: "reports", label: "Signalements" },
+              { key: "audit", label: "Journal (Audit)" },
               { key: "overview", label: "Vue globale" }
             ].map((tab) => {
               const isActive = activeTab === tab.key;
@@ -314,6 +413,26 @@ const AdminDashboard = () => {
                   <p>• Rafraîchir les données après chaque décision.</p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === "audit" && (
+            <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-[#13243f]">Journal d'audit</h2>
+                  <p className="mt-1 text-sm text-[#66758d]">Historique des actions administrateur (approbations, suppressions, etc.).</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input value={actionFilter} onChange={(e) => setActionFilter(e.target.value)} placeholder="Action (approve_user, delete_garage...)" className="rounded-xl border px-3 py-2 text-sm" />
+                  <input value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)} placeholder="Entité (user, garage, piece)" className="rounded-xl border px-3 py-2 text-sm" />
+                  <input value={adminEmailFilter} onChange={(e) => setAdminEmailFilter(e.target.value)} placeholder="Admin email" className="rounded-xl border px-3 py-2 text-sm" />
+                  <button onClick={() => { setAuditPage(1); loadAudit({ page: 1, action: actionFilter || null, entity: entityFilter || null, adminEmail: adminEmailFilter || null }); }} className="rounded-xl bg-[#13243f] px-3 py-2 text-sm font-semibold text-white">Filtrer</button>
+                  <button onClick={() => { setActionFilter(''); setEntityFilter(''); setAdminEmailFilter(''); setAuditPage(1); loadAudit({ page: 1 }); }} className="rounded-xl bg-slate-100 px-3 py-2 text-sm">Réinitialiser</button>
+                </div>
+              </div>
+
+              <AuditTable />
             </div>
           )}
 

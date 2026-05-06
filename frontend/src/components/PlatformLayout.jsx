@@ -47,25 +47,31 @@ const PlatformLayout = ({ children }) => {
     navigate("/login", { replace: true });
   };
 
-  const navItems = [
-    { label: "Accueil", to: "/" },
-    { label: "Mon profil", to: "/profil" },
-    { label: "Tableau de bord", to: dashboardPath },
-    { label: "Catalogue pièces", to: "/vendeur/catalogue" }
-  ];
+  const navItems = (() => {
+    if (user?.role === "admin") {
+      return [
+        { label: "Tableau de bord", to: "/admin" }
+      ];
+    }
 
-  if (user?.role === "automobiliste" || user?.role === "vendeur") {
-    navItems.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
-    navItems.push({ label: "Garages", to: "/automobiliste/garages" });
-  }
+    const items = [
+      { label: "Accueil", to: "/" },
+      { label: "Mon profil", to: "/profil" },
+      { label: "Tableau de bord", to: dashboardPath },
+      { label: "Catalogue pièces", to: "/vendeur/catalogue" }
+    ];
 
-  if (user?.role === "garage") {
-    navItems.push({ label: "Gestion garage", to: "/garage" });
-  }
+    if (user?.role === "automobiliste" || user?.role === "vendeur") {
+      items.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
+      items.push({ label: "Garages", to: "/automobiliste/garages" });
+    }
 
-  if (user?.role === "admin") {
-    navItems.push({ label: "Garages", to: "/automobiliste/garages" });
-  }
+    if (user?.role === "garage") {
+      items.push({ label: "Gestion garage", to: "/garage" });
+    }
+
+    return items;
+  })();
 
   if (user?.role === "vendeur") {
     // Messagerie accessible via navbar/chat modal — removed from sidebar
@@ -92,7 +98,14 @@ const PlatformLayout = ({ children }) => {
         <div className="rounded-lg border border-white/20 bg-white/5 px-4 py-4">
           <div className="text-[1.25rem] font-extrabold tracking-wide">AutoBot</div>
           <div className="mt-2 text-sm text-white/80">{user?.name || "Utilisateur"}</div>
-          <div className="mt-1 text-xs uppercase tracking-[0.12em] text-blue-200/80">{user?.role || "compte"}</div>
+          <div className="mt-1 text-xs uppercase tracking-[0.12em] text-blue-200/80">
+            {user?.role === "admin" ? "Espace administration" : (user?.role || "compte")}
+          </div>
+          {user?.role === "admin" && (
+            <p className="mt-3 text-sm leading-6 text-white/75">
+              Supervision des contenus, modération et audit centralisés.
+            </p>
+          )}
         </div>
 
         <nav className="flex flex-col gap-2">

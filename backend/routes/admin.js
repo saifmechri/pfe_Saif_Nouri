@@ -12,8 +12,10 @@ router.get('/stats', verifyAdminToken, adminController.getDashboardStats);
 
 // Protected validation routes for user accounts.
 router.get('/users/pending', verifyAdminToken, adminController.listPendingUsers);
+router.get('/users/moderation', verifyAdminToken, adminController.listModerationUsers);
 router.post('/users/:id/approve', verifyAdminToken, adminController.approveUser);
 router.post('/users/:id/reject', verifyAdminToken, adminController.rejectUser);
+router.post('/users/:id/toggle-block', verifyAdminToken, adminController.toggleUserBlock);
 
 // Protected moderation routes for reports.
 router.get('/reports/pending', verifyAdminToken, reportController.listPendingReports);
@@ -25,6 +27,7 @@ router.post('/reports/:id/dismiss', verifyAdminToken, reportController.dismissRe
 router.get('/garages', verifyAdminToken, adminController.listGarages);
 router.get('/audit-logs', verifyAdminToken, adminController.listAuditLogs);
 router.post('/garages/:id/deactivate', verifyAdminToken, adminController.deactivateGarage);
+router.post('/garages/:id/toggle-block', verifyAdminToken, adminController.toggleGarageBlock);
 router.delete('/garages/:id', verifyAdminToken, adminController.deleteGarageAdmin);
 router.post('/garages/:id/approve', verifyAdminToken, adminController.approveGarage);
 router.post('/garages/:id/reject', verifyAdminToken, adminController.rejectGarage);

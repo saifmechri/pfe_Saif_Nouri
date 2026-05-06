@@ -50,6 +50,10 @@ const Login = () => {
       
       if (errorCode === 'ACCOUNT_NOT_VALIDATED') {
         setError("Votre compte est en attente de validation par l'administrateur.");
+      } else if (errorCode === 'ACCOUNT_BLOCKED') {
+        setError("Ce compte est bloqué. Veuillez contacter l'administrateur.");
+      } else if (errorCode === 'GARAGE_BLOCKED') {
+        setError("Ce garage est bloqué. L'accès est refusé.");
       } else if (errorCode === 'USER_NOT_FOUND' || errorCode === 'INVALID_PASSWORD') {
         setError("Email ou mot de passe incorrect.");
       } else if (errorCode === 'ACCOUNT_INCOMPLETE') {
@@ -59,7 +63,9 @@ const Login = () => {
       } else {
         setError("Erreur de connexion. Veuillez réessayer.");
       }
-      console.error('Login error:', err?.response?.data || err);
+      if (!['ACCOUNT_BLOCKED', 'GARAGE_BLOCKED'].includes(errorCode)) {
+        console.error('Login error:', err?.response?.data || err);
+      }
     } finally {
       setLoading(false);
     }

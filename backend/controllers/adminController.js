@@ -37,6 +37,35 @@ const listPendingUsers = async (req, res) => {
   }
 };
 
+// Returns all moderateable accounts, including garage accounts.
+const listModerationUsers = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT u.id,
+             u.name,
+             u.email,
+             u.phone,
+             u.created_at,
+             COALESCE(u.is_validated, false) AS is_validated,
+             r.name AS role,
+             g.id AS garage_id,
+             g.name AS garage_name,
+             COALESCE(g.is_open, true) AS garage_is_open
+      FROM users u
+      JOIN roles r ON u.role_id = r.id
+      LEFT JOIN garages g ON g.user_id = u.id
+      WHERE LOWER(r.name) IN ('automobiliste', 'vendeur', 'garage')
+      ORDER BY u.created_at DESC
+      LIMIT 300
+    `);
+
+    return sendApiResponse(res, { message: 'Utilisateurs en modération', data: { items: result.rows } });
+  } catch (err) {
+    console.error('listModerationUsers', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
 // Approves a user account by switching the validation flag to true.
 const approveUser = async (req, res) => {
   try {
@@ -97,6 +126,86 @@ const rejectUser = async (req, res) => {
   }
 };
 
+// Toggle account status between active and blocked for moderation.
+const toggleUserBlock = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+    }
+
+    const accountInfo = await pool.query(
+      `SELECT u.id,
+              u.name,
+              u.email,
+              COALESCE(u.is_validated, false) AS is_validated,
+              LOWER(r.name) AS role_name,
+              g.id AS garage_id
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       LEFT JOIN garages g ON g.user_id = u.id
+       WHERE u.id = $1`,
+      [id]
+    );
+
+    if (accountInfo.rows.length === 0) {
+      return sendApiResponse(res, { statusCode: 404, success: false, message: 'Utilisateur introuvable', error: { code: 'USER_NOT_FOUND' } });
+    }
+
+    const currentAccount = accountInfo.rows[0];
+    const nextIsValidated = !currentAccount.is_validated;
+
+    const result = await pool.query(
+      `UPDATE users
+       SET is_validated = $2,
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, name, email, COALESCE(is_validated, false) AS is_validated`,
+      [id, nextIsValidated]
+    );
+
+    if (result.rows.length === 0) {
+      return sendApiResponse(res, { statusCode: 404, success: false, message: 'Utilisateur introuvable', error: { code: 'USER_NOT_FOUND' } });
+    }
+
+    const user = result.rows[0];
+
+    if (currentAccount.role_name === 'garage' && currentAccount.garage_id) {
+      await pool.query(
+        `UPDATE garages
+         SET is_open = $1,
+             updated_at = NOW()
+         WHERE id = $2`,
+        [nextIsValidated, currentAccount.garage_id]
+      );
+    }
+
+    try {
+      await logAction({
+        adminEmail: req.admin?.email || null,
+        action: user.is_validated ? 'unblock_user' : 'block_user',
+        entity: 'user',
+        entityId: id,
+        details: {
+          ...user,
+          role: currentAccount.role_name,
+          garage_id: currentAccount.garage_id || null,
+          garage_sync: currentAccount.role_name === 'garage'
+        },
+        ip: req.ip || null,
+        userAgent: req.headers['user-agent'] || null
+      });
+    } catch (e) {
+      console.error('audit log failed', e);
+    }
+
+    return sendApiResponse(res, { message: user.is_validated ? 'Compte débloqué' : 'Compte bloqué', data: { user: { ...user, role: currentAccount.role_name, garage_id: currentAccount.garage_id || null } } });
+  } catch (err) {
+    console.error('toggleUserBlock', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
 // Returns all garages for admin management
 const listGarages = async (req, res) => {
   try {
@@ -138,6 +247,50 @@ const deactivateGarage = async (req, res) => {
       return sendApiResponse(res, { message: 'Garage désactivé', data: { garage: result.rows[0] } });
   } catch (err) {
     console.error('deactivateGarage error', err);
+    return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
+  }
+};
+
+// Toggle garage status between active and blocked for moderation.
+const toggleGarageBlock = async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return sendApiResponse(res, { statusCode: 400, success: false, message: 'Identifiant invalide', error: { code: 'INVALID_ID' } });
+    }
+
+    const result = await pool.query(
+      `UPDATE garages
+       SET is_open = NOT COALESCE(is_open, true),
+           updated_at = NOW()
+       WHERE id = $1
+       RETURNING id, name, COALESCE(is_open, true) AS is_open`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return sendApiResponse(res, { statusCode: 404, success: false, message: 'Garage introuvable', error: { code: 'GARAGE_NOT_FOUND' } });
+    }
+
+    const garage = result.rows[0];
+
+    try {
+      await logAction({
+        adminEmail: req.admin?.email || null,
+        action: garage.is_open ? 'unblock_garage' : 'block_garage',
+        entity: 'garage',
+        entityId: id,
+        details: garage,
+        ip: req.ip || null,
+        userAgent: req.headers['user-agent'] || null
+      });
+    } catch (e) {
+      console.error('audit log failed', e);
+    }
+
+    return sendApiResponse(res, { message: garage.is_open ? 'Garage débloqué' : 'Garage bloqué', data: { garage } });
+  } catch (err) {
+    console.error('toggleGarageBlock error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });
   }
 };
@@ -494,4 +647,23 @@ const listAuditLogs = async (req, res) => {
   }
 };
 
-module.exports = { login, getDashboardStats, listPendingUsers, approveUser, rejectUser, listGarages, deactivateGarage, deleteGarageAdmin, approveGarage, rejectGarage, listPieces, deletePieceAdmin, approvePiece, rejectPiece, listAuditLogs };
+module.exports = {
+  login,
+  getDashboardStats,
+  listPendingUsers,
+  listModerationUsers,
+  approveUser,
+  rejectUser,
+  toggleUserBlock,
+  listGarages,
+  deactivateGarage,
+  toggleGarageBlock,
+  deleteGarageAdmin,
+  approveGarage,
+  rejectGarage,
+  listPieces,
+  deletePieceAdmin,
+  approvePiece,
+  rejectPiece,
+  listAuditLogs
+};

@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { sendApiResponse } = require("../utils/apiResponse");
 const { createUser, emailExists, findUserByEmail } = require("../models/user.model");
+const { pool } = require("../db");
 
 const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
 
@@ -157,6 +158,38 @@ const login = async (req, res) => {
         message: "Email ou mot de passe incorrect",
         error: { code: 'INVALID_PASSWORD' }
       });
+    }
+
+    // Vérifier que le compte n'est pas bloqué
+    if (!user.is_validated) {
+      console.log('[LOGIN FAIL] Compte bloqué pour ID:', user.id);
+      return sendApiResponse(res, {
+        statusCode: 403,
+        success: false,
+        message: "Ce compte a été bloqué par l'administrateur. Veuillez contacter le support.",
+        error: { code: 'ACCOUNT_BLOCKED' }
+      });
+    }
+
+    // Vérifier l'état du garage si l'utilisateur est garage
+    if (user.role_name === 'garage') {
+      const { findGarageIdentityByUserId } = require('../models/garage.model');
+      const garage = await findGarageIdentityByUserId(user.id);
+      
+      if (garage) {
+        const garageDetail = await pool.query('SELECT is_open FROM garages WHERE id = $1', [garage.id]);
+        const garageData = garageDetail.rows[0];
+        
+        if (garageData && !garageData.is_open) {
+          console.log('[LOGIN FAIL] Garage bloqué pour user ID:', user.id);
+          return sendApiResponse(res, {
+            statusCode: 403,
+            success: false,
+            message: "Votre garage a été bloqué par l'administrateur. Veuillez contacter le support.",
+            error: { code: 'GARAGE_BLOCKED' }
+          });
+        }
+      }
     }
 
     // Générer le token JWT

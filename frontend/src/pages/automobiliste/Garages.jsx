@@ -4,6 +4,7 @@ import { CalendarCheck2, Clock3, MapPin, Navigation, Share2, Star } from "lucide
 import PlatformLayout from "../../components/PlatformLayout";
 import GoogleMapGarages from "../../components/GoogleMapGarages";
 import QuickAppointmentModal from "../../components/appointments/QuickAppointmentModal";
+import ReportModal from "../../components/ReportModal";
 import {
   createGarageReview,
   deleteGarageReview,
@@ -361,6 +362,10 @@ const GaragesPage = () => {
   // Appointment modal state
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [vehicules, setVehicules] = useState([]);
+
+  // Report modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportData, setReportData] = useState({ entityType: null, entityId: null, entityName: null });
 
   const getApiErrorMessage = (err, fallback) => {
     const data = err?.response?.data;
@@ -1251,10 +1256,25 @@ const GaragesPage = () => {
                   </article>
 
                   <article className="rounded-[24px] border border-white/80 bg-white/95 p-6 space-y-4 shadow-[0_14px_35px_rgba(15,23,42,0.08)]">
-                  <div>
-                    <h2 className="text-2xl font-bold text-[#1a2b4b]">{selectedGarage?.name}</h2>
-                    <p className="mt-1 text-sm text-[#617089]">{selectedGarage?.adresse || "Adresse non precisee"}</p>
-                    <p className="mt-1 text-sm text-[#617089]">Contact: {selectedGarage?.telephone || "N/A"} • {selectedGarage?.email || "N/A"}</p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-bold text-[#1a2b4b]">{selectedGarage?.name}</h2>
+                      <p className="mt-1 text-sm text-[#617089]">{selectedGarage?.adresse || "Adresse non precisee"}</p>
+                      <p className="mt-1 text-sm text-[#617089]">Contact: {selectedGarage?.telephone || "N/A"} • {selectedGarage?.email || "N/A"}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setReportData({
+                          entityType: 'garage',
+                          entityId: selectedGarage?.id,
+                          entityName: selectedGarage?.name
+                        });
+                        setShowReportModal(true);
+                      }}
+                      className="flex-shrink-0 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition"
+                    >
+                      🚩 Signaler
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1356,12 +1376,27 @@ const GaragesPage = () => {
                         {garageReviews.map((review) => (
                           <li key={review.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
                             <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
+                              <div className="flex-1">
                                 <p className="font-bold text-[#1a2b4b]">{review.reviewer?.name || "Utilisateur"}</p>
                                 <p className="text-sm text-[#617089]">Note: {review.rating}/5</p>
                                 <p className="mt-1 text-sm text-[#334155]">{review.comment || "Sans commentaire"}</p>
                               </div>
-                              <p className="text-xs text-[#617089]">{new Date(review.created_at).toLocaleDateString("fr-FR")}</p>
+                              <div className="flex flex-col items-end gap-2">
+                                <p className="text-xs text-[#617089]">{new Date(review.created_at).toLocaleDateString("fr-FR")}</p>
+                                <button
+                                  onClick={() => {
+                                    setReportData({
+                                      entityType: 'review',
+                                      entityId: review.id,
+                                      entityName: `Avis de ${review.reviewer?.name || 'Utilisateur'}`
+                                    });
+                                    setShowReportModal(true);
+                                  }}
+                                  className="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition"
+                                >
+                                  Signaler
+                                </button>
+                              </div>
                             </div>
                           </li>
                         ))}
@@ -1384,6 +1419,18 @@ const GaragesPage = () => {
         onAppointmentCreated={() => {
           setSuccessMessage("✓ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
           setShowAppointmentModal(false);
+        }}
+      />
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        entityType={reportData.entityType}
+        entityId={reportData.entityId}
+        entityName={reportData.entityName}
+        onSuccess={() => {
+          setSuccessMessage("✓ Merci! Votre signalement a été reçu par nos modérateurs.");
+          setTimeout(() => setSuccessMessage(""), 3000);
         }}
       />
     </PlatformLayout>

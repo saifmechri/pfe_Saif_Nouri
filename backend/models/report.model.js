@@ -19,6 +19,19 @@ const getPendingReports = async ({ limit = 50, offset = 0 } = {}) => {
   return result.rows;
 };
 
+// Returns summary counters for admin dashboards.
+const getReportSummary = async () => {
+  const result = await pool.query(
+    `SELECT
+       COUNT(*)::int AS total,
+       COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
+       COUNT(*) FILTER (WHERE status = 'resolved')::int AS resolved,
+       COUNT(*) FILTER (WHERE status = 'dismissed')::int AS dismissed
+     FROM reports`
+  );
+  return result.rows[0] || { total: 0, pending: 0, resolved: 0, dismissed: 0 };
+};
+
 // Fetches a report by its identifier.
 const getReportById = async (id) => {
   const result = await pool.query(`SELECT * FROM reports WHERE id = $1`, [id]);
@@ -43,6 +56,7 @@ const deleteReport = async (id) => {
 module.exports = {
   createReport,
   getPendingReports,
+  getReportSummary,
   getReportById,
   updateReportStatus,
   deleteReport

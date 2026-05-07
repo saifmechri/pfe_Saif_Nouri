@@ -15,7 +15,8 @@ import {
   approvePiece,
   rejectPiece,
   getDashboardStats,
-  getAuditLogs
+  getAuditLogs,
+  getReportStats
 } from "../../services/admin";
 import {
   Bar,
@@ -151,11 +152,12 @@ const AdminDashboard = () => {
     setError("");
 
     try {
-      const [statsResponse, garagesResponse, piecesResponse, reportsResponse] = await Promise.all([
+      const [statsResponse, garagesResponse, piecesResponse, reportsResponse, reportStatsResponse] = await Promise.all([
         getDashboardStats(),
         getGarages(),
         getPieces(),
-        getPendingReports()
+        getPendingReports(),
+        getReportStats()
       ]);
 
       const statsData = statsResponse?.data?.data || statsResponse?.data || null;
@@ -164,6 +166,7 @@ const AdminDashboard = () => {
       const garagesList = garagesResponse?.data?.data?.items || garagesResponse?.data?.items || garagesResponse?.data || [];
       const piecesList = piecesResponse?.data?.data?.items || piecesResponse?.data?.items || piecesResponse?.data || [];
       const reportsList = reportsResponse?.data?.data || reportsResponse?.data || [];
+      const reportStats = reportStatsResponse?.data?.data || reportStatsResponse?.data || {};
 
       setGarages(Array.isArray(garagesList) ? garagesList : []);
       setPieces(Array.isArray(piecesList) ? piecesList : []);
@@ -172,7 +175,7 @@ const AdminDashboard = () => {
         totalGarages: Array.isArray(garagesList) ? garagesList.length : 0,
         totalPieces: Array.isArray(piecesList) ? piecesList.length : 0,
         pendingReports: Array.isArray(reportsList) ? reportsList.length : 0,
-        resolvedReports: Array.isArray(reportsList) ? reportsList.filter((item) => item.status === "resolved").length : 0,
+        resolvedReports: Number(reportStats.resolved || 0),
         totalUsers: Number(statsData?.users?.totalUsers || 0),
         totalAppointments: Number(statsData?.appointments?.totalAppointments || 0),
         pendingAppointments: Number(statsData?.appointments?.pendingAppointments || 0)

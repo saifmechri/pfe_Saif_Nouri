@@ -17,6 +17,7 @@ router.post('/users/:id/reject', verifyAdminToken, adminController.rejectUser);
 
 // Protected moderation routes for reports.
 router.get('/reports/pending', verifyAdminToken, reportController.listPendingReports);
+router.get('/reports/stats', verifyAdminToken, reportController.getReportStats);
 router.get('/reports/:id', verifyAdminToken, reportController.getReport);
 router.post('/reports/:id/resolve', verifyAdminToken, reportController.resolveReport);
 router.post('/reports/:id/dismiss', verifyAdminToken, reportController.dismissReport);

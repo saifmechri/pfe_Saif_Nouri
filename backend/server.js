@@ -32,7 +32,8 @@ app.get("/", (req, res) => {
 });
 
 registerRoutes(app);
-app.use("/api/recommandations", recommendationRoutes);
+// Removed duplicate/misspelled route mount to keep canonical routes from `registerRoutes`.
+// app.use("/api/recommandations", recommendationRoutes);
 
 // Gestion globale des erreurs applicatives (AppError et erreurs inattendues)
 app.use(errorHandler);

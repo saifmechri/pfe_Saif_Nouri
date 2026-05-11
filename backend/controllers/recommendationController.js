@@ -1,10 +1,18 @@
 const { pool } = require('../db');
 const {
   calculateInterventionScore,
+  calculateInterventionScoreDetailed,
   calculateGarageScore,
+  calculateGarageScoreDetailed,
   getUrgency,
   haversine
 } = require('../utils/algorithms');
+
+const DEFAULT_INTERVENTION_TYPES = [
+  { id: 'default-vidange', type: 'vidange', km_recommande: 10000, jours_recommandes: 180 },
+  { id: 'default-revision', type: 'révision', km_recommande: 20000, jours_recommandes: 365 },
+  { id: 'default-reparation', type: 'réparation', km_recommande: 40000, jours_recommandes: 730 }
+];
 
 // Convertit en nombre avec fallback si valeur absente/invalide.
 function toNumber(value, fallback = null) {
@@ -71,6 +79,69 @@ async function getLastInterventionByType(vehicleId, type) {
   );
 
   return result.rows[0] || null;
+}
+
+function pushUniqueReason(reasons, reason) {
+  if (!reason) return;
+  if (!reasons.includes(reason)) {
+    reasons.push(reason);
+  }
+}
+
+function buildInterventionReasons(interventionDetail, kmActuel, kmRecommande, kmRestant) {
+  const reasons = [];
+
+  if (interventionDetail.kmScorePercent >= 70 || (kmRecommande > 0 && kmActuel >= kmRecommande)) {
+    pushUniqueReason(reasons, 'Kilométrage élevé');
+  }
+
+  if (interventionDetail.dateScorePercent >= 70) {
+    pushUniqueReason(reasons, 'Dernière intervention ancienne');
+  }
+
+  if (kmRestant !== null && kmRestant <= 1000) {
+    pushUniqueReason(reasons, 'Entretien à prévoir rapidement');
+  }
+
+  if (reasons.length === 0) {
+    pushUniqueReason(reasons, 'Entretien cohérent avec l’historique du véhicule');
+  }
+
+  return reasons;
+}
+
+function buildGarageReasons(garageDetail) {
+  const reasons = [];
+
+  if (garageDetail.distanceScore0to10 >= 8) {
+    pushUniqueReason(reasons, 'Garage proche');
+  }
+
+  if (garageDetail.ratingScore0to10 >= 8) {
+    pushUniqueReason(reasons, 'Garage bien noté');
+  }
+
+  if (garageDetail.availabilityScore0to10 >= 10) {
+    pushUniqueReason(reasons, 'Disponible aujourd’hui');
+  }
+
+  if (reasons.length === 0) {
+    pushUniqueReason(reasons, 'Garage pertinent selon la localisation et la disponibilité');
+  }
+
+  return reasons;
+}
+
+function buildRecommendationSummary(finalScore, interventionScore, garageScore) {
+  if (finalScore >= 80 && interventionScore >= 70 && garageScore >= 70) {
+    return 'Meilleur choix global';
+  }
+
+  if (finalScore >= 60) {
+    return 'Bon compromis qualité/prix';
+  }
+
+  return 'Option secondaire';
 }
 
 // Construit une liste classée de recommandations dynamiques pour l'utilisateur connecté.
@@ -192,15 +263,10 @@ async function getRecommendations(req, res) {
        ORDER BY type, id DESC`
     );
 
-    const interventionTypes = interventionTypesResult.rows;
-
-    if (!interventionTypes || interventionTypes.length === 0) {
-      return res.json({
-        success: true,
-        data: [],
-        message: 'Aucun type d intervention trouvé (table interventions vide)'
-      });
-    }
+    const interventionTypes =
+      Array.isArray(interventionTypesResult.rows) && interventionTypesResult.rows.length > 0
+        ? interventionTypesResult.rows
+        : DEFAULT_INTERVENTION_TYPES;
 
     const garagesResult = await pool.query(
       `SELECT id, name, adresse, telephone, latitude, longitude, rating, is_open
@@ -240,7 +306,7 @@ async function getRecommendations(req, res) {
         const kmRecommande = Number(interventionType.km_recommande ?? 0);
         const kmRestant = kmRecommande > 0 ? Math.max(0, kmRecommande - kmActuel) : null;
 
-        const interventionScore = calculateInterventionScore(
+        const interventionScoreDetail = calculateInterventionScoreDetailed(
           {
             ...vehicle,
             kilometrage: kmActuel,
@@ -249,64 +315,77 @@ async function getRecommendations(req, res) {
           lastIntervention,
           interventionType
         );
+        const interventionScore = interventionScoreDetail.total;
 
-        if (interventionScore >= 50) {
-          const bestGarages = garages
-            .map((garage) => {
-              const garageLat = Number(garage.latitude);
-              const garageLon = Number(garage.longitude);
-              const hasGps = Number.isFinite(garageLat) && Number.isFinite(garageLon);
-              const distance = hasGps ? haversine(userLat, userLon, garageLat, garageLon) : null;
-              const score = calculateGarageScore(
-                userLat,
-                userLon,
-                {
-                  ...garage,
-                  latitude: garageLat,
-                  longitude: garageLon,
-                  isOpen: Boolean(garage.is_open)
-                }
-              );
-              return {
+        const bestGarages = garages
+          .map((garage) => {
+            const garageLat = Number(garage.latitude);
+            const garageLon = Number(garage.longitude);
+            const hasGps = Number.isFinite(garageLat) && Number.isFinite(garageLon);
+            const garageDetail = calculateGarageScoreDetailed(
+              userLat,
+              userLon,
+              {
                 ...garage,
-                distance_km: distance,
-                score_global: score
-              };
-            })
-            .sort((a, b) => b.score_global - a.score_global)
-            .slice(0, garageLimit);
+                latitude: garageLat,
+                longitude: garageLon,
+                isOpen: Boolean(garage.is_open)
+              }
+            );
+            return {
+              id: garage.id,
+              name: garage.name,
+              adresse: garage.adresse,
+              telephone: garage.telephone,
+              distance_km: garageDetail.distanceKm,
+              rating: parseFloat(garage.rating) || 3.5,
+              score_global: parseFloat(garageDetail.total.toFixed(2)),
+              score_breakdown: garageDetail,
+              isOpen: Boolean(garage.is_open)
+            };
+          })
+          .sort((a, b) => b.score_global - a.score_global)
+          .slice(0, garageLimit);
 
-          allRecommendations.push({
-            vehicle: {
-              id: vehicle.id,
-              marque: null,
-              modele: vehicle.modele_voiture || null,
-              kilometrage: kmActuel,
-              type: vehicleType,
-              matricule: vehicle.matricule_voiture || null
-            },
-            intervention: {
-              id: interventionType.id,
-              type: interventionType.type,
-              urgence: getUrgency(kmActuel, kmRecommande),
-              score: parseFloat(interventionScore.toFixed(2)),
-              km_recommande: kmRecommande || null,
-              km_actuel: kmActuel,
-              km_restant: kmRestant,
-              jours_recommandes: interventionType.jours_recommandes
-            },
-            garages: bestGarages.map((g) => ({
-              id: g.id,
-              name: g.name,
-              adresse: g.adresse,
-              telephone: g.telephone,
-              distance_km: g.distance_km,
-              rating: parseFloat(g.rating) || 3.5,
-              score_global: parseFloat(g.score_global.toFixed(2)),
-              isOpen: Boolean(g.is_open)
-            }))
-          });
-        }
+        const bestGarage = bestGarages[0] || null;
+        const garageScore = bestGarage?.score_global ?? 0;
+        const finalScore = parseFloat((((interventionScoreDetail.total || 0) + garageScore) / 2).toFixed(2));
+        const interventionReasons = buildInterventionReasons(interventionScoreDetail, kmActuel, kmRecommande, kmRestant);
+        const garageReasons = bestGarage ? buildGarageReasons(bestGarage.score_breakdown) : [];
+        const reasons = [...interventionReasons, ...garageReasons];
+        const recommendationSummary = buildRecommendationSummary(finalScore, interventionScoreDetail.total || 0, garageScore);
+
+        allRecommendations.push({
+          vehicle: {
+            id: vehicle.id,
+            marque: null,
+            modele: vehicle.modele_voiture || null,
+            kilometrage: kmActuel,
+            type: vehicleType,
+            matricule: vehicle.matricule_voiture || null
+          },
+          intervention: {
+            id: interventionType.id,
+            type: interventionType.type,
+            urgence: getUrgency(kmActuel, kmRecommande),
+            score: parseFloat(interventionScore.toFixed(2)),
+            score_breakdown: interventionScoreDetail,
+            km_recommande: kmRecommande || null,
+            km_actuel: kmActuel,
+            km_restant: kmRestant,
+            jours_recommandes: interventionType.jours_recommandes
+          },
+          garages: bestGarages,
+          finalScore,
+          recommendationSummary,
+          reasons,
+          explanation: {
+            interventionReasons,
+            garageReasons,
+            recommendationSummary,
+            finalScore
+          }
+        });
       }
     }
 
@@ -351,10 +430,18 @@ async function getRecommendations(req, res) {
       return acc;
     }, {});
 
+    const serializedRecommendations = pagedRecommendations.map((item) => ({
+      ...item,
+      garages: (item.garages || []).map((garage) => ({
+        ...garage,
+        score_breakdown: garage.score_breakdown ? { ...garage.score_breakdown } : null
+      }))
+    }));
+
     return res.json({
       success: true,
-      data: pagedRecommendations,
-      count: pagedRecommendations.length,
+      data: serializedRecommendations,
+      count: serializedRecommendations.length,
       meta: {
         total,
         page: safePage,

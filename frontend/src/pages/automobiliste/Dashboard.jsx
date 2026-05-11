@@ -58,7 +58,8 @@ const AutomobilisteDashboard = () => {
     garage_nom: "",
     garage_adresse: "",
     kilometrage: "",
-    pieces: []
+    pieces: [],
+    pieces_libres: ""
   });
 
   // États pour le formulaire
@@ -225,7 +226,8 @@ const AutomobilisteDashboard = () => {
       garage_nom: "",
       garage_adresse: "",
       kilometrage: "",
-      pieces: []
+      pieces: [],
+      pieces_libres: ""
     });
 
     if (pieces.length === 0) {
@@ -272,7 +274,8 @@ const AutomobilisteDashboard = () => {
       garage_nom: "",
       garage_adresse: "",
       kilometrage: "",
-      pieces: []
+      pieces: [],
+      pieces_libres: ""
     });
   };
 
@@ -290,10 +293,18 @@ const AutomobilisteDashboard = () => {
           ...(p.prix_unitaire !== "" ? { prix_unitaire: Number(p.prix_unitaire) } : {})
         }));
 
+      const manualPiecesText = (interventionFormData.pieces_libres || "").trim();
+      const mergedDescription = [
+        interventionFormData.description?.trim(),
+        manualPiecesText ? `Pièces utilisées (saisie libre): ${manualPiecesText}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
       const payload = {
         date_intervention: interventionFormData.date_intervention || undefined,
         type: interventionFormData.type,
-        description: interventionFormData.description || undefined,
+        description: mergedDescription || undefined,
         garage_nom: interventionFormData.garage_nom || undefined,
         garage_adresse: interventionFormData.garage_adresse || undefined,
         kilometrage: interventionFormData.kilometrage !== "" ? Number(interventionFormData.kilometrage) : undefined,
@@ -824,7 +835,7 @@ const AutomobilisteDashboard = () => {
                       </div>
 
                       {piecesLoading ? (
-                        <p className="text-sm text-gray-500">Chargement des pièces...</p>
+                        <p className="text-sm text-gray-500">Chargement des pièces... (vous pouvez saisir manuellement ci-dessous)</p>
                       ) : interventionFormData.pieces.length === 0 ? (
                         <p className="text-sm text-gray-500">Aucune pièce ajoutée.</p>
                       ) : (
@@ -874,6 +885,18 @@ const AutomobilisteDashboard = () => {
                           ))}
                         </div>
                       )}
+
+                      <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Saisie libre des pièces utilisées</label>
+                        <textarea
+                          name="pieces_libres"
+                          value={interventionFormData.pieces_libres}
+                          onChange={handleInterventionFieldChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded"
+                          rows="2"
+                          placeholder="Ex: Filtre huile x1, Huile moteur 5W30 x4L"
+                        />
+                      </div>
                     </div>
 
                     <div className="md:col-span-2 flex gap-2">

@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 const {
   calculateInterventionScore,
   calculateInterventionScoreDetailed,
@@ -10,8 +10,8 @@ const {
 
 const DEFAULT_INTERVENTION_TYPES = [
   { id: 'default-vidange', type: 'vidange', km_recommande: 10000, jours_recommandes: 180 },
-  { id: 'default-revision', type: 'révision', km_recommande: 20000, jours_recommandes: 365 },
-  { id: 'default-reparation', type: 'réparation', km_recommande: 40000, jours_recommandes: 730 }
+  { id: 'default-revision', type: 'rÃ©vision', km_recommande: 20000, jours_recommandes: 365 },
+  { id: 'default-reparation', type: 'rÃ©paration', km_recommande: 40000, jours_recommandes: 730 }
 ];
 
 // Convertit en nombre avec fallback si valeur absente/invalide.
@@ -28,7 +28,7 @@ function parsePositiveInt(value, fallback) {
   return n;
 }
 
-// Normalise les clés de tri supportées.
+// Normalise les clÃ©s de tri supportÃ©es.
 function normalizeSortBy(value) {
   const sortBy = String(value || 'urgence').toLowerCase();
   if (['urgence', 'score', 'distance', 'type'].includes(sortBy)) {
@@ -52,22 +52,22 @@ function compareValues(a, b, order = 'desc') {
   return order === 'asc' ? base : -base;
 }
 
-// Transforme un niveau d'urgence en rang numérique.
+// Transforme un niveau d'urgence en rang numÃ©rique.
 function getUrgencyRank(label) {
-  const ranks = { URGENT: 3, 'RECOMMANDÉ': 2, FUTUR: 1 };
+  const ranks = { URGENT: 3, 'RECOMMANDÃ‰': 2, FUTUR: 1 };
   return ranks[label] || 0;
 }
 
-// Uniformise la valeur d'urgence reçue depuis la query string.
+// Uniformise la valeur d'urgence reÃ§ue depuis la query string.
 function normalizeUrgency(value) {
   if (value === undefined || value === null || value === '') return null;
   const raw = String(value).toUpperCase();
-  if (raw === 'RECOMMANDE') return 'RECOMMANDÉ';
-  if (['URGENT', 'RECOMMANDÉ', 'FUTUR'].includes(raw)) return raw;
+  if (raw === 'RECOMMANDE') return 'RECOMMANDÃ‰';
+  if (['URGENT', 'RECOMMANDÃ‰', 'FUTUR'].includes(raw)) return raw;
   return null;
 }
 
-// Retourne la dernière intervention pour un type et un véhicule.
+// Retourne la derniÃ¨re intervention pour un type et un vÃ©hicule.
 async function getLastInterventionByType(vehicleId, type) {
   const result = await pool.query(
     `SELECT id, date_intervention, kilometrage, created_at
@@ -91,20 +91,45 @@ function pushUniqueReason(reasons, reason) {
 function buildInterventionReasons(interventionDetail, kmActuel, kmRecommande, kmRestant) {
   const reasons = [];
 
-  if (interventionDetail.kmScorePercent >= 70 || (kmRecommande > 0 && kmActuel >= kmRecommande)) {
-    pushUniqueReason(reasons, 'Kilométrage élevé');
+  // Kilometer-based scoring in tiers
+  const kmScore = interventionDetail.kmScorePercent || 0;
+  if (kmScore >= 90) {
+    pushUniqueReason(reasons, 'Kilométrage très élevé - intervention urgente');
+  } else if (kmScore >= 70) {
+    pushUniqueReason(reasons, 'Kilométrage élevé par rapport aux recommandations');
+  } else if (kmScore >= 50) {
+    pushUniqueReason(reasons, 'Kilométrage approchant le seuil recommandé');
   }
 
-  if (interventionDetail.dateScorePercent >= 70) {
+  // Date-based scoring in tiers
+  const dateScore = interventionDetail.dateScorePercent || 0;
+  if (dateScore >= 90) {
+    pushUniqueReason(reasons, 'Dernière intervention très ancienne');
+  } else if (dateScore >= 70) {
     pushUniqueReason(reasons, 'Dernière intervention ancienne');
+  } else if (dateScore >= 50) {
+    pushUniqueReason(reasons, 'Intervalle recommandé approchant');
   }
 
-  if (kmRestant !== null && kmRestant <= 1000) {
-    pushUniqueReason(reasons, 'Entretien à prévoir rapidement');
+  // Granular km restant checks
+  if (kmRestant !== null && kmRestant !== undefined) {
+    if (kmRestant <= 500) {
+      pushUniqueReason(reasons, 'Entretien à prévoir très rapidement - moins de 500 km');
+    } else if (kmRestant <= 1000) {
+      pushUniqueReason(reasons, 'Entretien à prévoir rapidement - moins de 1000 km');
+    } else if (kmRestant <= 2000) {
+      pushUniqueReason(reasons, 'Entretien recommandé dans les 2000 km');
+    }
+  }
+
+  // Score-based reasoning
+  const combinedScore = (kmScore + dateScore) / 2;
+  if (combinedScore >= 70) {
+    pushUniqueReason(reasons, 'Score de priorite d\'entretien eleve');
   }
 
   if (reasons.length === 0) {
-    pushUniqueReason(reasons, 'Entretien cohérent avec l’historique du véhicule');
+    pushUniqueReason(reasons, 'Entretien coherent avec l\'historique du vehicule');
   }
 
   return reasons;
@@ -113,16 +138,44 @@ function buildInterventionReasons(interventionDetail, kmActuel, kmRecommande, km
 function buildGarageReasons(garageDetail) {
   const reasons = [];
 
-  if (garageDetail.distanceScore0to10 >= 8) {
-    pushUniqueReason(reasons, 'Garage proche');
+  // Distance score in multiple tiers
+  const distanceScore = garageDetail.distanceScore0to10 || 0;
+  if (distanceScore >= 9) {
+    pushUniqueReason(reasons, 'Garage très proche - localisation excellente');
+  } else if (distanceScore >= 8) {
+    pushUniqueReason(reasons, 'Garage proche - localisation optimale');
+  } else if (distanceScore >= 6) {
+    pushUniqueReason(reasons, 'Garage à distance raisonnable');
+  } else if (distanceScore >= 4) {
+    pushUniqueReason(reasons, 'Garage accessible');
   }
 
-  if (garageDetail.ratingScore0to10 >= 8) {
+  // Rating score in multiple tiers
+  const ratingScore = garageDetail.ratingScore0to10 || 0;
+  if (ratingScore >= 9) {
+    pushUniqueReason(reasons, 'Garage excellent - très bien noté');
+  } else if (ratingScore >= 8) {
     pushUniqueReason(reasons, 'Garage bien noté');
+  } else if (ratingScore >= 6) {
+    pushUniqueReason(reasons, 'Garage correctement noté');
   }
 
-  if (garageDetail.availabilityScore0to10 >= 10) {
-    pushUniqueReason(reasons, 'Disponible aujourd’hui');
+  // Availability score with better logic
+  const availabilityScore = garageDetail.availabilityScore0to10 || 0;
+  if (availabilityScore >= 9) {
+    pushUniqueReason(reasons, 'Disponible aujourd\'hui - excellente réactivité');
+  } else if (availabilityScore >= 7) {
+    pushUniqueReason(reasons, 'Bonne disponibilité');
+  } else if (availabilityScore >= 5) {
+    pushUniqueReason(reasons, 'Disponibilité acceptable');
+  }
+
+  // Overall garage score evaluation
+  const overallScore = (distanceScore + ratingScore + availabilityScore) / 3;
+  if (overallScore >= 8) {
+    pushUniqueReason(reasons, 'Garage très recommandé - excellent profil global');
+  } else if (overallScore >= 6) {
+    pushUniqueReason(reasons, 'Garage pertinent selon tous les critères');
   }
 
   if (reasons.length === 0) {
@@ -144,7 +197,230 @@ function buildRecommendationSummary(finalScore, interventionScore, garageScore) 
   return 'Option secondaire';
 }
 
-// Construit une liste classée de recommandations dynamiques pour l'utilisateur connecté.
+function clamp(value, min = 0, max = 100) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function getHistoryState(interventionScoreDetail) {
+  const signals = [
+    interventionScoreDetail?.kmRecommande,
+    interventionScoreDetail?.kmRestant,
+    interventionScoreDetail?.dateScorePercent
+  ].filter((value) => value !== null && value !== undefined).length;
+
+  if (signals === 0) return 'missing';
+  if (signals >= 3) return 'complete';
+  return 'partial';
+}
+
+function getVehicleScore(kmActuel) {
+  if (!Number.isFinite(kmActuel)) {
+    return { score: 60, label: 'Kilométrage manquant' };
+  }
+
+  if (kmActuel < 80000) {
+    return { score: 85, label: 'Kilométrage sain' };
+  }
+
+  if (kmActuel <= 150000) {
+    return { score: 60, label: 'Kilométrage intermédiaire' };
+  }
+
+  return { score: 30, label: 'Kilométrage élevé' };
+}
+
+function getRiskLevel(kmActuel, historyState) {
+  if ((Number.isFinite(kmActuel) && kmActuel > 150000) || historyState !== 'complete') {
+    return {
+      level: 'HIGH',
+      tone: 'rose',
+      message: "Le véhicule est classé HIGH car le kilométrage est critique ou l'historique est incomplet."
+    };
+  }
+
+  if (Number.isFinite(kmActuel) && kmActuel >= 80000) {
+    return {
+      level: 'MEDIUM',
+      tone: 'amber',
+      message: 'Le véhicule est classé MEDIUM car il se situe dans la zone de vigilance kilométrique.'
+    };
+  }
+
+  return {
+    level: 'LOW',
+    tone: 'emerald',
+    message: 'Le véhicule est classé LOW car le kilométrage est faible et l\'historique est complet.'
+  };
+}
+
+function buildDecisionAnalysis({ kmActuel, kmRecommande, kmRestant, historyState, risk }) {
+  const kmNowText = Number.isFinite(kmActuel) ? `${Math.round(kmActuel)} km` : 'km inconnu';
+  const kmTargetText = Number.isFinite(kmRecommande) ? `${Math.round(kmRecommande)} km` : 'seuil non renseigné';
+
+  const trigger = `Déclencheur: ${kmNowText} observés pour un seuil conseillé à ${kmTargetText}.`;
+
+  const history =
+    historyState === 'missing'
+      ? "Historique incomplet: le moteur applique une stratégie prudente par défaut."
+      : historyState === 'partial'
+        ? 'Historique partiel: la décision combine les signaux disponibles sans interpolation agressive.'
+        : 'Historique complet: la décision exploite toutes les informations de maintenance disponibles.';
+
+  const riskReason =
+    Number.isFinite(kmRestant)
+      ? `Risque ${risk.level}: marge restante estimée à ${Math.max(0, Math.round(kmRestant))} km avant le prochain seuil.`
+      : `Risque ${risk.level}: calcul fondé sur le kilométrage et la complétude de l'historique.`;
+
+  return { trigger, history, riskReason };
+}
+
+function normalizeDecisionType(type) {
+  const raw = String(type || '').toLowerCase();
+  if (raw.includes('vidange')) return 'Vidange';
+  if (raw.includes('revision') || raw.includes('révision')) return 'Révision';
+  if (raw.includes('reparation') || raw.includes('réparation')) return 'Réparation';
+  return 'Révision';
+}
+
+function buildEmptyGarageFallback() {
+  return {
+    id: null,
+    name: 'Garage à confirmer',
+    adresse: null,
+    telephone: null,
+    distance_km: null,
+    rating: null,
+    score_global: 0,
+    score_breakdown: null,
+    isOpen: false
+  };
+}
+
+function buildFallbackDecision({ vehicle = null, garage = null, service = 'Révision' } = {}) {
+  const fallbackGarage = garage || buildEmptyGarageFallback();
+  const safeVehicle = vehicle
+    ? {
+        id: vehicle.id ?? null,
+        marque: null,
+        modele: vehicle.modele_voiture ?? vehicle.modele ?? null,
+        kilometrage: Number(vehicle.kilometrage_voiture ?? vehicle.kilometrage ?? 0),
+        type: vehicle.type_vehicule ?? vehicle.type ?? 'Essence',
+        fuel: vehicle.type_vehicule ?? vehicle.fuel ?? null,
+        current_state: vehicle.current_state ?? 'À vérifier',
+        matricule: vehicle.matricule_voiture ?? vehicle.matricule ?? null
+      }
+    : {
+        id: null,
+        marque: null,
+        modele: 'Votre véhicule',
+        kilometrage: 0,
+        type: 'Essence',
+        fuel: null,
+        current_state: 'À vérifier',
+        matricule: null
+      };
+
+  return {
+    decision: normalizeDecisionType(service),
+    recommendation_summary: 'Recommandation générée avec les données disponibles',
+    risk: 'MEDIUM',
+    risk_message: "Le moteur applique un niveau MEDIUM par défaut lorsqu'il manque des informations.",
+    risk_tone: 'amber',
+    final_score: 50,
+    vehicle_score: 50,
+    garage_score: 50,
+    vehicle_score_label: 'Score par défaut',
+    history_state: 'missing',
+    reasons: [
+      'Décision de secours calculée pour garantir une recommandation continue.',
+      'Complétez les données véhicule et historique pour affiner le score.'
+    ],
+    analysis: {
+      trigger: 'Déclencheur: mode fallback activé.',
+      history: 'Historique insuffisant: le moteur applique une stratégie prudente.',
+      riskReason: 'Risque MEDIUM: valeur de sécurité en attendant des données plus complètes.'
+    },
+    vehicle: safeVehicle,
+    intervention: {
+      id: null,
+      type: normalizeDecisionType(service),
+      urgence: 'RECOMMANDÉ',
+      score: 50,
+      score_breakdown: null,
+      km_recommande: null,
+      km_actuel: safeVehicle.kilometrage,
+      km_restant: null,
+      jours_recommandes: null
+    },
+    recommended_garage: fallbackGarage,
+    top_garages: [fallbackGarage]
+  };
+}
+
+function toDecisionPayload(candidate) {
+  if (!candidate) return buildFallbackDecision();
+
+  const intervention = candidate.intervention || {};
+  const vehicle = candidate.vehicle || {};
+  const garages = Array.isArray(candidate.garages) ? candidate.garages.slice(0, 3) : [];
+  const bestGarage = garages[0] || null;
+
+  const kmActuel = toNumber(vehicle.kilometrage, null);
+  const kmRecommande = toNumber(intervention.km_recommande, null);
+  const kmRestant = toNumber(intervention.km_restant, null);
+  const historyState = getHistoryState(intervention.score_breakdown);
+  const vehicleScoreDetail = getVehicleScore(kmActuel);
+  const garageScore = toNumber(bestGarage?.score_global, 0) || 0;
+  const finalScore = clamp(Math.round(0.5 * vehicleScoreDetail.score + 0.5 * garageScore));
+  const risk = getRiskLevel(kmActuel, historyState);
+  const analysis = buildDecisionAnalysis({
+    kmActuel,
+    kmRecommande,
+    kmRestant,
+    historyState,
+    risk
+  });
+
+  return {
+    decision: normalizeDecisionType(intervention.type),
+    recommendation_summary: candidate.recommendationSummary || 'Recommandation principale',
+    risk: risk.level,
+    risk_message: risk.message,
+    risk_tone: risk.tone,
+    final_score: finalScore,
+    vehicle_score: vehicleScoreDetail.score,
+    garage_score: Math.round(garageScore),
+    vehicle_score_label: vehicleScoreDetail.label,
+    history_state: historyState,
+    reasons: Array.isArray(candidate.reasons) ? candidate.reasons.slice(0, 3) : [],
+    analysis,
+    vehicle,
+    intervention,
+    recommended_garage: bestGarage || buildEmptyGarageFallback(),
+    top_garages: garages.length > 0 ? garages : [buildEmptyGarageFallback()]
+  };
+}
+
+function buildVehicleCurrentState(kmActuel, kmRecommande, urgency) {
+  const normalizedUrgency = String(urgency || '').toUpperCase();
+  const remainingKm = Number.isFinite(kmRecommande) ? Math.max(0, kmRecommande - kmActuel) : null;
+
+  if (normalizedUrgency === 'URGENT' || (remainingKm !== null && remainingKm <= 500)) {
+    return 'Entretien urgent';
+  }
+
+  if (normalizedUrgency === 'RECOMMANDÉ' || normalizedUrgency === 'RECOMMANDE' || (remainingKm !== null && remainingKm <= 1500)) {
+    return 'Entretien recommandé';
+  }
+
+  if (remainingKm !== null && remainingKm <= 3000) {
+    return 'À surveiller';
+  }
+
+  return 'État correct';
+}
+
+// Construit une liste classÃ©e de recommandations dynamiques pour l'utilisateur connectÃ©.
 async function getRecommendations(req, res) {
   try {
     const TUNIS_DEFAULT_LAT = 36.8065;
@@ -154,7 +430,7 @@ async function getRecommendations(req, res) {
 
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'Non authentifié' });
+      return res.status(401).json({ success: false, message: 'Non authentifiÃ©' });
     }
 
     const errors = [];
@@ -175,7 +451,7 @@ async function getRecommendations(req, res) {
     }
 
     if (rawUrgency !== undefined && normalizeUrgency(rawUrgency) === null) {
-      errors.push('urgency doit etre URGENT, RECOMMANDÉ (ou RECOMMANDE), ou FUTUR');
+      errors.push('urgency doit etre URGENT, RECOMMANDÃ‰ (ou RECOMMANDE), ou FUTUR');
     }
 
     if (rawSortBy !== undefined && !['urgence', 'score', 'distance', 'type'].includes(String(rawSortBy).toLowerCase())) {
@@ -230,7 +506,7 @@ async function getRecommendations(req, res) {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvÃ©' });
     }
 
     const user = userResult.rows[0];
@@ -248,7 +524,8 @@ async function getRecommendations(req, res) {
       return res.json({
         success: true,
         data: [],
-        message: 'Aucun véhicule trouvé'
+        decision: buildFallbackDecision({ service: 'Révision' }),
+        message: 'Aucun vÃ©hicule trouvÃ©'
       });
     }
 
@@ -279,7 +556,8 @@ async function getRecommendations(req, res) {
       return res.json({
         success: true,
         data: [],
-        message: 'Aucun garage trouvé'
+        decision: buildFallbackDecision({ vehicle: vehicles[0], service: 'Révision' }),
+        message: 'Aucun garage trouvÃ©'
       });
     }
 
@@ -362,6 +640,8 @@ async function getRecommendations(req, res) {
             modele: vehicle.modele_voiture || null,
             kilometrage: kmActuel,
             type: vehicleType,
+            fuel: vehicle.type_vehicule || null,
+            current_state: buildVehicleCurrentState(kmActuel, kmRecommande, getUrgency(kmActuel, kmRecommande)),
             matricule: vehicle.matricule_voiture || null
           },
           intervention: {
@@ -438,9 +718,28 @@ async function getRecommendations(req, res) {
       }))
     }));
 
+    const canonicalSource = filteredRecommendations.length > 0 ? filteredRecommendations : allRecommendations;
+
+    const canonicalCandidate = [...canonicalSource]
+      .sort((a, b) => {
+        if ((b.finalScore ?? 0) !== (a.finalScore ?? 0)) return (b.finalScore ?? 0) - (a.finalScore ?? 0);
+        if ((b.intervention?.score ?? 0) !== (a.intervention?.score ?? 0)) {
+          return (b.intervention?.score ?? 0) - (a.intervention?.score ?? 0);
+        }
+        const aGarage = a.garages?.[0]?.score_global ?? 0;
+        const bGarage = b.garages?.[0]?.score_global ?? 0;
+        if (bGarage !== aGarage) return bGarage - aGarage;
+        return 0;
+      })[0] || null;
+
+    const decision = canonicalCandidate
+      ? toDecisionPayload(canonicalCandidate)
+      : buildFallbackDecision({ vehicle: vehicles[0], garage: garages[0], service: 'Révision' });
+
     return res.json({
       success: true,
       data: serializedRecommendations,
+      decision,
       count: serializedRecommendations.length,
       meta: {
         total,
@@ -469,3 +768,4 @@ async function getRecommendations(req, res) {
 }
 
 module.exports = { getRecommendations };
+

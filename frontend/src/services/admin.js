@@ -48,6 +48,11 @@ export const getPendingReports = () => {
   return API.get('/admin/reports/pending');
 };
 
+// Get report summary counters
+export const getReportStats = () => {
+  return API.get('/admin/reports/stats');
+};
+
 // Get a specific report
 export const getReport = (reportId) => {
   return API.get(`/admin/reports/${reportId}`);

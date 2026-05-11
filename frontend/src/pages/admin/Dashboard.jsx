@@ -1,16 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, TriangleAlert, Trash2, BarChart3, Users, CalendarRange, Award } from "lucide-react";
+import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, Package, TriangleAlert, Trash2, BarChart3, Users, CalendarRange, Award } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
   dismissReport,
   getGarages,
   getPendingReports,
-  getModerationUsers,
+  getPieces,
+  deleteGarage,
+  deactivateGarage,
+  deletePiece,
   resolveReport,
-  rejectUser,
-  toggleUserBlock,
+  approveGarage,
+  rejectGarage,
+  approvePiece,
+  rejectPiece,
   getDashboardStats,
-  getAuditLogs
+  getAuditLogs,
+  getReportStats
 } from "../../services/admin";
 import {
   Bar,
@@ -28,7 +34,7 @@ import {
 
 const INITIAL_COUNTS = {
   totalGarages: 0,
-  pendingUsers: 0,
+  totalPieces: 0,
   pendingReports: 0,
   resolvedReports: 0,
   totalUsers: 0,
@@ -43,8 +49,8 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({ type: null, id: null });
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [pendingUsers, setPendingUsers] = useState([]);
+  const [garages, setGarages] = useState([]);
+  const [pieces, setPieces] = useState([]);
   const [pendingReports, setPendingReports] = useState([]);
   const [reportNoteById, setReportNoteById] = useState({});
   const [counts, setCounts] = useState(INITIAL_COUNTS);
@@ -144,37 +150,32 @@ const AdminDashboard = () => {
   const loadDashboard = async () => {
     setLoading(true);
     setError("");
-    setSuccess("");
 
     try {
-      const [statsResponse, garagesResponse, usersResponse, reportsResponse] = await Promise.all([
+      const [statsResponse, garagesResponse, piecesResponse, reportsResponse, reportStatsResponse] = await Promise.all([
         getDashboardStats(),
         getGarages(),
-        getModerationUsers(),
-        getPendingReports()
+        getPieces(),
+        getPendingReports(),
+        getReportStats()
       ]);
 
       const statsData = statsResponse?.data?.data || statsResponse?.data || null;
       setDashboardStats(statsData);
 
       const garagesList = garagesResponse?.data?.data?.items || garagesResponse?.data?.items || garagesResponse?.data || [];
-      const usersList = usersResponse?.data?.data?.items || usersResponse?.data?.items || usersResponse?.data || [];
-      const normalizedUsers = Array.isArray(usersList)
-        ? usersList.map((user) => ({
-            ...user,
-            is_validated: Boolean(user?.is_validated),
-            role: String(user?.role || "").toLowerCase()
-          }))
-        : [];
+      const piecesList = piecesResponse?.data?.data?.items || piecesResponse?.data?.items || piecesResponse?.data || [];
       const reportsList = reportsResponse?.data?.data || reportsResponse?.data || [];
+      const reportStats = reportStatsResponse?.data?.data || reportStatsResponse?.data || {};
 
-      setPendingUsers(normalizedUsers);
+      setGarages(Array.isArray(garagesList) ? garagesList : []);
+      setPieces(Array.isArray(piecesList) ? piecesList : []);
       setPendingReports(Array.isArray(reportsList) ? reportsList : []);
       setCounts({
         totalGarages: Array.isArray(garagesList) ? garagesList.length : 0,
-        pendingUsers: normalizedUsers.length,
+        totalPieces: Array.isArray(piecesList) ? piecesList.length : 0,
         pendingReports: Array.isArray(reportsList) ? reportsList.length : 0,
-        resolvedReports: Array.isArray(reportsList) ? reportsList.filter((item) => item.status === "resolved").length : 0,
+        resolvedReports: Number(reportStats.resolved || 0),
         totalUsers: Number(statsData?.users?.totalUsers || 0),
         totalAppointments: Number(statsData?.appointments?.totalAppointments || 0),
         pendingAppointments: Number(statsData?.appointments?.pendingAppointments || 0)
@@ -185,22 +186,6 @@ const AdminDashboard = () => {
       setLoading(false);
     }
   };
-
-  // Auto-clear success message after 3 seconds
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(""), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
-
-  // Auto-clear error message after 5 seconds
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => setError(""), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
 
   useEffect(() => {
     loadDashboard();
@@ -214,32 +199,17 @@ const AdminDashboard = () => {
 
   const overviewCards = useMemo(() => ([
     { label: "Garages", value: counts.totalGarages, icon: Store, tone: "from-blue-500 to-cyan-500" },
-    { label: "Comptes à modérer", value: counts.pendingUsers, icon: Users, tone: "from-violet-500 to-fuchsia-500" },
+    { label: "Pièces", value: counts.totalPieces, icon: Package, tone: "from-purple-500 to-pink-500" },
     { label: "Signalements ouverts", value: counts.pendingReports, icon: TriangleAlert, tone: "from-amber-500 to-orange-500" },
     { label: "Signalements résolus", value: counts.resolvedReports, icon: CheckCircle2, tone: "from-emerald-500 to-teal-500" }
   ]), [counts]);
 
   const kpiCards = useMemo(() => ([
-    { label: "Utilisateurs", value: counts.totalUsers, icon: Users, note: `${dashboardStats?.users?.pendingUsers || 0} en attente de validation`, tone: "from-sky-500 to-blue-600" },
+    { label: "Utilisateurs", value: counts.totalUsers, icon: Users, note: `${dashboardStats?.users?.pendingUsers || 0} en attente de profil`, tone: "from-sky-500 to-blue-600" },
     { label: "RDV total", value: counts.totalAppointments, icon: CalendarRange, note: `${dashboardStats?.appointments?.appointmentsLast30Days || 0} ces 30 derniers jours`, tone: "from-violet-500 to-fuchsia-600" },
     { label: "RDV en attente", value: counts.pendingAppointments, icon: TriangleAlert, note: `${dashboardStats?.appointments?.confirmedAppointments || 0} confirmés`, tone: "from-amber-500 to-orange-600" },
     { label: "Top garage", value: dashboardStats?.garages?.topGarages?.[0]?.appointmentsCount || 0, icon: Award, note: dashboardStats?.garages?.topGarages?.[0]?.name || "Aucun garage", tone: "from-emerald-500 to-teal-600" }
   ]), [counts, dashboardStats]);
-
-  const pendingAutomobilistes = useMemo(
-    () => pendingUsers.filter((user) => String(user.role || "").toLowerCase() === "automobiliste"),
-    [pendingUsers]
-  );
-
-  const pendingVendeurs = useMemo(
-    () => pendingUsers.filter((user) => String(user.role || "").toLowerCase() === "vendeur"),
-    [pendingUsers]
-  );
-
-  const pendingGarages = useMemo(
-    () => pendingUsers.filter((user) => String(user.role || "").toLowerCase() === "garage"),
-    [pendingUsers]
-  );
 
   const userRoleChartData = useMemo(() => {
     const roles = dashboardStats?.users?.byRole || [];
@@ -260,123 +230,47 @@ const AdminDashboard = () => {
     }));
   }, [dashboardStats]);
 
-  const renderPendingUsersTable = (title, items, emptyMessage) => (
-    <div className="rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold text-[#13243f]">{title}</h3>
-          <p className="mt-1 text-sm text-[#66758d]">Gestion et modération des comptes {title.toLowerCase()}.</p>
-        </div>
-        <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] text-sky-700 ring-1 ring-sky-200">
-          {items.length}
-        </span>
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border border-[#e6edf6]">
-        <table className="min-w-full divide-y divide-[#e6edf6] text-left text-sm">
-          <thead className="bg-gradient-to-r from-[#f8fbff] to-white text-[#5f6f87]">
-            <tr>
-              <th className="px-4 py-3 font-semibold">Nom</th>
-              <th className="px-4 py-3 font-semibold">Email</th>
-              <th className="px-4 py-3 font-semibold">Téléphone</th>
-              <th className="px-4 py-3 font-semibold">Créé le</th>
-              <th className="px-4 py-3 font-semibold">Statut</th>
-              <th className="px-4 py-3 font-semibold">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[#eef3f8] bg-white">
-            {!loading && items.length === 0 && (
-              <tr>
-                <td className="px-4 py-8 text-center text-[#6b7a90]" colSpan={6}>
-                  <div className="flex flex-col items-center gap-2">
-                    <ShieldAlert className="h-5 w-5 text-[#cbd5e1]" />
-                    <span>{emptyMessage}</span>
-                  </div>
-                </td>
-              </tr>
-            )}
-            {items.map((user) => (
-              <tr key={user.id} className="align-top transition hover:bg-[#f8fbff]">
-                <td className="px-4 py-4">
-                  <div className="font-semibold text-[#13243f]">{user.name || "-"}</div>
-                </td>
-                <td className="px-4 py-4 text-[#5f6f87] text-xs font-mono">{user.email || "-"}</td>
-                <td className="px-4 py-4 text-[#5f6f87] text-xs">{user.phone || "-"}</td>
-                <td className="px-4 py-4 text-[#5f6f87] text-xs">
-                  {user.created_at ? new Date(user.created_at).toLocaleDateString('fr-FR', { year: 'numeric', month: 'short', day: 'numeric' }) : "-"}
-                </td>
-                <td className="px-4 py-4">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em] shadow-sm ${user.is_validated ? "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200" : "bg-red-100 text-red-800 ring-1 ring-red-200"}`}>
-                    <span className={`inline-block h-2 w-2 rounded-full ${user.is_validated ? "bg-emerald-600" : "bg-red-600"}`} />
-                    {user.is_validated ? "Actif" : "Bloqué"}
-                  </span>
-                </td>
-                <td className="px-4 py-4">
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleUserAction(user.id, user.is_validated ? "block" : "unblock")}
-                      disabled={actionLoading.type === "user" && actionLoading.id === user.id}
-                      className={`inline-flex items-center justify-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${user.is_validated ? "bg-amber-600 hover:bg-amber-500" : "bg-emerald-600 hover:bg-emerald-500"}`}
-                      title={user.is_validated ? "Bloquer ce compte" : "Débloquer ce compte"}
-                    >
-                      {actionLoading.type === "user" && actionLoading.id === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldAlert className="h-3 w-3" />}
-                      {user.is_validated ? "Bloquer" : "Débloquer"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUserAction(user.id, "delete")}
-                      disabled={actionLoading.type === "user" && actionLoading.id === user.id}
-                      className="inline-flex items-center justify-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Supprimer ce compte"
-                    >
-                      {actionLoading.type === "user" && actionLoading.id === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                      Supprimer
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-
-  const handleUserAction = async (userId, action) => {
-    setActionLoading({ type: "user", id: userId });
+  const handleGarageAction = async (garageId, action) => {
+    setActionLoading({ type: "garage", id: garageId });
     setError("");
-    setSuccess("");
+
+    try {
+      if (action === "deactivate") {
+        await deactivateGarage(garageId);
+      } else if (action === "delete") {
+        await deleteGarage(garageId);
+      } else if (action === "approve") {
+        await approveGarage(garageId);
+      } else if (action === "reject") {
+        await rejectGarage(garageId);
+      }
+
+      setGarages((current) => current.filter((garage) => garage.id !== garageId));
+      setCounts((current) => ({ ...current, totalGarages: Math.max(0, current.totalGarages - 1) }));
+    } catch (actionError) {
+      setError(actionError?.response?.data?.message || "Action sur le garage impossible.");
+    } finally {
+      setActionLoading({ type: null, id: null });
+    }
+  };
+
+  const handlePieceAction = async (pieceId, action) => {
+    setActionLoading({ type: "piece", id: pieceId });
+    setError("");
 
     try {
       if (action === "delete") {
-        await rejectUser(userId);
-        setPendingUsers((current) => current.filter((user) => user.id !== userId));
-        setCounts((current) => ({ ...current, pendingUsers: Math.max(0, current.pendingUsers - 1) }));
-        setSuccess("Compte supprimé avec succès");
-      } else if (action === "block" || action === "unblock" || action === "toggleBlock") {
-        const response = await toggleUserBlock(userId);
-        const updatedUser = response?.data?.data?.user || response?.data?.user || null;
-        const user = pendingUsers.find((u) => u.id === userId);
-        const wasValidated = user?.is_validated;
-
-        if (updatedUser) {
-          setPendingUsers((current) => current.map((u) => (
-            u.id === userId ? { ...u, is_validated: Boolean(updatedUser.is_validated) } : u
-          )));
-        } else {
-          setPendingUsers((current) => current.map((u) => (
-            u.id === userId ? { ...u, is_validated: !u.is_validated } : u
-          )));
-        }
-        
-        const newStatus = updatedUser?.is_validated ?? !wasValidated;
-        setSuccess(newStatus ? "Compte débloqué avec succès" : "Compte bloqué avec succès");
+        await deletePiece(pieceId);
+      } else if (action === "approve") {
+        await approvePiece(pieceId);
+      } else if (action === "reject") {
+        await rejectPiece(pieceId);
       }
+
+      setPieces((current) => current.filter((piece) => piece.id !== pieceId));
+      setCounts((current) => ({ ...current, totalPieces: Math.max(0, current.totalPieces - 1) }));
     } catch (actionError) {
-      const errorMsg = actionError?.response?.data?.message || "Action sur le compte impossible.";
-      setError(errorMsg);
-      console.error("handleUserAction error:", actionError);
+      setError(actionError?.response?.data?.message || "Action sur la pièce impossible.");
     } finally {
       setActionLoading({ type: null, id: null });
     }
@@ -411,10 +305,10 @@ const AdminDashboard = () => {
           <div className="mb-8 flex flex-col gap-4 rounded-3xl border border-white/70 bg-white/75 p-6 shadow-[0_18px_50px_rgba(26,43,75,0.08)] backdrop-blur">
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#64748b]">Centre de supervision</p>
-                <h1 className="mt-2 text-3xl font-black text-[#13243f] md:text-4xl">Pilotage des contenus et de la conformité</h1>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#64748b]">Dashboard admin</p>
+                <h1 className="mt-2 text-3xl font-black text-[#13243f] md:text-4xl">Gestion du contenu et modération</h1>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-[#5f6f87]">
-                  Vue consolidée des indicateurs, validation des contenus, traitement des signalements et suivi des actions administrateur.
+                  Consulter le dashboard global • Valider ou refuser les garages ajoutés • Valider ou refuser les pièces ajoutées • Supprimer ou désactiver du contenu • Gérer les signalements utilisateurs
                 </p>
               </div>
 
@@ -429,13 +323,8 @@ const AdminDashboard = () => {
             </div>
 
             {error && (
-              <div className="animate-in rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 shadow-sm">
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                 {error}
-              </div>
-            )}
-            {success && (
-              <div className="animate-in rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700 shadow-sm">
-                ✓ {success}
               </div>
             )}
           </div>
@@ -474,10 +363,11 @@ const AdminDashboard = () => {
           <div className="mb-6 flex flex-wrap gap-3 rounded-2xl border border-[#dbe5f1] bg-white/70 p-2 shadow-[0_10px_24px_rgba(26,43,75,0.05)] backdrop-blur">
             {[
               { key: "stats", label: "Statistiques" },
-              { key: "users", label: "Modération comptes" },
+              { key: "garages", label: "Garages" },
+              { key: "pieces", label: "Pièces" },
               { key: "reports", label: "Signalements" },
-              { key: "audit", label: "Journal d'audit" },
-              { key: "overview", label: "Synthèse" }
+              { key: "audit", label: "Journal (Audit)" },
+              { key: "overview", label: "Vue globale" }
             ].map((tab) => {
               const isActive = activeTab === tab.key;
               return (
@@ -496,61 +386,35 @@ const AdminDashboard = () => {
           {activeTab === "overview" && (
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
               <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
-                <h2 className="text-xl font-black text-[#13243f]">Priorités opérationnelles</h2>
+                <h2 className="text-xl font-black text-[#13243f]">Priorités du jour</h2>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-2xl bg-[#f3f7fd] p-4">
                     <p className="text-sm text-[#607089]">Garages à gérer</p>
-                    <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : counts.totalGarages}</p>
+                    <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : garages.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#fef6e8] p-4">
                     <p className="text-sm text-[#7a6330]">Signalements à traiter</p>
                     <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pendingReports.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#f5f3ff] p-4">
-                    <p className="text-sm text-[#6b5b95]">Comptes à valider</p>
-                    <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pendingUsers.length}</p>
+                    <p className="text-sm text-[#6b5b95]">Pièces à gérer</p>
+                    <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pieces.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#f0fdf4] p-4">
                     <p className="text-sm text-[#347a34]">Actions rapides</p>
-                    <p className="mt-2 text-sm text-[#5f6f87]">Valider les comptes, suivre les garages et traiter les signalements</p>
+                    <p className="mt-2 text-sm text-[#5f6f87]">Gérer garages, pièces et signalements</p>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
-                <h2 className="text-xl font-black text-[#13243f]">Repères d'utilisation</h2>
+                <h2 className="text-xl font-black text-[#13243f]">Guide rapide</h2>
                 <div className="mt-5 space-y-3 text-sm text-[#5f6f87]">
-                  <p>• Traiter d'abord les comptes en attente avant les autres actions.</p>
-                  <p>• Consulter les statistiques pour suivre la charge d'activité.</p>
-                  <p>• Examiner le journal d'audit pour tracer les actions sensibles.</p>
-                  <p>• Actualiser les données après chaque décision de modération.</p>
+                  <p>• Gérer les garages depuis l'onglet garages.</p>
+                  <p>• Gérer les pièces depuis l'onglet pièces.</p>
+                  <p>• Traiter les signalements via le tab signalements.</p>
+                  <p>• Rafraîchir les données après chaque décision.</p>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "users" && (
-            <div className="space-y-6">
-              <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
-                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#64748b]">Modération des comptes</p>
-                    <h2 className="mt-2 text-2xl font-black text-[#13243f]">Modération des comptes automobilistes, vendeurs et garages</h2>
-                    <p className="mt-2 text-sm text-[#5f6f87]">Basculer un compte entre actif et bloqué, ou le supprimer si nécessaire.</p>
-                  </div>
-                  <div className="rounded-2xl bg-[#f8fbff] px-4 py-3 text-sm text-[#5f6f87]">
-                    <span className="font-bold text-[#13243f]">{pendingAutomobilistes.length}</span> automobilistes, <span className="font-bold text-[#13243f]">{pendingVendeurs.length}</span> vendeurs et <span className="font-bold text-[#13243f]">{pendingGarages.length}</span> garages
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-6 xl:grid-cols-2">
-                {renderPendingUsersTable("Automobilistes", pendingAutomobilistes, "Aucun compte automobiliste disponible.")}
-                {renderPendingUsersTable("Vendeurs", pendingVendeurs, "Aucun compte vendeur disponible.")}
-              </div>
-
-              <div className="grid gap-6">
-                {renderPendingUsersTable("Garages", pendingGarages, "Aucun compte garage disponible.")}
               </div>
             </div>
           )}
@@ -590,13 +454,13 @@ const AdminDashboard = () => {
                 </div>
 
                 <div className="mt-6 grid gap-4 xl:grid-cols-2">
-                  <div className="min-w-0 rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5">
+                  <div className="rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5">
                     <div className="mb-4 flex items-center justify-between">
                       <h3 className="text-lg font-bold text-[#13243f]">Utilisateurs par rôle</h3>
                       <BarChart3 className="h-5 w-5 text-[#5b6b84]" />
                     </div>
-                    <div className="h-[320px] min-h-[320px] w-full min-w-0">
-                      <ResponsiveContainer width="100%" height={320}>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={userRoleChartData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e6edf6" />
                           <XAxis dataKey="name" tick={{ fill: '#5f6f87', fontSize: 12 }} />
@@ -612,13 +476,13 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="min-w-0 rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5">
+                  <div className="rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5">
                     <div className="mb-4 flex items-center justify-between">
                       <h3 className="text-lg font-bold text-[#13243f]">RDV par statut</h3>
                       <CalendarRange className="h-5 w-5 text-[#5b6b84]" />
                     </div>
-                    <div className="h-[320px] min-h-[320px] w-full min-w-0">
-                      <ResponsiveContainer width="100%" height={320}>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={appointmentStatusChartData}
@@ -640,13 +504,13 @@ const AdminDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="min-w-0 rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5 xl:col-span-2">
+                  <div className="rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5 xl:col-span-2">
                     <div className="mb-4 flex items-center justify-between">
                       <h3 className="text-lg font-bold text-[#13243f]">Top garages par nombre de RDV</h3>
                       <Award className="h-5 w-5 text-[#5b6b84]" />
                     </div>
-                    <div className="h-[320px] min-h-[320px] w-full min-w-0">
-                      <ResponsiveContainer width="100%" height={320}>
+                    <div className="h-80 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={topGaragesChartData} layout="vertical" margin={{ left: 20, right: 20 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#e6edf6" />
                           <XAxis type="number" tick={{ fill: '#5f6f87', fontSize: 12 }} allowDecimals={false} />
@@ -659,6 +523,185 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "garages" && (
+            <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-[#13243f]">Gestion des garages</h2>
+                  <p className="mt-1 text-sm text-[#66758d]">Tous les garages ajoutés par les utilisateurs.</p>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-blue-700">
+                  {garages.length} garages
+                </span>
+              </div>
+
+              <div className="mt-6 overflow-hidden rounded-2xl border border-[#e6edf6]">
+                <table className="min-w-full divide-y divide-[#e6edf6] text-left text-sm">
+                  <thead className="bg-[#f8fbff] text-[#5f6f87]">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Nom</th>
+                      <th className="px-4 py-3 font-semibold">Adresse</th>
+                      <th className="px-4 py-3 font-semibold">Email</th>
+                      <th className="px-4 py-3 font-semibold">Propriétaire</th>
+                      <th className="px-4 py-3 font-semibold">Statut</th>
+                      <th className="px-4 py-3 font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#eef3f8] bg-white">
+                    {!loading && garages.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-6 text-[#6b7a90]" colSpan={6}>
+                          Aucun garage pour le moment.
+                        </td>
+                      </tr>
+                    )}
+                    {garages.map((garage) => (
+                      <tr key={garage.id} className="align-top hover:bg-[#f8fbff]">
+                        <td className="px-4 py-4 font-semibold text-[#13243f]">{garage.name || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{garage.adresse || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{garage.email || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{garage.user_name || "-"}</td>
+                        <td className="px-4 py-4">
+                          <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] ${garage.is_open ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                            {garage.is_open ? "Actif" : "Inactif"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex flex-wrap gap-2">
+                            {garage.is_validated === false && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleGarageAction(garage.id, "approve")}
+                                  disabled={actionLoading.type === "garage" && actionLoading.id === garage.id}
+                                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                  Valider
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleGarageAction(garage.id, "reject")}
+                                  disabled={actionLoading.type === "garage" && actionLoading.id === garage.id}
+                                  className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                                >
+                                  {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                  Refuser
+                                </button>
+                              </>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleGarageAction(garage.id, "deactivate")}
+                              disabled={actionLoading.type === "garage" && actionLoading.id === garage.id}
+                              className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
+                              Désactiver
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleGarageAction(garage.id, "delete")}
+                              disabled={actionLoading.type === "garage" && actionLoading.id === garage.id}
+                              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                              {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                              Supprimer
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "pieces" && (
+            <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-[#13243f]">Gestion des pièces</h2>
+                  <p className="mt-1 text-sm text-[#66758d]">Toutes les pièces ajoutées par les vendeurs.</p>
+                </div>
+                <span className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-purple-700">
+                  {pieces.length} pièces
+                </span>
+              </div>
+
+              <div className="mt-6 overflow-hidden rounded-2xl border border-[#e6edf6]">
+                <table className="min-w-full divide-y divide-[#e6edf6] text-left text-sm">
+                  <thead className="bg-[#f8fbff] text-[#5f6f87]">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Nom</th>
+                      <th className="px-4 py-3 font-semibold">Référence</th>
+                      <th className="px-4 py-3 font-semibold">Prix</th>
+                      <th className="px-4 py-3 font-semibold">Stock</th>
+                      <th className="px-4 py-3 font-semibold">Vendeur</th>
+                      <th className="px-4 py-3 font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#eef3f8] bg-white">
+                    {!loading && pieces.length === 0 && (
+                      <tr>
+                        <td className="px-4 py-6 text-[#6b7a90]" colSpan={6}>
+                          Aucune pièce pour le moment.
+                        </td>
+                      </tr>
+                    )}
+                    {pieces.map((piece) => (
+                      <tr key={piece.id} className="align-top hover:bg-[#f8fbff]">
+                        <td className="px-4 py-4 font-semibold text-[#13243f]">{piece.nom || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{piece.reference || "-"}</td>
+                        <td className="px-4 py-4 text-[#5f6f87]">{piece.prix_unitaire ? `${piece.prix_unitaire} DT` : "-"}</td>
+                        <td className="px-4 py-4">
+                          <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] ${piece.stock > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                            {piece.stock || 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-[#5f6f87] text-xs">{piece.user_name || "-"}</td>
+                        <td className="px-4 py-4">
+                          <button
+                            type="button"
+                            onClick={() => handlePieceAction(piece.id, "delete")}
+                            disabled={actionLoading.type === "piece" && actionLoading.id === piece.id}
+                            className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {actionLoading.type === "piece" && actionLoading.id === piece.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            Supprimer
+                          </button>
+                          {piece.is_validated === false && (
+                            <div className="mt-2">
+                              <button
+                                type="button"
+                                onClick={() => handlePieceAction(piece.id, "approve")}
+                                disabled={actionLoading.type === "piece" && actionLoading.id === piece.id}
+                                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {actionLoading.type === "piece" && actionLoading.id === piece.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                                Valider
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handlePieceAction(piece.id, "reject")}
+                                disabled={actionLoading.type === "piece" && actionLoading.id === piece.id}
+                                className="inline-flex items-center gap-2 ml-2 rounded-xl bg-red-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+                              >
+                                {actionLoading.type === "piece" && actionLoading.id === piece.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                                Refuser
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

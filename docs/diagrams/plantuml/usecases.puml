@@ -1,0 +1,46 @@
+@startuml
+left to right direction
+
+actor Visiteur
+actor "Automobiliste\n(authentifié)" as AutomobilisteAuth
+actor Vendeur
+actor "Garage (proprietaire)" as GarageOwner
+actor Admin
+
+usecase UC1 as "Consulter catalogue de pieces"
+usecase UC2 as "Comparer prix"
+usecase UC3 as "Gerer pieces (CRUD)"
+usecase UC4 as "Consulter profil garage"
+usecase UC5 as "Gerer profil garage"
+usecase UC6 as "Localiser & filtrer garages"
+usecase UC7 as "Chat & messagerie"
+usecase UC8 as "Recevoir notifications"
+usecase UC9 as "Signaler / Rapport"
+
+Visiteur --> UC1
+AutomobilisteAuth --> UC1
+AutomobilisteAuth --> UC2
+AutomobilisteAuth --> UC4
+AutomobilisteAuth --> UC6
+AutomobilisteAuth --> UC7
+AutomobilisteAuth --> UC8
+AutomobilisteAuth --> UC9
+AutomobilisteAuth --> UC3 : auth
+
+Vendeur --> UC1
+Vendeur --> UC2
+Vendeur --> UC3 : auth
+
+GarageOwner --> UC5
+GarageOwner --> UC7
+
+Admin --> UC9
+Admin --> UC5 : admin
+Admin --> UC8 : admin
+
+note left of UC7
+  Remarque: actuellement via polling;
+  remplacer par WebSocket/Socket.io
+end note
+
+@enduml

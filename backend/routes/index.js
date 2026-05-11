@@ -1,5 +1,5 @@
 let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, recommendationRoutes, garageRoutes, chatRoutes;
-let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes, maintenanceRoutes;
+let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes, maintenanceRoutes, reportRoutes;
 let adminRoutes;
 
 try {
@@ -74,6 +74,12 @@ try {
   console.error('[routes/index] Error loading maintenance:', e.message);
 }
 
+try {
+  reportRoutes = require('./reports');
+} catch (e) {
+  console.error('[routes/index] Error loading reports:', e.message);
+}
+
 const registerRoutes = (app) => {
   console.log('[registerRoutes] CALLED - debug mode', process.env.DEBUG_ROUTES ? 'ON' : 'OFF');
   const debug = process.env.DEBUG_ROUTES;
@@ -117,9 +123,22 @@ const registerRoutes = (app) => {
     if (debug) console.log('[registerRoutes] Mounting /api/maintenance-alerts');
     app.use('/api/maintenance-alerts', maintenanceAlertRoutes);
   }
+  if (reportRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/reports');
+    app.use('/api/reports', reportRoutes);
+  }
+  if (!adminRoutes) {
+    try {
+      adminRoutes = require('./admin');
+    } catch (e) {
+      console.error('[registerRoutes] Error loading admin routes at mount time:', e.message);
+    }
+  }
   if (adminRoutes) {
-    if (debug) console.log('[registerRoutes] Mounting /api/admin');
+    console.log('[registerRoutes] Mounting /api/admin - adminRoutes is:', typeof adminRoutes);
     app.use('/api/admin', adminRoutes);
+  } else {
+    console.log('[registerRoutes] ✗ adminRoutes is undefined or falsy');
   }
   if (interventionRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/vehicules/:vehicleId/interventions');

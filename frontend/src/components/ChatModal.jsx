@@ -539,6 +539,13 @@ const ChatModal = ({ isOpen, onClose }) => {
             </div>
           </div>
         )}
+
+        {selectedConversation && (
+          <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
+            {selectedConversation.counterpart?.phone && <p>Téléphone: {selectedConversation.counterpart.phone}</p>}
+            {selectedConversation.counterpart?.email && <p>Email: {selectedConversation.counterpart.email}</p>}
+          </div>
+        )}
       </div>
     </div>
   );

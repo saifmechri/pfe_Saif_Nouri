@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Pencil, Save, X } from 'lucide-react';
 import interventionsApi from '../../services/interventions';
 
 const InterventionDetail = () => {
@@ -10,9 +11,11 @@ const InterventionDetail = () => {
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetch = async () => {
+  const loadIntervention = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await interventionsApi.getById(vehicleId, id);
       setItem(data);
@@ -33,7 +36,7 @@ const InterventionDetail = () => {
   };
 
   useEffect(() => {
-    fetch();
+    loadIntervention();
   }, [vehicleId, id]);
 
   const handleChange = (e) => {
@@ -41,88 +44,248 @@ const InterventionDetail = () => {
     setForm((s) => ({ ...s, [name]: value }));
   };
 
+  const resetFormFromItem = () => {
+    if (!item) return;
+    setForm({
+      date_intervention: item.date_intervention || '',
+      type: item.type || '',
+      description: item.description || '',
+      garage_nom: item.garage_nom || '',
+      garage_adresse: item.garage_adresse || '',
+      kilometrage: item.kilometrage || '',
+      cout_total: item.cout_total || ''
+    });
+  };
+
   const handleSave = async () => {
+    setSubmitting(true);
+    setError(null);
     try {
       await interventionsApi.update(vehicleId, id, form);
       setEditing(false);
-      await fetch();
+      await loadIntervention();
     } catch (err) {
       setError(err?.response?.data?.message || err.message || 'Erreur lors de la mise a jour');
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Supprimer cette intervention ?')) return;
-    try {
-      await interventionsApi.remove(vehicleId, id);
-      navigate(`/vehicules/${vehicleId}/history`);
-    } catch (err) {
-      setError(err?.response?.data?.message || err.message || 'Erreur lors de la suppression');
-    }
+  const handleCancelEdit = () => {
+    resetFormFromItem();
+    setEditing(false);
   };
 
-  if (loading) return <div>Chargement...</div>;
-  if (error) return <div>Erreur: {error}</div>;
-  if (!item) return <div>Intervention introuvable</div>;
+  const formatDate = (value) => {
+    if (!value) return '—';
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return value;
+    return dt.toLocaleDateString('fr-FR');
+  };
 
-  return (
-    <div className="p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Intervention #{item.id}</h2>
-        <div className="flex gap-2">
-          {!editing && (
-            <button onClick={() => setEditing(true)} className="btn btn-primary">Modifier</button>
-          )}
-          <button onClick={handleDelete} className="btn btn-danger">Supprimer</button>
-        </div>
-      </div>
-
-      {!editing ? (
-        <div className="mt-4 space-y-2">
-          <div><strong>Date:</strong> {item.date_intervention}</div>
-          <div><strong>Type:</strong> {item.type}</div>
-          <div><strong>Garage:</strong> {item.garage_nom} — {item.garage_adresse}</div>
-          <div><strong>Kilométrage:</strong> {item.kilometrage ? `${item.kilometrage} km` : '—'}</div>
-          <div><strong>Coût:</strong> {item.cout_total ? `${item.cout_total} ` : '—'}</div>
-          <div><strong>Description:</strong><div className="mt-1 whitespace-pre-wrap">{item.description}</div></div>
-        </div>
-      ) : (
-        <div className="mt-4 space-y-3 max-w-xl">
-          <label className="block">
-            <div className="text-sm">Date intervention</div>
-            <input name="date_intervention" value={form.date_intervention} onChange={handleChange} type="date" className="input" />
-          </label>
-          <label className="block">
-            <div className="text-sm">Type</div>
-            <input name="type" value={form.type} onChange={handleChange} className="input" />
-          </label>
-          <label className="block">
-            <div className="text-sm">Garage</div>
-            <input name="garage_nom" value={form.garage_nom} onChange={handleChange} className="input" />
-          </label>
-          <label className="block">
-            <div className="text-sm">Adresse garage</div>
-            <input name="garage_adresse" value={form.garage_adresse} onChange={handleChange} className="input" />
-          </label>
-          <label className="block">
-            <div className="text-sm">Kilométrage</div>
-            <input name="kilometrage" value={form.kilometrage} onChange={handleChange} type="number" className="input" />
-          </label>
-          <label className="block">
-            <div className="text-sm">Coût total</div>
-            <input name="cout_total" value={form.cout_total} onChange={handleChange} type="number" step="0.01" className="input" />
-          </label>
-          <label className="block">
-            <div className="text-sm">Description</div>
-            <textarea name="description" value={form.description} onChange={handleChange} className="input" rows={6} />
-          </label>
-
-          <div className="flex gap-2">
-            <button onClick={handleSave} className="btn btn-primary">Enregistrer</button>
-            <button onClick={() => setEditing(false)} className="btn">Annuler</button>
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] bg-[#f4f7fc] p-4 md:p-8">
+        <div className="mx-auto max-w-5xl animate-pulse rounded-2xl border border-[#dbe4f2] bg-white p-6 shadow-sm">
+          <div className="h-7 w-56 rounded bg-slate-200" />
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="h-20 rounded bg-slate-100" />
+            <div className="h-20 rounded bg-slate-100" />
+            <div className="h-20 rounded bg-slate-100" />
+            <div className="h-20 rounded bg-slate-100" />
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  if (!item) {
+    return (
+      <div className="min-h-[70vh] bg-[#f4f7fc] p-4 md:p-8">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-[#f6d6d6] bg-[#fff6f6] p-6 text-[#8b1d1d] shadow-sm">
+          Intervention introuvable.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[70vh] bg-[#f4f7fc] p-4 md:p-8">
+      <div className="mx-auto max-w-5xl space-y-4">
+        <Link
+          to={`/vehicules/${vehicleId}/history`}
+          className="inline-flex items-center gap-2 rounded-lg border border-[#d6deeb] bg-white px-3 py-2 text-sm font-semibold text-[#153563] hover:bg-[#f3f7ff]"
+        >
+          <ArrowLeft size={16} />
+          Retour à l'historique
+        </Link>
+
+        <section className="overflow-hidden rounded-2xl border border-[#dbe4f2] bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-[#e8eef8] bg-gradient-to-r from-[#eef4ff] to-[#f7fbff] p-5 md:flex-row md:items-center md:justify-between md:p-6">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4f6f9c]">Fiche intervention</p>
+              <h2 className="mt-1 text-2xl font-bold text-[#102848]">Intervention #{item.id}</h2>
+              <p className="mt-1 text-sm text-[#5d7397]">Consultez et modifiez les détails de maintenance.</p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {!editing && (
+                <button
+                  onClick={() => {
+                    resetFormFromItem();
+                    setEditing(true);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#c8d8f5] bg-[#eaf2ff] px-4 py-2 text-sm font-semibold text-[#144a9f] hover:bg-[#dfebff]"
+                >
+                  <Pencil size={16} />
+                  Modifier
+                </button>
+              )}
+
+            </div>
+          </div>
+
+          {error && (
+            <div className="mx-5 mt-5 rounded-lg border border-[#f6d2d2] bg-[#fff6f6] px-4 py-3 text-sm text-[#8f1f1f] md:mx-6">
+              {error}
+            </div>
+          )}
+
+          {!editing ? (
+            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2 md:gap-5 md:p-6">
+              <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Date intervention</p>
+                <p className="mt-2 text-lg font-semibold text-[#102848]">{formatDate(item.date_intervention)}</p>
+              </div>
+
+              <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Type</p>
+                <p className="mt-2 text-lg font-semibold capitalize text-[#102848]">{item.type || '—'}</p>
+              </div>
+
+              <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Garage</p>
+                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.garage_nom || '—'}</p>
+                <p className="mt-1 text-sm text-[#5d7397]">{item.garage_adresse || 'Adresse non renseignée'}</p>
+              </div>
+
+              <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Kilométrage</p>
+                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.kilometrage ? `${item.kilometrage} km` : '—'}</p>
+              </div>
+
+              <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Coût total</p>
+                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.cout_total ? `${item.cout_total} TND` : '—'}</p>
+              </div>
+
+              <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Description</p>
+                <p className="mt-2 whitespace-pre-wrap text-[#1f3558]">{item.description || 'Aucune description.'}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="p-5 md:p-6">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">Date intervention</span>
+                  <input
+                    name="date_intervention"
+                    value={form.date_intervention}
+                    onChange={handleChange}
+                    type="date"
+                    className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">Type</span>
+                  <input
+                    name="type"
+                    value={form.type}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">Garage</span>
+                  <input
+                    name="garage_nom"
+                    value={form.garage_nom}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">Adresse garage</span>
+                  <input
+                    name="garage_adresse"
+                    value={form.garage_adresse}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">Kilométrage</span>
+                  <input
+                    name="kilometrage"
+                    value={form.kilometrage}
+                    onChange={handleChange}
+                    type="number"
+                    className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">Coût total</span>
+                  <input
+                    name="cout_total"
+                    value={form.cout_total}
+                    onChange={handleChange}
+                    type="number"
+                    step="0.01"
+                    className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
+                  />
+                </label>
+
+                <label className="block md:col-span-2">
+                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">Description</span>
+                  <textarea
+                    name="description"
+                    value={form.description}
+                    onChange={handleChange}
+                    rows={5}
+                    className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={handleSave}
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#1d4ed8] px-4 py-2 text-sm font-semibold text-white hover:bg-[#173ea9] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <Save size={16} />
+                  {submitting ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-lg border border-[#d2dceb] bg-white px-4 py-2 text-sm font-semibold text-[#16375f] hover:bg-[#f5f8fe] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  <X size={16} />
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 };

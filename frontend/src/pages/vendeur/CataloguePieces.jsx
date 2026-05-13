@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin, Navigation2, Package, TrendingDown } from "lucide-react";
-import { comparePieceAcrossVendors, createPiece, deletePiece, getPieces, updatePiece } from "../../services/pieces";
+import { comparePieceAcrossVendors, createPiece, deletePiece, getPieceById, getPieces, updatePiece } from "../../services/pieces";
 import { extractConversationAndMessages, startChatConversation } from "../../services/chat";
 import { getCompleteProfile, getCompleteProfileById, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -491,7 +491,6 @@ const CataloguePieces = () => {
   const [createSuccess, setCreateSuccess] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [newPiece, setNewPiece] = useState(createEmptyPieceForm);
-  const [locationFocusToken, setLocationFocusToken] = useState(0);
 
   const [showMarquesModal, setShowMarquesModal] = useState(false);
   const [showModelesModal, setShowModelesModal] = useState(false);
@@ -512,7 +511,6 @@ const CataloguePieces = () => {
   const mapContainerRef = useRef(null);
   const googleMapRef = useRef(null);
   const markerRef = useRef(null);
-  const vendorLocationRef = useRef(null);
 
   // Google Maps handlers
   const initializeGoogleMap = () => {
@@ -986,37 +984,6 @@ const CataloguePieces = () => {
 
     return offers;
   }, [selectedPiece]);
-  const selectedPieceLocationQuery = useMemo(() => {
-    const parts = [
-      selectedPieceVendor?.magasin,
-      selectedPieceVendor?.store_name,
-      selectedPieceVendor?.nom,
-      selectedPieceVendor?.name,
-      selectedPiece?.seller_store_name,
-      selectedPiece?.seller_name,
-      selectedPiece?.zone_geographique,
-      "Tunisie"
-    ].filter(Boolean);
-
-    return parts.join(", ");
-  }, [selectedPiece, selectedPieceVendor]);
-  const selectedPieceLocationMapUrl = useMemo(
-    () => (selectedPieceLocationQuery ? buildGoogleMapsEmbedUrl(selectedPieceLocationQuery) : ""),
-    [selectedPieceLocationQuery]
-  );
-  const selectedPieceLocationSearchUrl = useMemo(
-    () => (selectedPieceLocationQuery ? buildGoogleMapsSearchUrl(selectedPieceLocationQuery) : ""),
-    [selectedPieceLocationQuery]
-  );
-  const selectedPieceVendorMapUrl = useMemo(
-    () => (selectedPieceVendor ? buildVendorGoogleMapsEmbedUrl(selectedPieceVendor) : ""),
-    [selectedPieceVendor]
-  );
-  const selectedPieceVendorSearchUrl = useMemo(
-    () => (selectedPieceVendor ? buildVendorGoogleMapsSearchUrl(selectedPieceVendor) : ""),
-    [selectedPieceVendor]
-  );
-
   const getVendorOwnerId = (vendorOffer) => {
     if (!vendorOffer) {
       return null;
@@ -1406,21 +1373,26 @@ const CataloguePieces = () => {
       return;
     }
 
-    setSelectedPiece(piece);
-    setLocationFocusToken(Date.now());
+    openPieceDetails(piece);
   };
 
-  useEffect(() => {
-    if (!selectedPiece || !locationFocusToken) {
+  const openPieceDetails = async (piece) => {
+    if (!piece?.id) {
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      vendorLocationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
+    setSelectedPiece(piece);
 
-    return () => window.clearTimeout(timer);
-  }, [selectedPiece, locationFocusToken]);
+    try {
+      const response = await getPieceById(piece.id);
+      const refreshedPiece = response?.data?.data ?? response?.data ?? null;
+      if (refreshedPiece) {
+        setSelectedPiece(refreshedPiece);
+      }
+    } catch (_error) {
+      // Keep the local snapshot if the refresh fails.
+    }
+  };
 
   const handleExitVendorStore = () => {
     setIsStoreView(false);
@@ -1634,7 +1606,7 @@ const CataloguePieces = () => {
 
                       return (
                         <article key={piece.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.12)]">
-                          <button type="button" className="w-full" onClick={() => setSelectedPiece(piece)}>
+                          <button type="button" className="w-full" onClick={() => openPieceDetails(piece)}>
                             <img src={imageSrc} alt={piece.nom} className="h-52 w-full object-cover" />
                           </button>
 
@@ -1657,7 +1629,7 @@ const CataloguePieces = () => {
                               </span>
                               <button
                                 type="button"
-                                onClick={() => setSelectedPiece(piece)}
+                                onClick={() => openPieceDetails(piece)}
                                 className="rounded-xl border border-blue-200 bg-white px-3 py-1 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
                               >
                                 Details
@@ -2118,110 +2090,6 @@ const CataloguePieces = () => {
                   </div>
 
                   <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
-                    <label className="mb-2 block text-lg font-semibold text-slate-800">Lieu</label>
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-4">
-                      <div>
-                        <p className="text-base text-slate-800">Ajouter une localisation</p>
-                        <p className="text-sm text-slate-500">(approximative)</p>
-                      </div>
-                      <select
-                        name="zone_geographique"
-                        value={newPiece.zone_geographique || ""}
-                        onChange={handleCreateInput}
-                        className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-                      >
-                        <option value="">Zone</option>
-                        <option value="Nord">Nord</option>
-                        <option value="Sud">Sud</option>
-                        <option value="Est">Est</option>
-                        <option value="Ouest">Ouest</option>
-                        <option value="Centre">Centre</option>
-                      </select>
-                    </div>
-
-                    <div className="mt-4 flex gap-3">
-                      <button
-                        type="button"
-                        onClick={handleOpenMapModal}
-                        className="flex-1 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
-                      >
-                        📍 Position GPS
-                      </button>
-                      {newPiece.latitude && newPiece.longitude && (
-                        <div className="flex-1 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-xs font-semibold text-emerald-700">
-                          ✓ Lieu enregistré
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-3 space-y-2">
-                      {newPiece.latitude && (
-                        <p className="text-sm text-slate-600">📍 Latitude: {newPiece.latitude.toFixed(4)}</p>
-                      )}
-                      {newPiece.longitude && (
-                        <p className="text-sm text-slate-600">📍 Longitude: {newPiece.longitude.toFixed(4)}</p>
-                      )}
-                    </div>
-
-                    {showMapModal && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="h-4/5 w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col">
-                          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                            <h3 className="text-lg font-semibold text-slate-800">Sélectionner le lieu de la pièce</h3>
-                            <button
-                              onClick={() => setShowMapModal(false)}
-                              className="text-slate-500 hover:text-slate-700"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          
-                          <div ref={mapContainerRef} className="flex-1 w-full" style={{ minHeight: "400px" }} />
-                          
-                          <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
-                            <button
-                              type="button"
-                              onClick={() => setShowMapModal(false)}
-                              className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleSaveLocation}
-                              className="flex-1 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
-                            >
-                              ✓ Enregistrer le lieu
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                      <iframe
-                        title="Google Maps localisation piece"
-                        src={googleMapsEmbedUrl}
-                        className="h-64 w-full border-0"
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                      />
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-sm text-slate-600">Carte basee sur: {pieceLocationQuery}</p>
-                      <a
-                        href={googleMapsSearchUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
-                      >
-                        Ouvrir dans Google Maps
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-lg font-semibold text-slate-800">Prix Fixe</p>
@@ -2275,25 +2143,16 @@ const CataloguePieces = () => {
                     <button
                       type="button"
                       onClick={handleContactVendorChat}
-                      className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-2xl text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
+                      className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
                       aria-label="Contacter le vendeur"
                       title="Contacter le vendeur"
                     >
-                      💬
+                      <span>💬</span>
+                      <span>Contacter le vendeur</span>
                     </button>
                   </div>
 
-                  {user?.role === "automobiliste" && selectedPieceLocationSearchUrl && (
-                    <a
-                      href={selectedPieceLocationSearchUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-center rounded-full bg-black px-5 py-4 text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-zinc-900"
-                    >
-                      <Navigation2 className="mr-3 h-5 w-5" />
-                      <span className="text-lg font-semibold">Itinéraires</span>
-                    </a>
-                  )}
+                  
 
                   {canEditSelectedPiece && (
                     <div className="grid grid-cols-2 gap-3">
@@ -2366,99 +2225,7 @@ const CataloguePieces = () => {
                       <p className="mt-1 text-sm text-slate-600">Stock: {selectedPiece.stock}</p>
                     </div>
 
-                    <div ref={vendorLocationRef} className="mb-4 rounded-2xl bg-slate-50 p-4">
-                      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Lieu</p>
-                      <p className="mt-1 text-base font-semibold text-slate-800">Localisation du vendeur</p>
-                      <button
-                        type="button"
-                        onClick={handleOpenVendorStore}
-                        className="mt-1 text-left text-sm font-semibold text-blue-700 underline decoration-blue-300 underline-offset-4 transition hover:text-blue-900"
-                      >
-                        {selectedPieceVendor?.magasin || selectedPieceVendor?.nom || selectedPieceVendor?.name || selectedPiece?.seller_store_name || selectedPiece?.seller_name || selectedPiece.zone_geographique || "Adresse du vendeur"}
-                      </button>
-                      {selectedPieceVendorOffers.length > 1 ? (
-                        <div className="mt-3 space-y-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            {selectedPieceVendorOffers.length} vendeurs pour cette reference
-                          </p>
-                          <div className="space-y-3">
-                            {selectedPieceVendorOffers.map((offer, index) => {
-                              const vendorName = offer?.seller_store_name || offer?.seller_name || offer?.vendeur_magasin || offer?.vendeur_nom || offer?.vendeur?.magasin || offer?.vendeur?.name || `Vendeur ${index + 1}`;
-                              const vendorQuery = buildVendorLocationQuery(offer?.vendeur || offer);
-                              const vendorMapUrl = vendorQuery ? buildGoogleMapsEmbedUrl(vendorQuery) : "";
-                              const vendorSearchUrl = vendorQuery ? buildGoogleMapsSearchUrl(vendorQuery) : "";
-
-                              return (
-                                <div key={offer?.id || `${vendorName}-${index}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenVendorStore(offer)}
-                                      className="text-left text-sm font-semibold text-blue-700 underline decoration-blue-300 underline-offset-4 transition hover:text-blue-900"
-                                    >
-                                      {vendorName}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenVendorPresentation(offer)}
-                                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
-                                    >
-                                      Presentation
-                                    </button>
-                                  </div>
-                                  <p className="mt-1 text-xs text-slate-500">{offer?.zone_geographique || offer?.zone || "Zone non renseignee"}</p>
-                                  {vendorMapUrl ? (
-                                    <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                      <iframe
-                                        title={`Localisation ${vendorName}`}
-                                        src={vendorMapUrl}
-                                        className="h-44 w-full border-0"
-                                        loading="lazy"
-                                        referrerPolicy="no-referrer-when-downgrade"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <p className="mt-2 text-sm text-slate-500">Aucune position GPS vendeur renseignée.</p>
-                                  )}
-                                  {vendorSearchUrl && (
-                                    <a
-                                      href={vendorSearchUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="mt-3 inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700"
-                                    >
-                                      Ouvrir dans Google Maps
-                                    </a>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : selectedPieceLocationMapUrl ? (
-                        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                          <iframe
-                            title="Localisation du vendeur"
-                            src={selectedPieceLocationMapUrl}
-                            className="h-56 w-full border-0"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                          />
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-sm text-slate-500">Aucune position GPS vendeur renseignée.</p>
-                      )}
-                      {selectedPieceVendorOffers.length <= 1 && selectedPieceLocationSearchUrl && (
-                        <a
-                          href={selectedPieceLocationSearchUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-3 inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
-                        >
-                          Ouvrir la localisation vendeur
-                        </a>
-                      )}
-                    </div>
+                    
 
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Magasin du vendeur</p>

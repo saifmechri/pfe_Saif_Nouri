@@ -4,6 +4,10 @@ export const getPieces = (params = {}) => {
   return API.get("/pieces", { params });
 };
 
+export const getPieceById = (pieceId) => {
+  return API.get(`/pieces/${pieceId}`);
+};
+
 export const createPiece = (formData) => {
   return API.post("/pieces", formData);
 };

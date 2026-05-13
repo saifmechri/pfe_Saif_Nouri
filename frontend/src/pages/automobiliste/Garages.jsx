@@ -312,6 +312,12 @@ const parseScheduleText = (value) => {
   return parsed.sort((a, b) => weekOrder.indexOf(a.day) - weekOrder.indexOf(b.day));
 };
 
+const splitServiceLines = (value) =>
+  String(value || "")
+    .split(/\r?\n|,|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 const GaragesPage = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -464,6 +470,44 @@ const GaragesPage = () => {
     () => parseScheduleText(selectedGarage?.travel_hours),
     [selectedGarage?.travel_hours]
   );
+
+  const selectedGarageDisplayServices = useMemo(() => {
+    if (garageServices.length > 0) {
+      return {
+        source: 'published',
+        items: garageServices
+          .filter((service) => service?.name)
+          .map((service) => ({
+            id: service.id,
+            name: service.name,
+            description: service.description || 'Sans description',
+            base_price: service.base_price,
+            duration_minutes: service.duration_minutes
+          }))
+      };
+    }
+
+    const fallbackText = [
+      selectedGarage?.store_services,
+      selectedGarage?.services_catalog,
+      Array.isArray(selectedGarage?.service_names) ? selectedGarage.service_names.join('\n') : ''
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const fallbackItems = splitServiceLines(fallbackText).map((serviceName, index) => ({
+      id: `fallback-service-${selectedGarage?.id || 'garage'}-${index}`,
+      name: serviceName,
+      description: 'Service renseigné dans la présentation du garage',
+      base_price: null,
+      duration_minutes: null
+    }));
+
+    return {
+      source: fallbackItems.length > 0 ? 'presentation' : 'empty',
+      items: fallbackItems
+    };
+  }, [garageServices, selectedGarage]);
 
   const toggleSelection = (value, setter) => {
     setter((current) =>
@@ -1305,22 +1349,29 @@ const GaragesPage = () => {
 
                   <div>
                     <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Services disponibles</h3>
-                    {garageServices.length === 0 ? (
-                      <p className="text-sm text-[#617089]">Ce garage n'a pas encore publie de services.</p>
+                    {selectedGarageDisplayServices.items.length === 0 ? (
+                      <p className="text-sm text-[#617089]">Ce garage n'a pas encore renseigné de services.</p>
                     ) : (
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        {garageServices.map((service) => (
-                          <div key={service.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
-                            <p className="font-bold text-[#1a2b4b]">{service.name}</p>
-                            <p className="mt-1 text-sm text-[#617089]">{service.description || "Sans description"}</p>
-                            <p className="mt-2 text-sm text-[#334155]">
-                              {service.base_price !== null ? `${service.base_price} TND` : "Prix non precise"}
-                              {" • "}
-                              {service.duration_minutes !== null ? `${service.duration_minutes} min` : "Duree non precisee"}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                      <>
+                        <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+                          {selectedGarageDisplayServices.source === 'published'
+                            ? 'Services publiés dans le catalogue du garage.'
+                            : 'Services récupérés depuis la présentation du garage.'}
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          {selectedGarageDisplayServices.items.map((service) => (
+                            <div key={service.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
+                              <p className="font-bold text-[#1a2b4b]">{service.name}</p>
+                              <p className="mt-1 text-sm text-[#617089]">{service.description || 'Sans description'}</p>
+                              <p className="mt-2 text-sm text-[#334155]">
+                                {service.base_price !== null && service.base_price !== undefined ? `${service.base_price} TND` : 'Prix non précisé'}
+                                {' • '}
+                                {service.duration_minutes !== null && service.duration_minutes !== undefined ? `${service.duration_minutes} min` : 'Durée non précisée'}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                   </article>

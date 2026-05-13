@@ -16,6 +16,21 @@ import {
 } from 'lucide-react';
 import { getNextRevision, getMatchingGarages, calculateUrgencyLevel, formatDate } from '../../services/alerts';
 
+const toNumberSafe = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatPercent = (value) => {
+  const parsed = toNumberSafe(value);
+  return parsed === null ? '0.0%' : `${parsed.toFixed(1)}%`;
+};
+
+const formatScore = (value) => {
+  const parsed = toNumberSafe(value);
+  return parsed === null ? '0.0' : parsed.toFixed(1);
+};
+
 const AlertsPage = () => {
   const { vehicleId } = useParams();
   const numVehicleId = parseInt(vehicleId, 10);
@@ -158,7 +173,7 @@ const AlertsPage = () => {
                     />
                   </div>
                   <div className="text-right text-xs text-gray-600 mt-1">
-                    {revision.kmProgressPercent.toFixed(1)}%
+                    {formatPercent(revision.kmProgressPercent)}
                   </div>
                 </div>
               </div>
@@ -193,7 +208,7 @@ const AlertsPage = () => {
                     />
                   </div>
                   <div className="text-right text-xs text-gray-600 mt-1">
-                    {revision.daysProgressPercent.toFixed(1)}%
+                    {formatPercent(revision.daysProgressPercent)}
                   </div>
                 </div>
               </div>
@@ -251,7 +266,7 @@ const AlertsPage = () => {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-blue-600">
-                          {garage.scores.total.toFixed(1)}
+                          {formatScore(garage.scores?.total)}
                         </div>
                         <div className="text-xs text-gray-600">/100</div>
                       </div>
@@ -301,7 +316,7 @@ const AlertsPage = () => {
                         </div>
                         <div className="text-lg font-bold text-gray-900">{garage.rating}/5</div>
                         <div className="text-xs text-gray-600">
-                          Score: {garage.scores.rating.toFixed(1)}/100
+                          Score: {formatScore(garage.scores?.rating)}/100
                         </div>
                       </div>
 
@@ -312,7 +327,7 @@ const AlertsPage = () => {
                         </div>
                         <div className="text-lg font-bold text-gray-900">{garage.distance} km</div>
                         <div className="text-xs text-gray-600">
-                          Score: {garage.scores.distance.toFixed(1)}/100
+                          Score: {formatScore(garage.scores?.distance)}/100
                         </div>
                       </div>
 
@@ -322,10 +337,10 @@ const AlertsPage = () => {
                           <span className="text-sm font-semibold">Prix moyen</span>
                         </div>
                         <div className="text-lg font-bold text-gray-900">
-                          {garage.avgPrice ? `${garage.avgPrice.toFixed(2)}€` : 'N/A'}
+                          {garage.avgPrice !== null && garage.avgPrice !== undefined ? `${Number(garage.avgPrice).toFixed(2)}€` : 'N/A'}
                         </div>
                         <div className="text-xs text-gray-600">
-                          Score: {garage.scores.price.toFixed(1)}/100
+                          Score: {formatScore(garage.scores?.price)}/100
                         </div>
                       </div>
 
@@ -342,7 +357,7 @@ const AlertsPage = () => {
                           {garage.isAvailable ? 'Ouvert' : 'Fermé'}
                         </div>
                         <div className="text-xs text-gray-600">
-                          Score: {garage.scores.availability.toFixed(1)}/100
+                          Score: {formatScore(garage.scores?.availability)}/100
                         </div>
                       </div>
                     </div>

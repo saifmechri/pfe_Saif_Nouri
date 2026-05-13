@@ -6,8 +6,9 @@ import {
   deleteVehicule,
   getInterventionsByVehicle,
   createIntervention,
-  getPieces
+  getPieces,
 } from "../../services/vehicule";
+import interventionsApi from "../../services/interventions";
 import { useNavigate } from "react-router-dom";
 import PlatformLayout from "../../components/PlatformLayout";
 import { listAppointments, deleteAppointment } from "../../services/appointments";
@@ -43,6 +44,7 @@ const AutomobilisteDashboard = () => {
   const [historiqueError, setHistoriqueError] = useState("");
   const [historiqueLoaded, setHistoriqueLoaded] = useState(false);
   const [historiqueByVehicule, setHistoriqueByVehicule] = useState([]);
+  const [interventionDeletingId, setInterventionDeletingId] = useState(null);
 
   // États pour la création d'intervention
   const [showInterventionForm, setShowInterventionForm] = useState(false);
@@ -59,7 +61,7 @@ const AutomobilisteDashboard = () => {
     garage_adresse: "",
     kilometrage: "",
     pieces: [],
-    pieces_libres: ""
+    pieces_libres: "",
   });
 
   // États pour le formulaire
@@ -198,6 +200,47 @@ const AutomobilisteDashboard = () => {
     }
   };
 
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setSelectedPhotoFile(null);
+    setSelectedPhotoPreview("");
+    setFormData({
+      modele_voiture: "",
+      matricule_voiture: "",
+      kilometrage_voiture: "",
+      photo_voiture: ""
+    });
+  };
+
+  const handleAddVehicleClick = () => {
+    setError("");
+    setEditingId(null);
+    setSelectedPhotoFile(null);
+    setSelectedPhotoPreview("");
+    setFormData({
+      modele_voiture: "",
+      matricule_voiture: "",
+      kilometrage_voiture: "",
+      photo_voiture: ""
+    });
+    setShowForm(true);
+  };
+
+  const handleEditClick = (vehicule) => {
+    setError("");
+    setEditingId(vehicule.id);
+    setSelectedPhotoFile(null);
+    setSelectedPhotoPreview(vehicule.photo_voiture ? getVehiclePhotoUrl(vehicule.photo_voiture) : "");
+    setFormData({
+      modele_voiture: vehicule.modele_voiture || "",
+      matricule_voiture: vehicule.matricule_voiture || "",
+      kilometrage_voiture: vehicule.kilometrage_voiture ?? "",
+      photo_voiture: vehicule.photo_voiture || ""
+    });
+    setShowForm(true);
+  };
+
   const openInterventionForm = async () => {
     setInterventionError("");
 
@@ -227,7 +270,7 @@ const AutomobilisteDashboard = () => {
       garage_adresse: "",
       kilometrage: "",
       pieces: [],
-      pieces_libres: ""
+      pieces_libres: "",
     });
 
     if (pieces.length === 0) {
@@ -242,7 +285,10 @@ const AutomobilisteDashboard = () => {
     setInterventionFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const addPieceLine = () => {
+  const addPieceLine = (event) => {
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
+
     setInterventionFormData((prev) => ({
       ...prev,
       pieces: [...prev.pieces, { pieceId: "", quantite: 1, prix_unitaire: "" }]
@@ -275,7 +321,7 @@ const AutomobilisteDashboard = () => {
       garage_adresse: "",
       kilometrage: "",
       pieces: [],
-      pieces_libres: ""
+      pieces_libres: "",
     });
   };
 
@@ -329,59 +375,11 @@ const AutomobilisteDashboard = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      modele_voiture: "",
-      matricule_voiture: "",
-      kilometrage_voiture: "",
-      photo_voiture: ""
-    });
-    setSelectedPhotoFile(null);
-    setSelectedPhotoPreview("");
-    setEditingId(null);
-    setShowForm(false);
+  const handleEditIntervention = (vehicleId, interventionId) => {
+    navigate(`/vehicules/${vehicleId}/interventions/${interventionId}`);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleAddClick = () => {
-    resetForm();
-    setShowForm(true);
-  };
-
-  const handleEditClick = (vehicule) => {
-    setFormData({
-      modele_voiture: vehicule.modele_voiture,
-      matricule_voiture: vehicule.matricule_voiture,
-      kilometrage_voiture: vehicule.kilometrage_voiture || "",
-      photo_voiture: vehicule.photo_voiture || ""
-    });
-    setSelectedPhotoFile(null);
-    setSelectedPhotoPreview(vehicule.photo_voiture || "");
-    setEditingId(vehicule.id);
-    setShowForm(true);
-  };
-
-  const handlePhotoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    setSelectedPhotoFile(file);
-    setSelectedPhotoPreview(URL.createObjectURL(file));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const handleDeleteIntervention = async (vehicleId, interventionId) => {
 
     try {
       const multipartData = new FormData();
@@ -483,7 +481,8 @@ const AutomobilisteDashboard = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Mes véhicules</h2>
                 <button 
-                  onClick={handleAddClick}
+                  type="button"
+                  onClick={handleAddVehicleClick}
                   disabled={loading}
                   className="vb-btn-primary px-4 py-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -731,6 +730,7 @@ const AutomobilisteDashboard = () => {
                 <h2 className="text-xl font-semibold">Historique des interventions</h2>
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={openInterventionForm}
                     disabled={interventionLoading}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
@@ -738,6 +738,7 @@ const AutomobilisteDashboard = () => {
                     + Nouvelle intervention
                   </button>
                   <button
+                    type="button"
                     onClick={fetchHistorique}
                     disabled={historiqueLoading}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
@@ -881,6 +882,7 @@ const AutomobilisteDashboard = () => {
                               >
                                 Supprimer
                               </button>
+
                             </div>
                           ))}
                         </div>
@@ -953,6 +955,24 @@ const AutomobilisteDashboard = () => {
                         <div className="space-y-3">
                           {interventions.map((intervention) => (
                             <div key={intervention.id} className="bg-gray-50 border rounded-md p-3">
+                              <div className="mb-2 flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditIntervention(vehicule.id, intervention.id)}
+                                  className="rounded border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                                >
+                                  Modifier
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteIntervention(vehicule.id, intervention.id)}
+                                  disabled={interventionDeletingId === intervention.id}
+                                  className="rounded border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {interventionDeletingId === intervention.id ? "Suppression..." : "Supprimer"}
+                                </button>
+                              </div>
+
                               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                                 <p><span className="font-semibold">Date :</span> {intervention.date_intervention || "-"}</p>
                                 <p><span className="font-semibold">Type :</span> {intervention.type || "-"}</p>

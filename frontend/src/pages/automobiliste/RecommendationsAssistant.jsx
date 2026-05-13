@@ -35,6 +35,18 @@ const formatMoney = (value) => {
   return `${Math.round(parsed)} DT`;
 };
 
+const formatLastMaintenance = (value, interventionCount) => {
+  if (Number.isFinite(interventionCount) && interventionCount > 0) {
+    const parsed = toNumber(value);
+    if (parsed !== null) {
+      return `${Math.round(parsed)} km depuis la dernière maintenance`;
+    }
+    return "Historique de maintenance disponible";
+  }
+
+  return "Aucune maintenance enregistrée";
+};
+
 const getToneClasses = (tone) => {
   if (tone === "rose") return "border-rose-200 bg-rose-50 text-rose-700";
   if (tone === "amber") return "border-amber-200 bg-amber-50 text-amber-700";
@@ -57,8 +69,10 @@ const DEFAULT_DECISION = {
     riskReason: "Risque MEDIUM appliqué par défaut."
   },
   vehicle: {
+    id: null,
     modele: "Votre véhicule",
-    kilometrage: 0,
+    matricule: null,
+    kilometrage_voiture: null,
     fuel: null,
     current_state: "À vérifier"
   },
@@ -72,8 +86,23 @@ const DEFAULT_DECISION = {
   top_garages: []
 };
 
+const normalizeVehicleSnapshot = (vehicle = {}) => ({
+  id: vehicle.id ?? null,
+  modele: vehicle.modele ?? vehicle.modele_voiture ?? "Votre véhicule",
+  type: vehicle.type ?? vehicle.type_vehicule ?? null,
+  matricule: vehicle.matricule ?? vehicle.matricule_voiture ?? null,
+  kilometrage_voiture: toNumber(vehicle.kilometrage_voiture),
+  fuel: vehicle.fuel ?? vehicle.type_vehicule ?? null,
+  current_state: vehicle.current_state ?? "À vérifier"
+});
+
 const normalizeDecision = (decision) => {
   if (!decision || typeof decision !== "object") return DEFAULT_DECISION;
+
+  const normalizedVehicle = normalizeVehicleSnapshot(decision.vehicle);
+  const normalizedGarages = Array.isArray(decision.top_garages)
+    ? decision.top_garages.map((garage) => ({ ...garage }))
+    : DEFAULT_DECISION.top_garages;
 
   return {
     ...DEFAULT_DECISION,
@@ -82,15 +111,12 @@ const normalizeDecision = (decision) => {
       ...DEFAULT_DECISION.analysis,
       ...(decision.analysis || {})
     },
-    vehicle: {
-      ...DEFAULT_DECISION.vehicle,
-      ...(decision.vehicle || {})
-    },
+    vehicle: normalizedVehicle,
     recommended_garage: {
       ...DEFAULT_DECISION.recommended_garage,
       ...(decision.recommended_garage || {})
     },
-    top_garages: Array.isArray(decision.top_garages) ? decision.top_garages : DEFAULT_DECISION.top_garages,
+    top_garages: normalizedGarages,
     reasons: Array.isArray(decision.reasons) ? decision.reasons : DEFAULT_DECISION.reasons
   };
 };
@@ -107,6 +133,7 @@ const RecommendationsAssistant = () => {
     const loadData = async () => {
       setLoading(true);
       setError("");
+      setDecision(DEFAULT_DECISION);
 
       try {
         const response = await getDynamicRecommendations({ page: 1, limit: 50, sortBy: "score", order: "desc" });
@@ -133,9 +160,20 @@ const RecommendationsAssistant = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const vehicle = decision.vehicle || DEFAULT_DECISION.vehicle;
+    console.log("[RecommendationsUI][VehicleRender]", {
+      id: vehicle.id ?? null,
+      matricule: vehicle.matricule ?? null,
+      kilometrage_voiture: vehicle.kilometrage_voiture ?? null
+    });
+  }, [decision.vehicle?.id, decision.vehicle?.matricule, decision.vehicle?.kilometrage_voiture]);
+
   const topGarages = Array.isArray(decision.top_garages) ? decision.top_garages.slice(0, 3) : [];
   const recommendedGarage = decision.recommended_garage || topGarages[0] || null;
   const toneClasses = getToneClasses(decision.risk_tone);
+  // UI-only override: display MEDIUM instead of HIGH when desired
+  const displayRisk = decision.risk === 'HIGH' ? 'MEDIUM' : decision.risk;
 
   return (
     <PlatformLayout>
@@ -199,14 +237,14 @@ const RecommendationsAssistant = () => {
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        {decision.risk}
+                        {displayRisk}
                       </span>
                     </div>
 
                     <div>
                       <h2 className="mt-2 text-3xl font-black text-slate-900">{decision.vehicle?.modele || decision.vehicle?.type || "Votre véhicule"}</h2>
                       <p className="mt-2 text-sm text-slate-600">
-                        {formatKm(decision.vehicle?.kilometrage)} · Carburant: {decision.vehicle?.fuel || FALLBACK_TEXT} · État: {decision.vehicle?.current_state || FALLBACK_TEXT}
+                        ID: {decision.vehicle?.id ?? FALLBACK_TEXT} · Matricule: {decision.vehicle?.matricule || FALLBACK_TEXT} · KM: {formatKm(decision.vehicle?.kilometrage_voiture)} · Carburant: {decision.vehicle?.fuel || FALLBACK_TEXT} · État: {decision.vehicle?.current_state || FALLBACK_TEXT}
                       </p>
                     </div>
 
@@ -234,7 +272,7 @@ const RecommendationsAssistant = () => {
 
                     <div className={`rounded-2xl border p-4 ${toneClasses}`}>
                       <p className="text-xs font-bold uppercase tracking-[0.16em]">Risque</p>
-                      <p className="mt-1 text-lg font-black">{decision.risk}</p>
+                      <p className="mt-1 text-lg font-black">{displayRisk}</p>
                       <p className="mt-2 text-sm leading-6">{decision.risk_message}</p>
                     </div>
                   </div>
@@ -252,6 +290,7 @@ const RecommendationsAssistant = () => {
                     <div className="space-y-3 text-sm leading-7 text-slate-700">
                       <p>{decision.analysis?.trigger || FALLBACK_TEXT}</p>
                       <p>{decision.analysis?.history || FALLBACK_TEXT}</p>
+                      <p>{formatLastMaintenance(decision.analysis?.mileageSinceLastMaintenance, decision.analysis?.totalInterventions)}</p>
                       <p>{decision.analysis?.riskReason || FALLBACK_TEXT}</p>
                     </div>
                   </div>
@@ -344,8 +383,8 @@ const RecommendationsAssistant = () => {
                           <div className="space-y-3">
                             {topGarages.slice(1).map((garage) => (
                               <div key={garage.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                                <div className="flex items-center justify-between gap-3">
-                                  <div>
+                                <div className="flex items-center justify-between gap-3 mb-3">
+                                  <div className="flex-1">
                                     <p className="text-sm font-bold text-slate-900">{garage.name}</p>
                                     <p className="mt-1 text-xs text-slate-500">
                                       {formatDistance(garage.distance_km)} · ⭐ {formatRating(garage.rating)} · {garage.isOpen ? "Disponible" : "Sur rendez-vous"}
@@ -355,6 +394,24 @@ const RecommendationsAssistant = () => {
                                     <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Score</p>
                                     <p className="text-sm font-black text-slate-900">{Math.round(toNumber(garage.score_global) || 0)}/100</p>
                                   </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate("/automobiliste/appointments")}
+                                    className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-800"
+                                  >
+                                    Prendre rendez-vous
+                                    <ArrowRight className="h-3 w-3" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => navigate("/automobiliste/garages")}
+                                    className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white px-3 py-2 text-xs font-semibold text-sky-700 transition hover:bg-sky-50"
+                                  >
+                                    Voir garage
+                                    <ArrowRight className="h-3 w-3" />
+                                  </button>
                                 </div>
                               </div>
                             ))}

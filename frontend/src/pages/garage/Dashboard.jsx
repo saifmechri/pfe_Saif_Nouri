@@ -15,6 +15,7 @@ import {
   updateGarageReview,
   updateGarageService
 } from "../../services/garage";
+import { getCompleteProfile, updateProfile } from "../../services/user";
 import GarageDashboardAppointments from "../../components/dashboard/GarageDashboardAppointments";
 import { calculateDistance, formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
@@ -380,6 +381,15 @@ const splitBySeparators = (value) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const splitLines = (value, fallback = []) => {
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.length > 0 ? lines : fallback;
+};
+
 const createDefaultSchedule = () =>
   openingDays.map((day) => ({
     day,
@@ -487,6 +497,16 @@ const GarageDashboard = () => {
 
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [myProfile, setMyProfile] = useState(null);
+  const [presentationForm, setPresentationForm] = useState({
+    store_name: "",
+    store_address: "",
+    store_description: ""
+  });
+  const [presentationSaving, setPresentationSaving] = useState(false);
+  const [presentationMessage, setPresentationMessage] = useState("");
+  const [presentationError, setPresentationError] = useState("");
 
   const hasGarageProfile = Boolean(garage?.id);
 
@@ -670,10 +690,10 @@ const GarageDashboard = () => {
     }
   };
 
-  const activeServicesCount = useMemo(
-    () => services.filter((service) => service.is_active).length,
-    [services]
-  );
+  const activeServicesCount = useMemo(() => {
+    const isActive = (value) => value === true || value === 1 || value === "1" || value === "true";
+    return services.filter((service) => isActive(service?.is_active)).length;
+  }, [services]);
 
   const visibleServices = useMemo(() => {
     if (!chipFilters.onlyActiveServices) {
@@ -692,6 +712,41 @@ const GarageDashboard = () => {
       loadMyReviews();
     }
   }, [hasGarageProfile]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const response = await getCompleteProfile();
+        const profile = response?.data?.data?.user || response?.data?.user || null;
+        if (!isMounted) {
+          return;
+        }
+
+        setMyProfile(profile);
+        setPresentationForm({
+          store_name: profile?.store_name || "",
+          store_address: profile?.store_address || "",
+          store_description: profile?.store_description || ""
+        });
+      } catch (_err) {
+        if (isMounted) {
+          setMyProfile(null);
+        }
+      } finally {
+        if (isMounted) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -813,10 +868,11 @@ const GarageDashboard = () => {
       const items = Array.isArray(payload?.items) ? payload.items : [];
       setReviews(items);
 
-      if (items.length === 0) {
+      const publishedItems = items.filter((item) => item?.is_published === true);
+      if (publishedItems.length === 0) {
         setReviewSummary({ reviews_count: 0, average_rating: 0, min_rating: 0, max_rating: 0 });
       } else {
-        const ratings = items.map((item) => Number(item.rating || 0));
+        const ratings = publishedItems.map((item) => Number(item.rating || 0));
         const sum = ratings.reduce((acc, value) => acc + value, 0);
         setReviewSummary({
           reviews_count: ratings.length,
@@ -1034,6 +1090,52 @@ const GarageDashboard = () => {
       setError(getApiErrorMessage(err, "Impossible de modifier la publication de cet avis."));
     }
   };
+
+  const handlePresentationChange = (event) => {
+    const { name, value } = event.target;
+    setPresentationForm((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePresentationSave = async (event) => {
+    event.preventDefault();
+    setPresentationError("");
+    setPresentationMessage("");
+    setPresentationSaving(true);
+
+    try {
+      await updateProfile({
+        store_name: presentationForm.store_name,
+        store_address: presentationForm.store_address,
+        store_description: presentationForm.store_description
+      });
+
+      const refreshed = await getCompleteProfile();
+      const profile = refreshed?.data?.data?.user || refreshed?.data?.user || null;
+      setMyProfile(profile);
+      setPresentationMessage("Présentation enregistrée avec succès.");
+    } catch (err) {
+      setPresentationError(err?.response?.data?.message || "Erreur lors de l'enregistrement de la présentation");
+    } finally {
+      setPresentationSaving(false);
+    }
+  };
+
+  const canManagePieces = user?.role === "garage" || user?.role === "admin";
+  const isStoreView = false;
+  const storeDisplayName = myProfile?.store_name || garageForm.name || user?.name || "Garage";
+  const storeDescription = myProfile?.store_description || garageForm.description || "Spécialiste en services et entretien automobile";
+  const vendorRole = myProfile?.role || user?.role || "garage";
+  const vendorEmail = myProfile?.email || user?.email || "Non renseigné";
+  const vendorPhone = myProfile?.phone || garageForm.telephone || "Non renseigné";
+  const storeSpecialties = splitLines(garage?.specialties || garageForm.specialties || myProfile?.store_specialties, ["Aucune spécialité renseignée"]);
+  const storeHours = splitLines(garage?.work_hours || garageForm.work_hours || myProfile?.store_hours, ["Horaires non renseignés"]);
+  const storeServices = splitLines(
+    garage?.services_catalog || garageForm.services_catalog || myProfile?.store_services,
+    ["Aucun service complémentaire renseigné"]
+  );
 
   const toggleSelection = (value, setter) => {
     setter((current) =>
@@ -1643,9 +1745,6 @@ const GarageDashboard = () => {
                         <input name="store_name" value={presentationForm.store_name} onChange={handlePresentationChange} placeholder="Nom du garage" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300" />
                         <input name="store_address" value={presentationForm.store_address} onChange={handlePresentationChange} placeholder="Adresse" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300" />
                         <textarea name="store_description" value={presentationForm.store_description} onChange={handlePresentationChange} placeholder="Description" rows={3} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
-                        <textarea name="store_hours" value={presentationForm.store_hours} onChange={handlePresentationChange} placeholder="Horaires, une ligne par jour" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
-                        <textarea name="store_specialties" value={presentationForm.store_specialties} onChange={handlePresentationChange} placeholder="Spécialités, une ligne par item" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
-                        <textarea name="store_services" value={presentationForm.store_services} onChange={handlePresentationChange} placeholder="Services, une ligne par item" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
                       </div>
 
                       <div className="mt-4 flex justify-end">
@@ -1658,11 +1757,9 @@ const GarageDashboard = () => {
 
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <h2 className="text-4xl font-black tracking-tight text-slate-900">{storeDisplayName}</h2>
-                    <p className="mt-2 text-lg text-slate-700">Spécialiste en services et entretien automobile</p>
-                    <p className="mt-2 text-base leading-relaxed text-slate-600">
-                      {storeDescription}
-                    </p>
-                    <p className="mt-3 text-base font-semibold text-slate-700">Role: {vendorRole}</p>
+                    <p className="mt-2 text-lg text-slate-700">{storeDescription}</p>
+                    <p className="mt-3 text-base font-semibold text-slate-700">Adresse: {garage?.adresse || garageForm.adresse || myProfile?.store_address || "Non renseignée"}</p>
+                    <p className="text-base font-semibold text-slate-700">Role: {vendorRole}</p>
                     <p className="text-base font-semibold text-slate-700">Email: {vendorEmail}</p>
                     <p className="text-base font-semibold text-slate-700">Telephone: {vendorPhone}</p>
                     {profileLoading && <p className="mt-2 text-sm text-slate-500">Chargement du profil...</p>}

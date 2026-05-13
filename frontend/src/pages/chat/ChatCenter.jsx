@@ -426,6 +426,12 @@ const ChatCenter = () => {
                     {humanRole[selectedConversation.counterpart.role]}
                   </p>
                 )}
+                {selectedConversation?.counterpart && (
+                  <div className="mt-1 space-y-0.5 text-xs text-[#617089]">
+                    {selectedConversation.counterpart.phone && <p>Téléphone: {selectedConversation.counterpart.phone}</p>}
+                    {selectedConversation.counterpart.email && <p>Email: {selectedConversation.counterpart.email}</p>}
+                  </div>
+                )}
               </div>
 
               <div ref={messagesContainerRef} className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-lg bg-[#f8fbff] p-3">

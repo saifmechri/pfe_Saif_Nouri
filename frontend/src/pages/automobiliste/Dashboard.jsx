@@ -241,6 +241,57 @@ const AutomobilisteDashboard = () => {
     setShowForm(true);
   };
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedPhotoFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setSelectedPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const multipartData = new FormData();
+      multipartData.append("modele_voiture", formData.modele_voiture);
+      multipartData.append("matricule_voiture", formData.matricule_voiture);
+      multipartData.append("kilometrage_voiture", formData.kilometrage_voiture || "");
+      if (selectedPhotoFile) {
+        multipartData.append("photo", selectedPhotoFile);
+      }
+
+      if (editingId) {
+        await updateVehicule(editingId, multipartData);
+        setSuccessMessage("Véhicule modifié avec succès");
+      } else {
+        await createVehicule(multipartData);
+        setSuccessMessage("Véhicule ajouté avec succès");
+      }
+      await fetchVehicules();
+      resetForm();
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || "Erreur lors de la sauvegarde");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openInterventionForm = async () => {
     setInterventionError("");
 
@@ -380,30 +431,19 @@ const AutomobilisteDashboard = () => {
   };
 
   const handleDeleteIntervention = async (vehicleId, interventionId) => {
-
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette intervention ?")) return;
+    
+    setInterventionDeletingId(interventionId);
     try {
-      const multipartData = new FormData();
-      multipartData.append("modele_voiture", formData.modele_voiture);
-      multipartData.append("matricule_voiture", formData.matricule_voiture);
-      multipartData.append("kilometrage_voiture", formData.kilometrage_voiture || "");
-      if (selectedPhotoFile) {
-        multipartData.append("photo", selectedPhotoFile);
-      }
-
-      if (editingId) {
-        await updateVehicule(editingId, multipartData);
-        setSuccessMessage("Véhicule modifié avec succès");
-      } else {
-        await createVehicule(multipartData);
-        setSuccessMessage("Véhicule ajouté avec succès");
-      }
-      await fetchVehicules();
-      resetForm();
+      await interventionsApi.deleteIntervention(vehicleId, interventionId);
+      setSuccessMessage("Intervention supprimée avec succès");
+      setHistoriqueLoaded(false);
+      await fetchHistorique();
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || "Erreur lors de la sauvegarde");
+      setInterventionError(err.response?.data?.message || "Erreur lors de la suppression");
     } finally {
-      setLoading(false);
+      setInterventionDeletingId(null);
     }
   };
 

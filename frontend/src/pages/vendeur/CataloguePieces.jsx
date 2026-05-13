@@ -686,6 +686,42 @@ const CataloguePieces = () => {
     }
   }, [canManagePieces]);
 
+  // Handle pieceId parameter from URL (for edit/view from Dashboard)
+  useEffect(() => {
+    const pieceIdParam = searchParams.get("pieceId");
+    const editParam = searchParams.get("edit");
+    const viewParam = searchParams.get("view");
+
+    if (!pieceIdParam) {
+      return;
+    }
+
+    const parsedPieceId = Number.parseInt(pieceIdParam, 10);
+    if (!Number.isInteger(parsedPieceId) || parsedPieceId <= 0) {
+      return;
+    }
+
+    // Find the piece in the current items
+    const targetPiece = items.find((p) => Number(p.id) === parsedPieceId);
+    
+    if (targetPiece) {
+      if (editParam === "true") {
+        // Open edit form
+        openEditPieceModal(targetPiece);
+      } else if (viewParam === "true") {
+        // Show piece details
+        openPieceDetails(targetPiece);
+      }
+      
+      // Clean up the URL params
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("pieceId");
+      nextParams.delete("edit");
+      nextParams.delete("view");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [items, searchParams]);
+
   const openStoreViewByOwnerId = async (ownerId, options = {}) => {
     const { syncUrl = false, tab = "presentation" } = options;
     const parsedOwnerId = Number.parseInt(ownerId, 10);
@@ -1178,7 +1214,13 @@ const CataloguePieces = () => {
   };
 
   const syncPiecesList = () => {
-    setAppliedFilters((prev) => ({ ...prev }));
+    // Réinitialiser à la page 1 et forcer un refresh complet
+    setPage(1);
+    // Déclencher un refresh en changeant appliedFilters
+    setAppliedFilters((prev) => ({
+      ...prev,
+      _refreshToken: Date.now() // Force React à voir un changement
+    }));
   };
 
   const handleSubmitPiece = async (event) => {
@@ -1245,7 +1287,28 @@ const CataloguePieces = () => {
       setNewPiece(createEmptyPieceForm());
       setEditingPieceId(null);
       setPage(1);
+      
+      // Réinitialiser les filtres de recherche pour voir la nouvelle pièce
+      setFilters((prev) => ({
+        ...prev,
+        search: ""
+      }));
+      setAppliedFilters((prev) => ({
+        ...prev,
+        search: ""
+      }));
+      
+      // Forcer l'affichage en scope "private" pour voir les pièces du vendeur
+      if (canManagePieces) {
+        setCatalogScope("private");
+      }
+      
       syncPiecesList();
+      
+      // Fermer la modale après 1.5 secondes
+      setTimeout(() => {
+        setShowCreateModal(false);
+      }, 1500);
     } catch (err) {
       try {
         const errorResponse = err.response?.data;
@@ -1583,13 +1646,7 @@ const CataloguePieces = () => {
                             >
                               Comparer les vendeurs
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPieceLocation(cheapest)}
-                              className="mt-2 flex w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300"
-                            >
-                              Localisation piece auto
-                            </button>
+                            
                             <button
                               type="button"
                               onClick={() => openComparisonPage(cheapest)}
@@ -1618,8 +1675,7 @@ const CataloguePieces = () => {
                             <div className="mt-3 flex items-center justify-between">
                               <p className="text-3xl font-black text-blue-700">{Number(piece.prix_unitaire).toFixed(2)} DT</p>
                               <div className="flex items-center gap-3 text-2xl text-slate-400">
-                                <button type="button" aria-label="Favori">♡</button>
-                                <button type="button" aria-label="Partager">↗</button>
+                               
                               </div>
                             </div>
 
@@ -1636,13 +1692,7 @@ const CataloguePieces = () => {
                               </button>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPieceLocation(piece)}
-                              className="mt-3 flex w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300"
-                            >
-                              Localisation piece auto
-                            </button>
+                            
                           </div>
                         </article>
                       );

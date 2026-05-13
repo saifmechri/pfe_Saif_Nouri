@@ -164,19 +164,19 @@ const VendeurDashboard = () => {
         {/* Statistiques */}
         <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-4">
           <div className="rounded-2xl border border-[#e8eef8] bg-gradient-to-br from-blue-50 to-blue-100 p-6 shadow-sm hover:shadow-md transition">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2">📦 Pièces publiées</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2">Pièces publiées</p>
             <p className="text-3xl font-bold text-[#1d4ed8]">{sellerPieces.length}</p>
           </div>
           <div className="rounded-2xl border border-[#e8eef8] bg-gradient-to-br from-green-50 to-green-100 p-6 shadow-sm hover:shadow-md transition">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2">✅ Stock disponible</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2"> Stock disponible</p>
             <p className="text-3xl font-bold text-green-600">{sellerPieces.filter((piece) => Number(piece.stock) > 0).length}</p>
           </div>
           <div className="rounded-2xl border border-[#e8eef8] bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 shadow-sm hover:shadow-md transition">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2">⚠️ En rupture</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2"> En rupture</p>
             <p className="text-3xl font-bold text-yellow-600">{sellerPieces.filter((piece) => Number(piece.stock) <= 0).length}</p>
           </div>
           <div className="rounded-2xl border border-[#e8eef8] bg-gradient-to-br from-purple-50 to-purple-100 p-6 shadow-sm hover:shadow-md transition">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2">👁️ Vues totales</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2"> Vues totales</p>
             <p className="text-3xl font-bold text-purple-600">{sellerPieces.reduce((acc, piece) => acc + Number(piece.vues || 0), 0)}</p>
           </div>
         </div>
@@ -195,12 +195,15 @@ const VendeurDashboard = () => {
           >
             Mes pièces
           </button>
+
           <button
             onClick={() => setActiveTab("messages")}
             className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "messages" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
             Messages
-          </button>
+          </button> 
+
+
           <button
             onClick={() => navigate("/vendeur/catalogue")}
             className="vb-btn-primary ml-auto px-4 py-2 text-sm"
@@ -304,9 +307,7 @@ const VendeurDashboard = () => {
             <div>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-[#102848]">Gestion des pièces</h2>
-                <button className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#1d4ed8] to-[#1e40af] px-6 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl transition">
-                  ➕ Nouvelle pièce
-                </button>
+                
               </div>
 
               {piecesLoading ? (
@@ -320,11 +321,11 @@ const VendeurDashboard = () => {
                   <table className="w-full text-left text-sm">
                     <thead className="border-b-2 border-[#dbe4f2] bg-[#f9fbff]">
                       <tr>
-                        <th className="px-4 py-3 font-semibold text-[#1a355e]">📦 Nom pièce</th>
-                        <th className="px-4 py-3 font-semibold text-[#1a355e]">💰 Prix</th>
-                        <th className="px-4 py-3 font-semibold text-[#1a355e]">📊 Stock</th>
-                        <th className="px-4 py-3 font-semibold text-[#1a355e]">👁️ Vues</th>
-                        <th className="px-4 py-3 font-semibold text-[#1a355e]">✅ Statut</th>
+                        <th className="px-4 py-3 font-semibold text-[#1a355e]">Nom pièce</th>
+                        <th className="px-4 py-3 font-semibold text-[#1a355e]"> Prix</th>
+                        <th className="px-4 py-3 font-semibold text-[#1a355e]">Stock</th>
+                        <th className="px-4 py-3 font-semibold text-[#1a355e]">Vues</th>
+                        <th className="px-4 py-3 font-semibold text-[#1a355e]">Statut</th>
                         <th className="px-4 py-3 font-semibold text-[#1a355e]">Actions</th>
                       </tr>
                     </thead>
@@ -338,7 +339,7 @@ const VendeurDashboard = () => {
                               <div className="font-semibold text-slate-900">{piece.nom || piece.reference || "Pièce"}</div>
                               <div className="text-xs text-slate-500">{piece.reference || "Référence non renseignée"}</div>
                             </td>
-                            <td className="px-4 py-3 font-semibold text-[#1d4ed8]">{Number(piece.prix_unitaire || 0).toFixed(2)} €</td>
+                            <td className="px-4 py-3 font-semibold text-[#1d4ed8]">{Number(piece.prix_unitaire || 0).toFixed(2)} DT</td>
                             <td className="px-4 py-3 font-semibold">{Number(piece.stock || 0)}</td>
                             <td className="px-4 py-3 text-purple-600 font-semibold">{Number(piece.vues || 0)}</td>
                             <td className="px-4 py-3">
@@ -354,14 +355,14 @@ const VendeurDashboard = () => {
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => navigate(`/vendeur/catalogue?pieceId=${piece.id}`)}
+                                  onClick={() => navigate(`/vendeur/catalogue?pieceId=${piece.id}&edit=true`)}
                                   className="inline-flex items-center gap-1 rounded-lg border border-[#c8d8f5] bg-[#eaf2ff] px-3 py-1 text-xs font-semibold text-[#144a9f] hover:bg-[#dfebff] transition"
                                 >
                                   <Pencil size={14} /> Éditer
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => navigate(`/vendeur/catalogue?pieceId=${piece.id}`)}
+                                  onClick={() => navigate(`/vendeur/catalogue?pieceId=${piece.id}&view=true`)}
                                   className="inline-flex items-center gap-1 rounded-lg border border-[#d2dceb] bg-white px-3 py-1 text-xs font-semibold text-[#16375f] hover:bg-[#f5f8fe] transition"
                                 >
                                   <Eye size={14} /> Voir

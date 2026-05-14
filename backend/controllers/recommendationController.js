@@ -473,6 +473,7 @@ async function getRecommendations(req, res) {
     const rawGarageLimit = req.query.garageLimit;
     const rawPage = req.query.page;
     const rawLimit = req.query.limit;
+    const rawVehicleId = req.query.vehicleId;
 
     if (rawMinInterventionScore !== undefined) {
       const parsed = toNumber(rawMinInterventionScore, null);
@@ -514,6 +515,13 @@ async function getRecommendations(req, res) {
       }
     }
 
+    if (rawVehicleId !== undefined) {
+      const parsed = parsePositiveInt(rawVehicleId, 0);
+      if (parsed < 1) {
+        errors.push('vehicleId doit etre un entier > 0');
+      }
+    }
+
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
@@ -530,6 +538,7 @@ async function getRecommendations(req, res) {
     const garageLimit = Math.min(parsePositiveInt(rawGarageLimit, 5), 10);
     const page = parsePositiveInt(rawPage, 1);
     const limit = Math.min(parsePositiveInt(rawLimit, 10), 50);
+    const vehicleIdFilter = rawVehicleId !== undefined ? parsePositiveInt(rawVehicleId, 0) : null;
 
     const userResult = await pool.query(
       'SELECT id, latitude, longitude FROM users WHERE id = $1',
@@ -549,7 +558,16 @@ async function getRecommendations(req, res) {
       [userId]
     );
 
-    const vehicles = vehiclesResult.rows;
+    const vehicles = vehicleIdFilter
+      ? vehiclesResult.rows.filter((vehicle) => Number(vehicle.id) === vehicleIdFilter)
+      : vehiclesResult.rows;
+
+    if (vehicleIdFilter && vehicles.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicule introuvable pour cet utilisateur'
+      });
+    }
 
     if (!vehicles || vehicles.length === 0) {
       return res.json({

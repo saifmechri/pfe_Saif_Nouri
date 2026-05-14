@@ -1,9 +1,19 @@
-const { pool } = require("../db");
+/**
+ * VEHICLE MANAGEMENT SYSTEM
+ * 
+ * Handles all vehicle-related operations for users.
+ * 
+ * KEY FEATURES:
+ * 1. Add vehicles - Register new car (brand, model, fuel type, year, mileage)
+ * 2. Track interventions - Full history of maintenance performed
+ * 3. Maintenance timeline - View when each service was completed
+ * 4. Mileage tracking - Used to calculate maintenance intervals and urgency
+ * 5. Vehicle details - Brand, model, fuel type, year for recommendations
+ * \n * USAGE:\n * POST /api/vehicules - Add new vehicle\n * GET /api/vehicules - List all user's vehicles\n * GET /api/vehicules/:id/interventions - Get vehicle maintenance history\n * PUT /api/vehicules/:id - Update vehicle info\n */\n\nconst { pool } = require("../db");
 
 const ALLOWED_VEHICLE_TYPES = ["Essence", "Diesel", "SUV", "Électrique"];
 
-// ===== VALIDATION =====
-const validateVehiculePayload = (payload) => {
+// ===== VALIDATION =====\n/**\n * Validates vehicle data before storage\n * - Requires: model, plate number\n * - Mileage: must be positive number\n * - Type: must be from allowed list\n */\nconst validateVehiculePayload = (payload) => {
   const { modele_voiture, matricule_voiture, kilometrage_voiture, type_vehicule } = payload;
 
   if (!modele_voiture || !matricule_voiture) {

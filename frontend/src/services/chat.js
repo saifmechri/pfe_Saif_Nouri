@@ -1,3 +1,10 @@
+/**
+ * CHAT SERVICE
+ * 
+ * Real-time messaging between users and garages.
+ * Features: conversations, messages, real-time updates via Supabase
+ */
+
 import API from "./api";
 import { getSupabaseClient } from "./supabaseClient";
 

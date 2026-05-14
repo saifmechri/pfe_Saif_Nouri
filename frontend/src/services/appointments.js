@@ -1,3 +1,17 @@
+/**
+ * APPOINTMENTS SERVICE
+ * 
+ * Manages appointment bookings between users and garages.
+ * 
+ * WORKFLOW:
+ * 1. User creates appointment with preferred dates
+ * 2. Garage proposes available time slots
+ * 3. User confirms selected time
+ * 4. Appointment scheduled
+ * 
+ * STATUSES: PENDING, PROPOSED, CONFIRMED, COMPLETED, CANCELLED
+ */
+
 import API from "./api";
 
 export const listAppointments = (params = {}) => {
@@ -18,6 +32,7 @@ export const updateAppointment = (id, updates = {}) => {
 
 export const deleteAppointment = (id) => {
   return API.delete(`/appointments/${id}`);
+};
 };
 
 export default {

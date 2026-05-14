@@ -1,9 +1,37 @@
-import { useContext, useState } from "react";
+/**
+ * HOME PAGE - Landing Page / Homepage
+ * 
+ * This is the main entry point for the application.
+ * 
+ * FEATURES:
+ * 1. Public Landing Page - Displayed when user is NOT logged in
+ *    - Shows platform overview and ecosystem statistics
+ *    - CTA buttons for Sign Up and Login
+ *    - Live statistics about users, garages, pieces, and interventions
+ * 
+ * 2. Authenticated Dashboard - Displayed when user IS logged in
+ *    - Quick access links to main dashboard
+ *    - Personalized greeting with user's name
+ * 
+ * 3. Navigation Bar
+ *    - Menu with links based on authentication status
+ *    - Chat and notification capabilities for logged-in users
+ *    - Mobile sidebar menu
+ * 
+ * FUNCTIONALITY EXPLAINED:
+ * - useEffect hook fetches public stats on page load
+ * - Stats displayed in ecosystem section showing real-time data
+ * - Responsive design with mobile and desktop layouts
+ * - Sidebar navigation accessible from hamburger menu
+ */
+
+import { useContext, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import ChatModal from "../components/ChatModal";
 import { MessageCircle } from "lucide-react";
 import NotificationBell from "../components/NotificationBell";
+import { getPublicStats } from "../services/publicStats";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -11,9 +39,44 @@ const Navbar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const isAuthenticated = Boolean(user);
+  const [stats, setStats] = useState({ users: 0, garages: 0, pieces: 0, interventions: 0 });
 
   const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
+
+  /**
+   * Load public statistics on component mount
+   * 
+   * This effect runs once when the page loads and fetches:
+   * - Active user count
+   * - Partner garage count
+   * - Available pieces in catalog
+   * - Total interventions tracked
+   * 
+   * Stats are displayed in the "Ecosystem" section to show platform activity.
+   * If fetch fails, defaults to 0 values (graceful degradation).
+   */
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await getPublicStats();
+        const data = res.data?.data || {};
+        if (!mounted) return;
+        setStats({
+          users: Number(data.users || 0),
+          garages: Number(data.garages || 0),
+          pieces: Number(data.pieces || 0),
+          interventions: Number(data.interventions || 0)
+        });
+      } catch (e) {
+        // ignore failures on public stats - keep default values
+      }
+    };
+
+    load();
+    return () => { mounted = false; }; // Cleanup on unmount
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -226,19 +289,19 @@ const Navbar = () => {
         <section className="grid gap-4 md:grid-cols-4">
           <div className="vb-card p-5">
             <p className="text-sm text-[#617089]">Utilisateurs actifs</p>
-            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">120+</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">{stats.users.toLocaleString()}</p>
           </div>
           <div className="vb-card p-5">
             <p className="text-sm text-[#617089]">Garages partenaires</p>
-            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">15</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">{stats.garages.toLocaleString()}</p>
           </div>
           <div className="vb-card p-5">
-            <p className="text-sm text-[#617089]">Pieces catalogue</p>
-            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">1000+</p>
+            <p className="text-sm text-[#617089]">Pièces catalogue</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">{stats.pieces.toLocaleString()}</p>
           </div>
           <div className="vb-card p-5">
             <p className="text-sm text-[#617089]">Interventions suivies</p>
-            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">230+</p>
+            <p className="mt-2 text-3xl font-extrabold text-[#1a2b4b]">{stats.interventions.toLocaleString()}</p>
           </div>
         </section>
 

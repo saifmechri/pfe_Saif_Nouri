@@ -1,3 +1,16 @@
+/**
+ * GARAGE MANAGEMENT SYSTEM
+ * 
+ * Handles garage profiles, services, location tracking, and ratings.
+ * 
+ * FEATURES:
+ * - Garage profiles with full details
+ * - Services catalog per garage
+ * - GPS coordinates for distance calculations
+ * - Ratings and customer reviews
+ * - Working hours and availability
+ */
+
 const { pool } = require('../db');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');

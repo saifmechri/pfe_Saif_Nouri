@@ -1,8 +1,28 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, CarFront, Loader2, MapPin, ShieldCheck, Sparkles, Wrench } from "lucide-react";
+import { ArrowRight, Loader2, MapPin, ShieldCheck, Sparkles, Wrench } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import { getDynamicRecommendations } from "../../services/recommendation";
+
+/**
+ * INTELLIGENT RECOMMENDATIONS PAGE
+ * 
+ * Displays AI-powered maintenance recommendations using AUTO BOT engine.
+ * 
+ * HOW TO USE:
+ * 1. Page loads recommendations for all user's vehicles
+ * 2. For each vehicle shows:
+ *    - Recommended maintenance type (oil change, inspection, etc.)
+ *    - Top 3 matching garages sorted by score
+ *    - Distance, rating, and price for each garage
+ * 3. Click "Choisir ce garage" to create appointment
+ * 
+ * RECOMMENDATION ALGORITHM:
+ * - Analyzes mileage vs service intervals
+ * - Checks time since last maintenance
+ * - Ranks garages by distance, ratings, specialization
+ * - Risk assessment: URGENT / RECOMMANDÉ / FUTUR
+ */
 
 const FALLBACK_TEXT = "Donnée non renseignée";
 
@@ -55,7 +75,8 @@ const getToneClasses = (tone) => {
 
 const DEFAULT_DECISION = {
   decision: "Révision",
-  recommendation_summary: "Recommandation générée avec les données disponibles.",
+  recommendation_summary: "Recommandation générée par le moteur intelligent Auto Bot.",
+  recommendation_role: "Moteur intelligent Auto Bot",
   risk: "MEDIUM",
   risk_message: "Le système applique un mode de continuité pour afficher une décision valide.",
   risk_tone: "amber",
@@ -116,6 +137,7 @@ const normalizeDecision = (decision) => {
       ...DEFAULT_DECISION.recommended_garage,
       ...(decision.recommended_garage || {})
     },
+    recommendation_role: decision.recommendation_role || DEFAULT_DECISION.recommendation_role,
     top_garages: normalizedGarages,
     reasons: Array.isArray(decision.reasons) ? decision.reasons : DEFAULT_DECISION.reasons
   };
@@ -191,7 +213,7 @@ const RecommendationsAssistant = () => {
                     Recommandation intelligente pour l'entretien véhicule
                   </h1>
                   <p className="max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                    Le moteur décisionnel backend fournit une seule décision canonique, affichée ici sans recalcul côté interface.
+                    Le moteur décisionnel d'Auto Bot analyse le véhicule, l'historique de maintenance et les garages pour fournir une décision canonique prête à être consommée en production.
                   </p>
                 </div>
               </div>

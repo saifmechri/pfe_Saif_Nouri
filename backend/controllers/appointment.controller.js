@@ -1,10 +1,45 @@
+/**
+ * APPOINTMENT/RENDEZ-VOUS SYSTEM
+ * 
+ * Manages appointment bookings between users and garages.
+ * 
+ * FEATURES:
+ * 1. Create appointments - User proposes maintenance at specific garage
+ * 2. Propose time slots - Garage owner suggests available times
+ * 3. Confirm/Decline - Both parties accept or reject proposals
+ * 4. Timeline tracking - Shows all appointment history
+ * 5. Status management - Pending, Confirmed, Completed, Cancelled
+ * 
+ * WORKFLOW:
+ * 1. User selects vehicle and maintenance type from recommendations
+ * 2. User chooses garage and preferred dates
+ * 3. CREATE appointment with initial proposal
+ * 4. Garage owner receives notification
+ * 5. Garage PROPOSES available time slots
+ * 6. User CONFIRMS selected slot
+ * 7. Appointment scheduled
+ */
+
 const { pool } = require('../db');
 const appointmentService = require('../services/appointmentService');
 const notificationService = require('../services/notificationService');
 const { findGarageIdentityByUserId, findGarageIdentityById } = require('../models/garage.model');
 const { validateAppointmentCreation, validateAppointmentUpdate, APPOINTMENT_CONSTANTS } = require('../utils/appointmentValidator');
 
-const listAppointments = async (req, res) => {
+/**
+ * LIST APPOINTMENTS
+ * 
+ * GET /api/appointments
+ * 
+ * Retrieves user's appointments based on role:
+ * - automobiliste: See appointments they created and proposed/confirmed by garages
+ * - garage: See appointments created by users for their garage
+ * 
+ * Query params:
+ * - status: PENDING|PROPOSED|CONFIRMED|COMPLETED|CANCELLED (optional filter)
+ * - limit: 1-100 (default 50)
+ * - offset: pagination offset (default 0)
+ * \n * Response includes appointment timeline and all proposed time slots\n */\nconst listAppointments = async (req, res) => {
   try {
     const userId = Number(req.user.id);
     const role = req.user.role;

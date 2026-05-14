@@ -185,16 +185,29 @@ function buildGarageReasons(garageDetail) {
   return reasons;
 }
 
+/**
+ * Generates human-readable recommendation summary based on scores
+ * Helps user understand why a recommendation is suggested
+ * 
+ * SCORE INTERPRETATION:
+ * 80+: Excellent - urgent maintenance with high-quality garage match
+ * 60-79: Good - moderate maintenance need, solid garage option
+ * <60: Fair - future maintenance, basic garage match
+ */
 function buildRecommendationSummary(finalScore, interventionScore, garageScore) {
   if (finalScore >= 80 && interventionScore >= 70 && garageScore >= 70) {
-    return 'Meilleur choix global';
+    return 'Décision Auto Bot priorisant le meilleur équilibre entre entretien et garage';
   }
 
   if (finalScore >= 60) {
-    return 'Bon compromis qualité/prix';
+    return 'Recommandation Auto Bot basée sur les signaux véhicule et garage';
   }
 
-  return 'Option secondaire';
+  return 'Recommandation de continuité calculée par le moteur intelligent Auto Bot';
+}
+
+function buildRecommendationRole() {
+  return 'Moteur intelligent Auto Bot: analyse le kilométrage, la dernière intervention, le type de véhicule, la distance, le rating et la disponibilité pour classer les meilleurs garages et entretiens.';
 }
 
 function clamp(value, min = 0, max = 100) {
@@ -322,7 +335,8 @@ function buildFallbackDecision({ vehicle = null, garage = null, service = 'Révi
 
   return {
     decision: normalizeDecisionType(service),
-    recommendation_summary: 'Recommandation générée avec les données disponibles',
+    recommendation_summary: 'Recommandation générée avec les données disponibles par le moteur intelligent Auto Bot',
+    recommendation_role: buildRecommendationRole(),
     risk: 'MEDIUM',
     risk_message: "Le moteur applique un niveau MEDIUM par défaut lorsqu'il manque des informations.",
     risk_tone: 'amber',
@@ -383,7 +397,8 @@ function toDecisionPayload(candidate) {
 
   return {
     decision: normalizeDecisionType(intervention.type),
-    recommendation_summary: candidate.recommendationSummary || 'Recommandation principale',
+    recommendation_summary: candidate.recommendationSummary || 'Recommandation principale du moteur Auto Bot',
+    recommendation_role: buildRecommendationRole(),
     risk: risk.level,
     risk_message: risk.message,
     risk_tone: risk.tone,
@@ -421,8 +436,24 @@ function buildVehicleCurrentState(kmActuel, kmRecommande, urgency) {
 }
 
 // Construit une liste classÃ©e de recommandations dynamiques pour l'utilisateur connectÃ©.
+/**
+ * AUTO BOT INTELLIGENT RECOMMENDATION ENGINE
+ * 
+ * This is the core AI-powered matching system that analyzes vehicle maintenance needs
+ * and ranks the best garages for each maintenance type.
+ * 
+ * SCORING FACTORS:
+ * 1. Intervention Score (0-100): Based on mileage, last maintenance date
+ * 2. Garage Score (0-100): Based on distance, ratings, availability
+ * 3. Risk Level: URGENT/RECOMMANDE/FUTUR
+ * 
+ * HOW TO USE:
+ * GET /api/recommendations/classees?sortBy=score&order=desc&page=1&limit=50
+ * Returns ranked recommendations with best garage match for each maintenance need.
+ */
 async function getRecommendations(req, res) {
   try {
+    // Default coordinates for Tunis (fallback when user location unavailable)
     const TUNIS_DEFAULT_LAT = 36.8065;
     const TUNIS_DEFAULT_LON = 10.1815;
     const LEGACY_DEFAULT_LAT = 33.8869;

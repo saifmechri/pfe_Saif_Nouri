@@ -480,7 +480,19 @@ const rejectPiece = async (req, res) => {
   }
 };
 
-// KPI and statistics for the admin dashboard.
+/**
+ * ADMIN DASHBOARD STATISTICS
+ * 
+ * Retrieves platform analytics for admin oversight:
+ * - User metrics (total, new, validated, pending)
+ * - Appointment tracking (by status and timeline)
+ * - Top performing garages (by appointment volume)
+ * - Content moderation queue (pending pieces, validations)
+ * 
+ * HOW TO USE:
+ * Admin calls GET /api/admin/stats to load dashboard metrics.
+ * Shows user engagement, appointment pipeline, and pending items needing approval.
+ */
 const getDashboardStats = async (req, res) => {
   try {
     const [usersResult, usersByRoleResult, appointmentsResult, appointmentsByStatusResult, topGaragesResult, recentActivityResult] = await Promise.all([

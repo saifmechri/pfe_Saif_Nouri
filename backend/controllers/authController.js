@@ -1,3 +1,9 @@
+/**
+ * AUTHENTICATION CONTROLLER
+ * Handles user registration, login, and account management
+ * Supports 3 roles: automobiliste, garage, admin
+ */
+
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { sendApiResponse } = require("../utils/apiResponse");

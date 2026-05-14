@@ -1,6 +1,11 @@
-let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, recommendationRoutes, garageRoutes, chatRoutes;
+/**
+ * CENTRAL ROUTE REGISTRY
+ * 
+ * This file loads and registers all backend API routes.
+ * \n * ROUTE STRUCTURE:\n * - /api/auth - Authentication (login, register, profile)\n * - /api/vehicules - Vehicle management (CRUD, interventions)\n * - /api/interventions - Maintenance history tracking\n * - /api/pieces - Car parts catalog\n * - /api/recommendations - AI recommendation engine\n * - /api/garages - Garage listings and profiles\n * - /api/chat - Messaging between users and garages\n * - /api/appointments - Appointment booking system\n * - /api/maintenance-alerts - Maintenance reminders\n * - /api/maintenance - Maintenance tracking\n * - /api/reports - Service reports and analytics\n * - /api/admin - Admin dashboard and controls\n * - /api/public - Public endpoints (no auth required)\n * \n * Each route module is loaded with error handling.\n * If a module fails to load, an error is logged but app continues.\n * \n * PUBLIC ENDPOINTS:\n * - GET /api/public/stats - Homepage statistics (users, garages, pieces, interventions)\n */\n\nlet authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, recommendationRoutes, garageRoutes, chatRoutes;
 let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes, maintenanceRoutes, reportRoutes;
 let adminRoutes;
+let publicRoutes;
 
 try {
   authRoutes = require('./auth');
@@ -30,6 +35,12 @@ try {
   recommendationRoutes = require('./recommendations');
 } catch (e) {
   console.error('[routes/index] Error loading recommendations:', e.message);
+}
+
+try {
+  publicRoutes = require('./public');
+} catch (e) {
+  console.error('[routes/index] Error loading public routes:', e.message);
 }
 
 try {
@@ -95,6 +106,10 @@ const registerRoutes = (app) => {
   if (pieceRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/pieces');
     app.use('/api/pieces', pieceRoutes);
+  }
+  if (publicRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/public');
+    app.use('/api/public', publicRoutes);
   }
   if (recommendationRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/recommendations');

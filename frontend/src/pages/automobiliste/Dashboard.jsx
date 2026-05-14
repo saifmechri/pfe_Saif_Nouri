@@ -6,7 +6,6 @@ import {
   deleteVehicule,
   getInterventionsByVehicle,
   createIntervention,
-  getPieces,
 } from "../../services/vehicule";
 import interventionsApi from "../../services/interventions";
 import { useNavigate } from "react-router-dom";
@@ -50,8 +49,6 @@ const AutomobilisteDashboard = () => {
   const [showInterventionForm, setShowInterventionForm] = useState(false);
   const [interventionLoading, setInterventionLoading] = useState(false);
   const [interventionError, setInterventionError] = useState("");
-  const [pieces, setPieces] = useState([]);
-  const [piecesLoading, setPiecesLoading] = useState(false);
   const [interventionFormData, setInterventionFormData] = useState({
     vehicleId: "",
     date_intervention: "",
@@ -60,7 +57,6 @@ const AutomobilisteDashboard = () => {
     garage_nom: "",
     garage_adresse: "",
     kilometrage: "",
-    pieces: [],
     pieces_libres: "",
   });
 
@@ -122,12 +118,6 @@ const AutomobilisteDashboard = () => {
     }
   }, [activeTab, historiqueLoaded]);
 
-  useEffect(() => {
-    if (activeTab === "historique" && showInterventionForm && pieces.length === 0 && !piecesLoading) {
-      fetchPieces();
-    }
-  }, [activeTab, showInterventionForm, pieces.length, piecesLoading]);
-
   const fetchVehicules = async () => {
     setLoading(true);
     setError("");
@@ -185,18 +175,6 @@ const AutomobilisteDashboard = () => {
       setHistoriqueError(err.response?.data?.message || "Erreur lors du chargement de l'historique");
     } finally {
       setHistoriqueLoading(false);
-    }
-  };
-
-  const fetchPieces = async () => {
-    setPiecesLoading(true);
-    try {
-      const res = await getPieces();
-      setPieces(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      setInterventionError(err.response?.data?.message || "Erreur lors du chargement des pièces");
-    } finally {
-      setPiecesLoading(false);
     }
   };
 
@@ -320,13 +298,8 @@ const AutomobilisteDashboard = () => {
       garage_nom: "",
       garage_adresse: "",
       kilometrage: "",
-      pieces: [],
       pieces_libres: "",
     });
-
-    if (pieces.length === 0) {
-      fetchPieces();
-    }
 
     setShowInterventionForm(true);
   };
@@ -334,30 +307,6 @@ const AutomobilisteDashboard = () => {
   const handleInterventionFieldChange = (e) => {
     const { name, value } = e.target;
     setInterventionFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const addPieceLine = (event) => {
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-
-    setInterventionFormData((prev) => ({
-      ...prev,
-      pieces: [...prev.pieces, { pieceId: "", quantite: 1, prix_unitaire: "" }]
-    }));
-  };
-
-  const removePieceLine = (index) => {
-    setInterventionFormData((prev) => ({
-      ...prev,
-      pieces: prev.pieces.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handlePieceFieldChange = (index, field, value) => {
-    setInterventionFormData((prev) => ({
-      ...prev,
-      pieces: prev.pieces.map((piece, i) => (i === index ? { ...piece, [field]: value } : piece))
-    }));
   };
 
   const resetInterventionForm = () => {
@@ -371,32 +320,47 @@ const AutomobilisteDashboard = () => {
       garage_nom: "",
       garage_adresse: "",
       kilometrage: "",
-      pieces: [],
       pieces_libres: "",
     });
   };
 
+  /**
+   * INTERVENTION FORM SUBMISSION HANDLER
+   * 
+   * Processes the new intervention (maintenance record) form and saves to backend.
+   * 
+   * FORM FIELDS:
+   * - date_intervention: Date of maintenance work
+   * - type: vidange, revision, reparation, etc.
+   * - garage_nom: Garage name
+   * - garage_adresse: Garage location
+   * - kilometrage: Vehicle mileage when maintenance done
+   * - description: Detailed notes about work performed
+   * - pieces_libres: Manual free-text entry of parts used
+   *   (Example: "Filtre huile x1, Huile 5W30 x4L, Plaquettes frein x4")
+   * 
+   * PROCESS:
+   * 1. Validate all required fields
+   * 2. Append pieces_libres to description as "Pièce utilisée: ..."
+   * 3. Send to backend API
+   * 4. Update vehicle intervention history
+   * 5. Show success/error message to user
+   * 
+   * USAGE:
+   * User fills form and clicks "Enregistrer".
+   * Intervention appears in vehicle history and contributes to maintenance timeline.
+   */
   const handleInterventionSubmit = async (e) => {
     e.preventDefault();
     setInterventionLoading(true);
     setInterventionError("");
 
     try {
-      const cleanedPieces = interventionFormData.pieces
-        .filter((p) => p.pieceId)
-        .map((p) => ({
-          pieceId: Number(p.pieceId),
-          quantite: p.quantite ? Number(p.quantite) : 1,
-          ...(p.prix_unitaire !== "" ? { prix_unitaire: Number(p.prix_unitaire) } : {})
-        }));
-
-      const manualPiecesText = (interventionFormData.pieces_libres || "").trim();
+      const manualPiecesText = String(interventionFormData.pieces_libres || "").trim();
       const mergedDescription = [
         interventionFormData.description?.trim(),
-        manualPiecesText ? `Pièces utilisées (saisie libre): ${manualPiecesText}` : ""
-      ]
-        .filter(Boolean)
-        .join("\n\n");
+        manualPiecesText ? `Pièce utilisée: ${manualPiecesText}` : ""
+      ].filter(Boolean).join("\n\n");
 
       const payload = {
         date_intervention: interventionFormData.date_intervention || undefined,
@@ -405,7 +369,6 @@ const AutomobilisteDashboard = () => {
         garage_nom: interventionFormData.garage_nom || undefined,
         garage_adresse: interventionFormData.garage_adresse || undefined,
         kilometrage: interventionFormData.kilometrage !== "" ? Number(interventionFormData.kilometrage) : undefined,
-        pieces: cleanedPieces
       };
 
       await createIntervention(Number(interventionFormData.vehicleId), payload);
@@ -864,81 +827,17 @@ const AutomobilisteDashboard = () => {
                     />
 
                     <div className="md:col-span-2 border border-gray-200 rounded p-3 bg-white">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="font-semibold">Pièces utilisées (optionnel)</p>
-                        <button
-                          type="button"
-                          onClick={addPieceLine}
-                          className="text-sm bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
-                        >
-                          + Ajouter pièce
-                        </button>
-                      </div>
-
-                      {piecesLoading ? (
-                        <p className="text-sm text-gray-500">Chargement des pièces... (vous pouvez saisir manuellement ci-dessous)</p>
-                      ) : interventionFormData.pieces.length === 0 ? (
-                        <p className="text-sm text-gray-500">Aucune pièce ajoutée.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {interventionFormData.pieces.map((pieceLine, index) => (
-                            <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                              <select
-                                value={pieceLine.pieceId}
-                                onChange={(e) => handlePieceFieldChange(index, "pieceId", e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded"
-                                required
-                              >
-                                <option value="">Choisir pièce</option>
-                                {pieces.map((p) => (
-                                  <option key={p.id} value={p.id}>{p.nom} ({p.prix_unitaire} TND)</option>
-                                ))}
-                              </select>
-
-                              <input
-                                type="number"
-                                min="1"
-                                value={pieceLine.quantite}
-                                onChange={(e) => handlePieceFieldChange(index, "quantite", e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded"
-                                placeholder="Quantité"
-                                required
-                              />
-
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={pieceLine.prix_unitaire}
-                                onChange={(e) => handlePieceFieldChange(index, "prix_unitaire", e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded"
-                                placeholder="Prix unitaire (optionnel)"
-                              />
-
-                              <button
-                                type="button"
-                                onClick={() => removePieceLine(index)}
-                                className="text-red-600 hover:underline"
-                              >
-                                Supprimer
-                              </button>
-
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Saisie libre des pièces utilisées</label>
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-gray-700">Quelle est la pièce utilisée ?</span>
                         <textarea
                           name="pieces_libres"
                           value={interventionFormData.pieces_libres}
                           onChange={handleInterventionFieldChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded"
-                          rows="2"
-                          placeholder="Ex: Filtre huile x1, Huile moteur 5W30 x4L"
+                          rows="3"
+                          placeholder="Écrire manuellement, ex: Filtre à huile x1, Huile moteur 5W30 x4L"
                         />
-                      </div>
+                      </label>
                     </div>
 
                     <div className="md:col-span-2 flex gap-2">

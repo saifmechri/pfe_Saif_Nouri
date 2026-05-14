@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, Package, TriangleAlert, Trash2, BarChart3, Users, CalendarRange, Award } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
@@ -45,6 +46,7 @@ const INITIAL_COUNTS = {
 const CHART_COLORS = ["#2563eb", "#7c3aed", "#f59e0b", "#10b981", "#ef4444", "#14b8a6"];
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("stats");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({ type: null, id: null });
@@ -181,7 +183,20 @@ const AdminDashboard = () => {
         pendingAppointments: Number(statsData?.appointments?.pendingAppointments || 0)
       });
     } catch (fetchError) {
-      setError(fetchError?.response?.data?.message || "Impossible de charger le tableau de bord admin.");
+      const status = fetchError?.response?.status;
+      const message = fetchError?.response?.data?.message;
+
+      if (status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("admin_session");
+        setError("Votre session a expiré. Veuillez vous reconnecter pour continuer.");
+        // Redirection vers login admin après 2 secondes
+        setTimeout(() => {
+          navigate("/admin/login");
+        }, 2000);
+      } else {
+        setError(message || "Impossible de charger le tableau de bord admin.");
+      }
     } finally {
       setLoading(false);
     }

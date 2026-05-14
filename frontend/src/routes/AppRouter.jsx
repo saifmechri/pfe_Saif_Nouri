@@ -3,6 +3,7 @@ import { useContext } from "react";
 import Home from "../pages/Home"; // situé directement dans pages/
 import Login from "../pages/auth/login";
 import Register from "../pages/auth/Register";
+import AdminLogin from "../pages/auth/AdminLogin";
 import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
 import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
@@ -37,6 +38,7 @@ const AppRouter = () => {
         {/* Routes publiques */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/register" element={<Register />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 

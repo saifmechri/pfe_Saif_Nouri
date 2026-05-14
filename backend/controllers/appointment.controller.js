@@ -1,24 +1,5 @@
-/**
- * APPOINTMENT/RENDEZ-VOUS SYSTEM
- * 
- * Manages appointment bookings between users and garages.
- * 
- * FEATURES:
- * 1. Create appointments - User proposes maintenance at specific garage
- * 2. Propose time slots - Garage owner suggests available times
- * 3. Confirm/Decline - Both parties accept or reject proposals
- * 4. Timeline tracking - Shows all appointment history
- * 5. Status management - Pending, Confirmed, Completed, Cancelled
- * 
- * WORKFLOW:
- * 1. User selects vehicle and maintenance type from recommendations
- * 2. User chooses garage and preferred dates
- * 3. CREATE appointment with initial proposal
- * 4. Garage owner receives notification
- * 5. Garage PROPOSES available time slots
- * 6. User CONFIRMS selected slot
- * 7. Appointment scheduled
- */
+// APPOINTMENT CONTROLLER
+// Manages appointment booking lifecycle between automobilistes and garages.
 
 const { pool } = require('../db');
 const appointmentService = require('../services/appointmentService');
@@ -26,20 +7,7 @@ const notificationService = require('../services/notificationService');
 const { findGarageIdentityByUserId, findGarageIdentityById } = require('../models/garage.model');
 const { validateAppointmentCreation, validateAppointmentUpdate, APPOINTMENT_CONSTANTS } = require('../utils/appointmentValidator');
 
-/**
- * LIST APPOINTMENTS
- * 
- * GET /api/appointments
- * 
- * Retrieves user's appointments based on role:
- * - automobiliste: See appointments they created and proposed/confirmed by garages
- * - garage: See appointments created by users for their garage
- * 
- * Query params:
- * - status: PENDING|PROPOSED|CONFIRMED|COMPLETED|CANCELLED (optional filter)
- * - limit: 1-100 (default 50)
- * - offset: pagination offset (default 0)
- * \n * Response includes appointment timeline and all proposed time slots\n */\nconst listAppointments = async (req, res) => {
+const listAppointments = async (req, res) => {
   try {
     const userId = Number(req.user.id);
     const role = req.user.role;
@@ -83,13 +51,11 @@ const getAppointment = async (req, res) => {
     const userId = Number(req.user?.id);
     const role = req.user?.role;
 
-    // Authorization: automobiliste can view own appointments, garage can view appointments belonging to their garage, admin can view all
     if (role === 'automobiliste') {
       if (Number(appointment.automobiliste_user_id) !== userId) {
         return res.status(403).json({ success: false, message: 'Accès refusé', data: null });
       }
     } else if (role === 'garage') {
-      // resolve garage id for this user
       const resolvedGarage = await findGarageIdentityByUserId(userId);
       const garageId = Number(req.query.garageId || resolvedGarage?.id);
       if (!garageId || Number(appointment.garage_id) !== garageId) {
@@ -99,7 +65,6 @@ const getAppointment = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Accès refusé', data: null });
     }
 
-    // Enrich appointment with automobiliste and garage basic info
     const automobilisteRow = await pool.query('SELECT id, name, email, phone FROM users WHERE id = $1', [appointment.automobiliste_user_id]);
     const automobiliste = automobilisteRow.rows[0] || null;
 
@@ -118,12 +83,10 @@ const createAppointment = async (req, res) => {
     const userId = Number(req.user.id);
     const { garageId, appointmentDate, appointmentTime, description, notes } = req.body;
 
-    // Authorization check: only automobilistes can create
     if (req.user.role !== 'automobiliste') {
       return res.status(403).json({ success: false, message: 'Seuls les automobilistes peuvent créer des rendez-vous', data: null });
     }
 
-    // Validate appointment data
     const validation = validateAppointmentCreation({
       garageId,
       automobilisteUserId: userId,
@@ -150,7 +113,6 @@ const createAppointment = async (req, res) => {
       status: APPOINTMENT_CONSTANTS.STATUS_PENDING
     });
 
-    // Generate notification for garage owner
     try {
       const garageResult = await require('../models/garage.model').findGarageIdentityById(Number(garageId));
       if (garageResult && garageResult.user_id) {
@@ -193,7 +155,6 @@ const updateAppointment = async (req, res) => {
 
     const garageIdentity = await findGarageIdentityById(Number(existing.garage_id));
 
-    // Authorization check: verify ownership
     const isAutomobiliste = role === 'automobiliste' && Number(existing.automobiliste_user_id) === userId;
     const isGarageOwner = role === 'garage' && Number(garageIdentity?.user_id) === userId;
     const isAdmin = role === 'admin';
@@ -202,7 +163,6 @@ const updateAppointment = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Vous n\'avez pas les droits de modifier ce rendez-vous', data: null });
     }
 
-    // Validate updates
     const validation = validateAppointmentUpdate(existing, updates);
     if (!validation.valid) {
       return res.status(400).json({ 
@@ -217,7 +177,6 @@ const updateAppointment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Rendez-vous non trouvé', data: null });
     }
 
-    // Send notifications on status change
     try {
       if (updates.status && updates.status !== existing.status) {
         const newStatus = String(updates.status).toLowerCase();
@@ -232,7 +191,6 @@ const updateAppointment = async (req, res) => {
             newStatus === 'cancelled' &&
             (existing.status === 'proposed' || existing.proposed_date || existing.proposed_time);
 
-          // Resolve garage owner user id
           let garageUserId = null;
           try {
             const garageResult = await require('../models/garage.model').findGarageIdentityById(Number(updated.garage_id));
@@ -241,7 +199,6 @@ const updateAppointment = async (req, res) => {
             console.error('Failed to lookup garage owner for notification:', err && err.message ? err.message : err);
           }
 
-          // Determine recipient: notify the other party
           let recipientUserId = null;
           if (role === 'garage' || role === 'admin') {
             recipientUserId = Number(updated.automobiliste_user_id);
@@ -315,7 +272,6 @@ const deleteAppointment = async (req, res) => {
 
     const garageIdentity = await findGarageIdentityById(Number(existing.garage_id));
 
-    // Authorization check: verify ownership
     const isAutomobiliste = role === 'automobiliste' && Number(existing.automobiliste_user_id) === userId;
     const isGarageOwner = role === 'garage' && Number(garageIdentity?.user_id) === userId;
     const isAdmin = role === 'admin';
@@ -324,10 +280,8 @@ const deleteAppointment = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Vous n\'avez pas les droits de supprimer ce rendez-vous', data: null });
     }
 
-    // Delete appointment
     await appointmentService.remove(id);
 
-    // Notify the other party about deletion
     try {
       const actorUserId = userId;
 

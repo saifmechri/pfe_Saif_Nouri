@@ -1,19 +1,11 @@
-/**
- * VEHICLE MANAGEMENT SYSTEM
- * 
- * Handles all vehicle-related operations for users.
- * 
- * KEY FEATURES:
- * 1. Add vehicles - Register new car (brand, model, fuel type, year, mileage)
- * 2. Track interventions - Full history of maintenance performed
- * 3. Maintenance timeline - View when each service was completed
- * 4. Mileage tracking - Used to calculate maintenance intervals and urgency
- * 5. Vehicle details - Brand, model, fuel type, year for recommendations
- * \n * USAGE:\n * POST /api/vehicules - Add new vehicle\n * GET /api/vehicules - List all user's vehicles\n * GET /api/vehicules/:id/interventions - Get vehicle maintenance history\n * PUT /api/vehicules/:id - Update vehicle info\n */\n\nconst { pool } = require("../db");
+// VEHICLE MANAGEMENT CONTROLLER
+// Handles vehicle CRUD and related operations for users.
+
+const { pool } = require("../db");
 
 const ALLOWED_VEHICLE_TYPES = ["Essence", "Diesel", "SUV", "Électrique"];
 
-// ===== VALIDATION =====\n/**\n * Validates vehicle data before storage\n * - Requires: model, plate number\n * - Mileage: must be positive number\n * - Type: must be from allowed list\n */\nconst validateVehiculePayload = (payload) => {
+const validateVehiculePayload = (payload) => {
   const { modele_voiture, matricule_voiture, kilometrage_voiture, type_vehicule } = payload;
 
   if (!modele_voiture || !matricule_voiture) {
@@ -34,10 +26,6 @@ const ALLOWED_VEHICLE_TYPES = ["Essence", "Diesel", "SUV", "Électrique"];
   return null;
 };
 
-/**
- * Ajoute un véhicule pour l'utilisateur authentifié.
- */
-// ===== POST: Ajouter un véhicule =====
 const createVehicule = async (req, res) => {
   const {
     modele_voiture,
@@ -95,10 +83,6 @@ const createVehicule = async (req, res) => {
   }
 };
 
-/**
- * Retourne la liste des véhicules appartenant à l'utilisateur connecté.
- */
-// ===== GET: Lister les véhicules de l'utilisateur =====
 const listVehicules = async (req, res) => {
   try {
     const result = await pool.query(
@@ -116,10 +100,6 @@ const listVehicules = async (req, res) => {
   }
 };
 
-/**
- * Met à jour les informations d'un véhicule de l'utilisateur connecté.
- */
-// ===== PUT: Modifier un véhicule =====
 const updateVehicule = async (req, res) => {
   const vehiculeId = Number(req.params.id);
   const {
@@ -199,10 +179,6 @@ const updateVehicule = async (req, res) => {
   }
 };
 
-/**
- * Supprime un véhicule appartenant à l'utilisateur connecté.
- */
-// ===== DELETE: Supprimer un véhicule =====
 const deleteVehicule = async (req, res) => {
   const vehiculeId = Number(req.params.id);
 

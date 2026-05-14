@@ -51,16 +51,18 @@ const removePieceValidation = [
   validateRequest
 ];
 
+
 // List interventions for a vehicle
-router.get('/', vehicleIdParam, validateRequest, verifyToken, interventionController.listInterventions);
+router.get('/', vehicleIdParam, validateRequest, verifyToken, interventionController.getInterventionsByVehicle);
 
 // Create a new intervention for vehicle
 router.post('/', createInterventionValidation, verifyToken, interventionController.createIntervention);
 
 // Get single intervention by id
-router.get('/:id', interventionIdParam, validateRequest, verifyToken, interventionController.getIntervention);
+router.get('/:id', interventionIdParam, validateRequest, verifyToken, interventionController.getInterventionById);
 
 // Manage pieces linked to an intervention
+
 router.post('/:id/pieces', addPieceValidation, verifyToken, interventionController.addPieceToIntervention);
 router.delete('/:id/pieces/:pieceId', removePieceValidation, verifyToken, interventionController.removePieceFromIntervention);
 

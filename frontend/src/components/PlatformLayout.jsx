@@ -48,18 +48,21 @@ const PlatformLayout = ({ children }) => {
   };
 
   const navItems = (() => {
-    if (user?.role === "admin") {
-      return [
-        { label: "Tableau de bord", to: "/admin" }
-      ];
-    }
-
+    // Build a base set of items visible to most users
     const items = [
       { label: "Accueil", to: "/" },
       { label: "Mon profil", to: "/profil" },
       { label: "Tableau de bord", to: dashboardPath },
       { label: "Catalogue pièces", to: "/vendeur/catalogue" }
     ];
+
+    // Admin should have the union of automobiliste/garage/vendeur links
+    if (user?.role === "admin") {
+      items.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
+      items.push({ label: "Garages", to: "/automobiliste/garages" });
+      items.push({ label: "Gestion garage", to: "/garage" });
+      return items;
+    }
 
     if (user?.role === "automobiliste" || user?.role === "vendeur") {
       items.push({ label: "Recommandations", to: "/automobiliste/recommandations" });

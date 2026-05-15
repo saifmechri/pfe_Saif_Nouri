@@ -17,9 +17,50 @@ const login = async (req, res) => {
       return sendApiResponse(res, { statusCode: 401, success: false, message: 'Identifiants admin invalides', error: { code: 'INVALID_ADMIN_CREDENTIALS' } });
     }
 
-    const token = jwt.sign({ admin: true, email: ADMIN_EMAIL }, SECRET, { expiresIn: '7d' });
+    let adminUserId = null;
+    let adminUserName = 'Administrateur';
 
-    return sendApiResponse(res, { message: 'Admin login success', data: { token } , extra: { token } });
+    try {
+      const adminUserResult = await pool.query(
+        `SELECT u.id, u.name
+         FROM users u
+         JOIN roles r ON r.id = u.role_id
+         WHERE LOWER(u.email) = LOWER($1)
+           AND LOWER(r.name) = 'admin'
+         LIMIT 1`,
+        [ADMIN_EMAIL]
+      );
+
+      if (adminUserResult.rows.length > 0) {
+        adminUserId = Number(adminUserResult.rows[0].id);
+        adminUserName = adminUserResult.rows[0].name || adminUserName;
+      }
+    } catch (lookupErr) {
+      console.error('Admin user lookup failed', lookupErr);
+    }
+
+    const tokenPayload = {
+      admin: true,
+      role: 'admin',
+      email: ADMIN_EMAIL,
+      ...(adminUserId ? { id: adminUserId } : {})
+    };
+
+    const token = jwt.sign(tokenPayload, SECRET, { expiresIn: '7d' });
+
+    return sendApiResponse(res, {
+      message: 'Admin login success',
+      data: {
+        token,
+        user: {
+          id: adminUserId || 'admin',
+          name: adminUserName,
+          email: ADMIN_EMAIL,
+          role: 'admin'
+        }
+      },
+      extra: { token }
+    });
   } catch (err) {
     console.error('Admin login error', err);
     return sendApiResponse(res, { statusCode: 500, success: false, message: 'Erreur serveur', error: { code: 'INTERNAL_SERVER_ERROR' } });

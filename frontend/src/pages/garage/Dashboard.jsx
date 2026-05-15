@@ -371,8 +371,7 @@ const getBrandLogoCandidates = (brand) => {
     return [...localCandidates, buildMarqueImage(brand)];
   }
 
-  const encodedDomain = encodeURIComponent(domain);
-  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`, buildMarqueImage(brand)];
+  return [...localCandidates, buildMarqueImage(brand)];
 };
 
 const splitBySeparators = (value) =>
@@ -621,6 +620,78 @@ const GarageDashboard = () => {
     });
   };
 
+  const createMapMarker = ({ map, position, title, draggable = false, accentColor = null }) => {
+    const markerApi = window.google?.maps?.marker;
+    const AdvancedMarkerElement = markerApi?.AdvancedMarkerElement;
+
+    if (AdvancedMarkerElement) {
+      const advancedOptions = {
+        map,
+        position,
+        title,
+        gmpDraggable: draggable
+      };
+
+      if (accentColor && markerApi?.PinElement) {
+        const pin = new markerApi.PinElement({
+          background: accentColor,
+          borderColor: "#ffffff",
+          glyphColor: "#ffffff"
+        });
+        advancedOptions.content = pin.element;
+      }
+
+      return new AdvancedMarkerElement(advancedOptions);
+    }
+
+    return new window.google.maps.Marker({
+      map,
+      position,
+      title,
+      draggable,
+      ...(accentColor
+        ? {
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: accentColor,
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 2
+            }
+          }
+        : {})
+    });
+  };
+
+  const setMarkerMap = (marker, map) => {
+    if (!marker) return;
+    if (typeof marker.setMap === "function") {
+      marker.setMap(map);
+      return;
+    }
+    marker.map = map;
+  };
+
+  const setMarkerPosition = (marker, position) => {
+    if (!marker) return;
+    if (typeof marker.setPosition === "function") {
+      marker.setPosition(position);
+      return;
+    }
+    marker.position = position;
+  };
+
+  const readMarkerPosition = (marker) => {
+    if (!marker) return null;
+
+    if (typeof marker.getPosition === "function") {
+      return marker.getPosition();
+    }
+
+    return marker.position || null;
+  };
+
   const syncGoogleMapMarkers = () => {
     const map = googleMapRef.current;
     if (!map || !window.google?.maps) {
@@ -634,16 +705,24 @@ const GarageDashboard = () => {
       const position = { lat: garageLat, lng: garageLng };
 
       if (!garageMarkerRef.current) {
-        garageMarkerRef.current = new window.google.maps.Marker({
-          position,
+        garageMarkerRef.current = createMapMarker({
           map,
+          position,
           draggable: true,
           title: "Position du garage"
         });
 
         garageMarkerRef.current.addListener("dragend", () => {
-          const nextLat = Number(garageMarkerRef.current.getPosition().lat().toFixed(6));
-          const nextLng = Number(garageMarkerRef.current.getPosition().lng().toFixed(6));
+          const markerPosition = readMarkerPosition(garageMarkerRef.current);
+          const nextLatValue = typeof markerPosition?.lat === "function" ? markerPosition.lat() : markerPosition?.lat;
+          const nextLngValue = typeof markerPosition?.lng === "function" ? markerPosition.lng() : markerPosition?.lng;
+
+          if (!Number.isFinite(nextLatValue) || !Number.isFinite(nextLngValue)) {
+            return;
+          }
+
+          const nextLat = Number(nextLatValue.toFixed(6));
+          const nextLng = Number(nextLngValue.toFixed(6));
           setGarageForm((prev) => ({
             ...prev,
             latitude: nextLat,
@@ -651,36 +730,29 @@ const GarageDashboard = () => {
           }));
         });
       } else {
-        garageMarkerRef.current.setPosition(position);
-        garageMarkerRef.current.setMap(map);
+        setMarkerPosition(garageMarkerRef.current, position);
+        setMarkerMap(garageMarkerRef.current, map);
       }
     } else if (garageMarkerRef.current) {
-      garageMarkerRef.current.setMap(null);
+      setMarkerMap(garageMarkerRef.current, null);
     }
 
     if (userPosition) {
       const userPositionObject = { lat: Number(userPosition[0]), lng: Number(userPosition[1]) };
 
       if (!userMarkerRef.current) {
-        userMarkerRef.current = new window.google.maps.Marker({
-          position: userPositionObject,
+        userMarkerRef.current = createMapMarker({
           map,
+          position: userPositionObject,
           title: "Ma localisation",
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#f59e0b",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2
-          }
+          accentColor: "#f59e0b"
         });
       } else {
-        userMarkerRef.current.setPosition(userPositionObject);
-        userMarkerRef.current.setMap(map);
+        setMarkerPosition(userMarkerRef.current, userPositionObject);
+        setMarkerMap(userMarkerRef.current, map);
       }
     } else if (userMarkerRef.current) {
-      userMarkerRef.current.setMap(null);
+      setMarkerMap(userMarkerRef.current, null);
     }
 
     if (Number.isFinite(garageLat) && Number.isFinite(garageLng)) {
@@ -835,7 +907,10 @@ const GarageDashboard = () => {
 
       if (isNotFound) {
         setGarage(null);
-        setGarageForm(emptyGarageForm);
+        setGarageForm({
+          ...emptyGarageForm,
+          name: user?.role === "admin" ? `Garage ${user?.name || user?.email || "administrateur"}` : ""
+        });
         clearLocalPhotoSelection();
       } else {
         setError(getApiErrorMessage(err, "Erreur lors du chargement du profil garage."));
@@ -902,6 +977,13 @@ const GarageDashboard = () => {
     setSuccessMessage("");
 
     try {
+      const garageName = garageForm.name.trim() || (user?.role === "admin" ? `Garage ${user?.name || user?.email || "administrateur"}` : "");
+
+      if (!garageName) {
+        setError("Le nom du garage est obligatoire.");
+        return;
+      }
+
       let uploadedPhotoUrls = [];
       if (localPhotoFiles.length > 0) {
         const uploadResponse = await uploadGaragePhotos(localPhotoFiles);
@@ -912,7 +994,7 @@ const GarageDashboard = () => {
       const mergedPhotoUrls = [...existingPhotoUrls, ...uploadedPhotoUrls].slice(0, 9);
 
       const payload = {
-        name: garageForm.name,
+        name: garageName,
         description: garageForm.description || null,
         adresse: garageForm.adresse || null,
         telephone: garageForm.telephone || null,
@@ -955,10 +1037,12 @@ const GarageDashboard = () => {
         setUserPosition([lat, lon]);
         setMapCenter([lat, lon]);
         setGarageForm((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+        setActivePanel("garage");
+        handleFocusMap();
         setIsLocating(false);
       },
       () => {
-        setError("Impossible de recuperer votre position actuelle.");
+        setError("Impossible de recuperer votre position actuelle. Autorisez la localisation du navigateur, puis reessayez.");
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -966,6 +1050,7 @@ const GarageDashboard = () => {
   };
 
   const handleFocusMap = () => {
+    setActivePanel("garage");
     if (mapContainerRef.current) {
       mapContainerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }

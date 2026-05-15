@@ -6,7 +6,7 @@ const { sendApiResponse } = require("../utils/apiResponse");
 const { register, login } = require("../controllers/authController");
 const { updateProfile, deleteProfile, changePassword } = require("../controllers/profileController");
 const { verifyToken } = require("../middlewares/authMiddleware");
-const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste } = require("../middlewares/roleMiddleware");
+const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste, isVendeurOrAdmin } = require("../middlewares/roleMiddleware");
 
 // Authentification (public)
 router.post("/register", register);
@@ -137,8 +137,8 @@ router.get("/garage/mes-services", verifyToken, isGarage, async (req, res) => {
   }
 });
 
-// Route accessible SEULEMENT aux vendeurs
-router.get("/vendeur/mes-annonces", verifyToken, isVendeur, (req, res) => {
+// Route accessible aux vendeurs et aux admins
+router.get("/vendeur/mes-annonces", verifyToken, isVendeurOrAdmin, (req, res) => {
   return sendApiResponse(res, {
     message: 'Liste de vos annonces de véhicules',
     data: { vendeurId: req.user.id, role: req.userRole },

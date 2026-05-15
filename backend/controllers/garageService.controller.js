@@ -88,6 +88,43 @@ const listGarageServices = asyncHandler(async (req, res) => {
 });
 
 const listMyGarageServices = asyncHandler(async (req, res) => {
+  if (req.user?.role === 'admin') {
+    const requestedGarageId = Number.parseInt(req.query?.garageId, 10);
+    let myGarage = null;
+
+    if (Number.isInteger(requestedGarageId) && requestedGarageId > 0) {
+      myGarage = await findGarageIdentityById(requestedGarageId);
+    } else {
+      const latestGarageResult = await pool.query(
+        `SELECT id, user_id
+         FROM garages
+         ORDER BY created_at DESC
+         LIMIT 1`
+      );
+      myGarage = latestGarageResult.rows[0] || null;
+    }
+
+    if (!myGarage) {
+      throw new AppError('Profil garage introuvable pour cet utilisateur', 404, 'GARAGE_PROFILE_NOT_FOUND');
+    }
+
+    const result = await pool.query(
+      `SELECT id, garage_id, name, description, base_price, duration_minutes, is_active, created_at, updated_at
+       FROM garage_services
+       WHERE garage_id = $1
+       ORDER BY created_at DESC`,
+      [myGarage.id]
+    );
+
+    return sendApiResponse(res, {
+      message: 'Liste de vos services recuperes avec succes',
+      data: {
+        garage_id: Number(myGarage.id),
+        items: result.rows.map(mapServiceRow)
+      }
+    });
+  }
+
   const userId = Number(req.user?.id);
   if (!Number.isInteger(userId) || userId <= 0) {
     throw new AppError('Utilisateur authentifie invalide', 401, 'INVALID_AUTH_USER');

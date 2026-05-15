@@ -237,8 +237,7 @@ const getBrandLogoCandidates = (marque) => {
     return localCandidates;
   }
 
-  const encodedDomain = encodeURIComponent(domain);
-  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`];
+  return localCandidates;
 };
 
 const buildSvgDataUrl = ({ top = "#f8fafc", bottom = "#ffffff", title = "", subtitle = "", accent = "#1e293b" }) => {
@@ -529,8 +528,41 @@ const CataloguePieces = () => {
 
     googleMapRef.current = map;
 
+    const markerApi = window.google?.maps?.marker;
+    const AdvancedMarkerElement = markerApi?.AdvancedMarkerElement;
+
+    const createMarker = (options) => {
+      if (AdvancedMarkerElement) {
+        return new AdvancedMarkerElement({
+          map: options.map,
+          position: options.position,
+          title: options.title,
+          gmpDraggable: Boolean(options.draggable)
+        });
+      }
+
+      return new window.google.maps.Marker(options);
+    };
+
+    const setMarkerPosition = (targetMarker, position) => {
+      if (!targetMarker) return;
+      if (typeof targetMarker.setPosition === "function") {
+        targetMarker.setPosition(position);
+        return;
+      }
+      targetMarker.position = position;
+    };
+
+    const readMarkerPosition = (targetMarker) => {
+      if (!targetMarker) return null;
+      if (typeof targetMarker.getPosition === "function") {
+        return targetMarker.getPosition();
+      }
+      return targetMarker.position || null;
+    };
+
     // Create marker
-    const marker = new window.google.maps.Marker({
+    const marker = createMarker({
       position: center,
       map: map,
       draggable: true,
@@ -541,11 +573,18 @@ const CataloguePieces = () => {
 
     // Handle marker drag
     marker.addListener("dragend", () => {
-      const pos = marker.getPosition();
+      const pos = readMarkerPosition(marker);
+      const latitude = typeof pos?.lat === "function" ? pos.lat() : pos?.lat;
+      const longitude = typeof pos?.lng === "function" ? pos.lng() : pos?.lng;
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return;
+      }
+
       setNewPiece(prev => ({
         ...prev,
-        latitude: pos.lat(),
-        longitude: pos.lng()
+        latitude,
+        longitude
       }));
     });
 
@@ -553,7 +592,7 @@ const CataloguePieces = () => {
     map.addListener("click", (e) => {
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
-      marker.setPosition({ lat, lng });
+      setMarkerPosition(marker, { lat, lng });
       setNewPiece(prev => ({
         ...prev,
         latitude: lat,
@@ -1020,7 +1059,8 @@ const CataloguePieces = () => {
 
     return offers;
   }, [selectedPiece]);
-  const getVendorOwnerId = (vendorOffer) => {
+
+  function getVendorOwnerId(vendorOffer) {
     if (!vendorOffer) {
       return null;
     }
@@ -1067,7 +1107,24 @@ const CataloguePieces = () => {
     return ownerIdCandidates
       .map((value) => Number.parseInt(value, 10))
       .find((value) => Number.isFinite(value) && value > 0) || null;
-  };
+  }
+
+  function resolveOwnerIdForStore(vendorOffer) {
+    return (
+      getVendorOwnerId(vendorOffer) ||
+      getVendorOwnerId(selectedPieceVendor) ||
+      getVendorOwnerId(selectedPieceVendorOffers[0]) ||
+      getVendorOwnerId(selectedPieceVendorOffers[0]?.vendeur) ||
+      getVendorOwnerId(selectedPiece)
+    );
+  }
+
+  const selectedPieceOwnerId = resolveOwnerIdForStore(selectedPieceVendor || selectedPiece);
+  const canContactSelectedPieceVendor = Boolean(
+    selectedPiece
+    && selectedPieceOwnerId
+    && Number(user?.id) !== Number(selectedPieceOwnerId)
+  );
 
   const handlePresentationChange = (event) => {
     const { name, value } = event.target;
@@ -1365,16 +1422,6 @@ const CataloguePieces = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const resolveOwnerIdForStore = (vendorOffer) => {
-    return (
-      getVendorOwnerId(vendorOffer) ||
-      getVendorOwnerId(selectedPieceVendor) ||
-      getVendorOwnerId(selectedPieceVendorOffers[0]) ||
-      getVendorOwnerId(selectedPieceVendorOffers[0]?.vendeur) ||
-      getVendorOwnerId(selectedPiece)
-    );
-  };
-
   const handleOpenVendorStore = async (vendorOffer = selectedPieceVendorOffers[0]?.vendeur || selectedPieceVendorOffers[0] || selectedPiece) => {
     const ownerId = resolveOwnerIdForStore(vendorOffer);
 
@@ -1401,7 +1448,7 @@ const CataloguePieces = () => {
     const sellerUserId = resolveOwnerIdForStore(selectedPieceVendor || selectedPiece);
     const targetMessagesPath = chatRouteByRole[user?.role] || "/login";
 
-    if (user?.role !== "automobiliste") {
+    if (user?.role !== "automobiliste" && user?.role !== "admin") {
       navigate(targetMessagesPath);
       return;
     }
@@ -1647,13 +1694,23 @@ const CataloguePieces = () => {
                               Comparer les vendeurs
                             </button>
                             
-                            <button
-                              type="button"
-                              onClick={() => openComparisonPage(cheapest)}
-                              className="mt-2 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
-                            >
-                              Ouvrir page complète
-                            </button>
+                            <div className="mt-2 grid gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openPieceDetails(cheapest)}
+                                className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
+                              >
+                                Détails
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => openComparisonPage(cheapest)}
+                                className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
+                              >
+                                Ouvrir page complète
+                              </button>
+                            </div>
                           </div>
                         </article>
                       );
@@ -2190,16 +2247,20 @@ const CataloguePieces = () => {
                       </span>
                       <span className="ml-3 text-xl transition-transform group-hover:translate-x-0.5">›</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleContactVendorChat}
-                      className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
-                      aria-label="Contacter le vendeur"
-                      title="Contacter le vendeur"
-                    >
-                      <span>💬</span>
-                      <span>Contacter le vendeur</span>
-                    </button>
+                    {canContactSelectedPieceVendor ? (
+                      <button
+                        type="button"
+                        onClick={handleContactVendorChat}
+                        className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
+                        aria-label="Contacter le vendeur"
+                        title="Contacter le vendeur"
+                      >
+                        <span>💬</span>
+                        <span>Contacter le vendeur</span>
+                      </button>
+                    ) : (
+                      <div className="hidden h-14 flex-1" aria-hidden="true" />
+                    )}
                   </div>
 
                   

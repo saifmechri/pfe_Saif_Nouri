@@ -194,8 +194,20 @@ const RecommendationsAssistant = () => {
   const topGarages = Array.isArray(decision.top_garages) ? decision.top_garages.slice(0, 3) : [];
   const recommendedGarage = decision.recommended_garage || topGarages[0] || null;
   const toneClasses = getToneClasses(decision.risk_tone);
-  // UI-only override: display MEDIUM instead of HIGH when desired
-  const displayRisk = decision.risk === 'HIGH' ? 'MEDIUM' : decision.risk;
+  // Client-side distance filtering and risk consistency
+  const MAX_DISTANCE_KM = 1000; // default cap for recommendations
+  const filteredTopGarages = topGarages.filter((g) => {
+    const d = Number(g.distance_km ?? g.distance ?? NaN);
+    return Number.isNaN(d) ? true : d <= MAX_DISTANCE_KM;
+  });
+  let finalRecommendedGarage = recommendedGarage;
+  if (
+    recommendedGarage &&
+    Number.isFinite(Number(recommendedGarage.distance_km)) &&
+    Number(recommendedGarage.distance_km) > MAX_DISTANCE_KM
+  ) {
+    finalRecommendedGarage = filteredTopGarages[0] || null;
+  }
 
   return (
     <PlatformLayout>
@@ -259,7 +271,7 @@ const RecommendationsAssistant = () => {
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
                         <ShieldCheck className="h-3.5 w-3.5" />
-                        {displayRisk}
+                        {decision.risk}
                       </span>
                     </div>
 
@@ -294,7 +306,7 @@ const RecommendationsAssistant = () => {
 
                     <div className={`rounded-2xl border p-4 ${toneClasses}`}>
                       <p className="text-xs font-bold uppercase tracking-[0.16em]">Risque</p>
-                      <p className="mt-1 text-lg font-black">{displayRisk}</p>
+                      <p className="mt-1 text-lg font-black">{decision.risk}</p>
                       <p className="mt-2 text-sm leading-6">{decision.risk_message}</p>
                     </div>
                   </div>
@@ -340,7 +352,7 @@ const RecommendationsAssistant = () => {
                 </div>
 
                 <div className="mt-5 space-y-4">
-                  {recommendedGarage ? (
+                  {finalRecommendedGarage ? (
                     <>
                       <article className="rounded-[30px] border border-amber-300 bg-gradient-to-br from-amber-50 via-white to-sky-50 p-6 shadow-[0_18px_45px_rgba(251,191,36,0.16)] ring-1 ring-amber-200">
                         <div className="flex items-start justify-between gap-3">
@@ -352,30 +364,30 @@ const RecommendationsAssistant = () => {
                                 RECOMMANDÉ
                               </span>
                             </div>
-                            <h3 className="mt-2 text-xl font-black text-slate-900">{recommendedGarage.name}</h3>
+                            <h3 className="mt-2 text-xl font-black text-slate-900">{finalRecommendedGarage.name}</h3>
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
                             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Score</p>
-                            <p className="text-sm font-black text-slate-900">{Math.round(toNumber(recommendedGarage.score_global) || 0)}/100</p>
+                            <p className="text-sm font-black text-slate-900">{Math.round(toNumber(finalRecommendedGarage.score_global) || 0)}/100</p>
                           </div>
                         </div>
 
                         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4 text-sm text-slate-700">
                           <div className="rounded-2xl bg-white px-3 py-2">
                             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Distance</p>
-                            <p className="mt-1 font-semibold text-slate-900">{formatDistance(recommendedGarage.distance_km)}</p>
+                            <p className="mt-1 font-semibold text-slate-900">{formatDistance(finalRecommendedGarage.distance_km)}</p>
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2">
                             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Rating</p>
-                            <p className="mt-1 font-semibold text-slate-900">⭐ {formatRating(recommendedGarage.rating)}</p>
+                            <p className="mt-1 font-semibold text-slate-900">⭐ {formatRating(finalRecommendedGarage.rating)}</p>
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2">
                             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Disponibilité</p>
-                            <p className="mt-1 font-semibold text-slate-900">{recommendedGarage.isOpen ? "Disponible maintenant" : "Sur rendez-vous"}</p>
+                            <p className="mt-1 font-semibold text-slate-900">{finalRecommendedGarage.isOpen ? "Disponible maintenant" : "Sur rendez-vous"}</p>
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2">
                             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Prix estimé</p>
-                            <p className="mt-1 font-semibold text-slate-900">{formatMoney(recommendedGarage.estimated_price)}</p>
+                            <p className="mt-1 font-semibold text-slate-900">{formatMoney(finalRecommendedGarage.estimated_price)}</p>
                           </div>
                         </div>
 

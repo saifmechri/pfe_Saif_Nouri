@@ -270,7 +270,12 @@ function buildDecisionAnalysis({ kmActuel, kmRecommande, kmRestant, historyState
   const kmNowText = Number.isFinite(kmActuel) ? `${Math.round(kmActuel)} km` : 'km inconnu';
   const kmTargetText = Number.isFinite(kmRecommande) ? `${Math.round(kmRecommande)} km` : 'seuil non renseigné';
 
-  const trigger = `Déclencheur: ${kmNowText} observés pour un seuil conseillé à ${kmTargetText}.`;
+  let trigger;
+  if (kmTargetText === 'seuil non renseigné') {
+    trigger = "Le seuil recommandé n’est pas encore défini pour ce véhicule.";
+  } else {
+    trigger = `Déclencheur: ${kmNowText} observés pour un seuil conseillé à ${kmTargetText}.`;
+  }
 
   const history =
     historyState === 'missing'

@@ -52,13 +52,13 @@ const isProfessional = checkRole('garage', 'vendeur', 'admin');
  * Middleware pré-configuré : Seulement les automobilistes
  * @type {Function}
  */
-const isAutomobiliste = checkRole('automobiliste');
+const isAutomobiliste = checkRole('automobiliste', 'admin');
 
 /**
  * Middleware pré-configuré : Seulement les garages
  * @type {Function}
  */
-const isGarage = checkRole('garage');
+const isGarage = checkRole('garage', 'admin');
 
 /**
  * Middleware pré-configuré : Seulement les vendeurs

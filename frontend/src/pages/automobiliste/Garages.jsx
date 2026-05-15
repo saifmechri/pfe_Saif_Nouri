@@ -236,7 +236,7 @@ const getBrandLogoCandidates = (marque) => {
   }
 
   const encodedDomain = encodeURIComponent(domain);
-  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`, buildMarqueImage(marque)];
+  return [...localCandidates, buildMarqueImage(marque)];
 };
 
 const buildMarqueImage = (marque) => {

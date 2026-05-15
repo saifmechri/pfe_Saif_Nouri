@@ -642,7 +642,7 @@ const AdminDashboard = () => {
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-xl font-black text-[#13243f]">Gestion des pièces</h2>
-                  <p className="mt-1 text-sm text-[#66758d]">Toutes les pièces ajoutées par les vendeurs.</p>
+                  <p className="mt-1 text-sm text-[#66758d]">Toutes les pièces publiées sur la plateforme.</p>
                 </div>
                 <span className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-purple-700">
                   {pieces.length} pièces
@@ -710,6 +710,11 @@ const AdminDashboard = () => {
                                 {actionLoading.type === "piece" && actionLoading.id === piece.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 Refuser
                               </button>
+                            </div>
+                          )}
+                          {piece.is_validated !== false && (
+                            <div className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">
+                              Validée
                             </div>
                           )}
                         </td>

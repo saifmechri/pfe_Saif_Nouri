@@ -33,7 +33,8 @@ const createPiece = asyncHandler(async (req, res) => {
 
   const payload = {
     ...(req.body || {}),
-    user_id: req.user?.id || null
+    user_id: req.user?.id || null,
+    is_validated: req.user?.role === 'admin'
   };
 
   if (req.file) {
@@ -78,60 +79,13 @@ const getPieceById = asyncHandler(async (req, res) => {
   });
 });
 
-const comparePieceAcrossVendors = asyncHandler(async (req, res) => {
-  const pieceId = req.query.pieceId;
-  const name = req.query.name;
-  const includeOutOfStock = ['true', '1', 'yes', 'on']
-    .includes(String(req.query.includeOutOfStock || '').toLowerCase());
-  const userLat = req.query.userLat;
-  const userLon = req.query.userLon;
-  const radiusKm = req.query.radiusKm;
-  const sortBy = req.query.sortBy;
-  const sortOrder = req.query.sortOrder;
-
-  const comparison = await pieceService.comparePieceAcrossVendors({
-    pieceId,
-    name,
-    includeOutOfStock,
-    userLat,
-    userLon,
-    radiusKm,
-    sortBy,
-    sortOrder
-  });
-
-  return sendApiResponse(res, {
-    message: 'Comparaison multi-vendeurs recuperee avec succes',
-    data: comparison
-  });
-});
-
-const getPieceSellerLocations = asyncHandler(async (req, res) => {
-  const locations = await pieceService.listPieceSellerLocations({
-    userLat: req.query.userLat,
-    userLon: req.query.userLon,
-    radiusKm: req.query.radiusKm
-  });
-
-  return sendApiResponse(res, {
-    message: 'Localisations vendeurs de pieces recuperees avec succes',
-    data: locations
-  });
-});
-
 const updatePiece = asyncHandler(async (req, res) => {
   const pieceId = Number.parseInt(req.params.id, 10);
   if (!Number.isFinite(pieceId) || pieceId <= 0) {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  const payload = req.body || {};
-
-  if (req.file) {
-    payload.photo_url = `/uploads/pieces/${req.file.filename}`;
-  }
-
-  const piece = await pieceService.updatePiece(pieceId, payload);
+  const piece = await pieceService.updatePiece(pieceId, req.body || {});
 
   return sendApiResponse(res, {
     message: 'Piece mise a jour avec succes',
@@ -163,6 +117,31 @@ const adjustPieceStock = asyncHandler(async (req, res) => {
 
   return sendApiResponse(res, {
     message: 'Stock ajuste avec succes',
+    data: result
+  });
+});
+
+const comparePiecesAcrossVendors = asyncHandler(async (req, res) => {
+  const result = await pieceService.comparePieceAcrossVendors({
+    pieceId: req.query.pieceId,
+    name: req.query.name,
+    includeOutOfStock: ['true', '1', 'yes', 'on'].includes(String(req.query.includeOutOfStock || '').toLowerCase())
+  });
+
+  return sendApiResponse(res, {
+    message: 'Comparaison des pieces recuperee avec succes',
+    data: result
+  });
+});
+
+const getPieceSellerLocations = asyncHandler(async (req, res) => {
+  const result = await pieceService.getPieceSellerLocations({
+    pieceId: req.query.pieceId,
+    name: req.query.name
+  });
+
+  return sendApiResponse(res, {
+    message: 'Localisations des vendeurs recuperees avec succes',
     data: result
   });
 });
@@ -202,11 +181,11 @@ module.exports = {
   createPiece,
   getAllPieces,
   getPieceById,
-  comparePieceAcrossVendors,
-  getPieceSellerLocations,
   updatePiece,
   deletePiece,
   adjustPieceStock,
   setPieceStock,
-  getPieceStockMovements
+  getPieceStockMovements,
+  comparePiecesAcrossVendors,
+  getPieceSellerLocations
 };

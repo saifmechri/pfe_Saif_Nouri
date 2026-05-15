@@ -229,6 +229,7 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS photo_url TEXT');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE SET NULL');
+  await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS is_validated BOOLEAN DEFAULT false');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS condition VARCHAR(50) DEFAULT \'Neuf\'');
   await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS zone_geographique VARCHAR(100)');
     await pool.query('ALTER TABLE pieces ADD COLUMN IF NOT EXISTS marque VARCHAR(100)');
@@ -249,6 +250,7 @@ const initDatabase = async () => {
   await pool.query('UPDATE pieces SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL');
   await pool.query('UPDATE pieces SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
   await pool.query('UPDATE pieces SET deleted_at = NULL WHERE deleted_at IS NULL');
+  await pool.query('UPDATE pieces SET is_validated = COALESCE(is_validated, false) WHERE is_validated IS NULL');
 
   await pool.query('UPDATE garages SET is_open = COALESCE(is_open, true) WHERE is_open IS NULL');
 
@@ -329,6 +331,13 @@ const initDatabase = async () => {
         WHERE table_name = 'pieces' AND column_name = 'updatedAt'
       ) THEN
         EXECUTE 'UPDATE pieces SET updated_at = COALESCE(updated_at, "updatedAt")';
+      END IF;
+
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'pieces' AND column_name = 'isValidated'
+      ) THEN
+        EXECUTE 'UPDATE pieces SET is_validated = COALESCE(is_validated, "isValidated")';
       END IF;
     END $$;
   `);

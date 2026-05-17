@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+﻿import dayjs from "dayjs";
 import "dayjs/locale/fr";
 
 dayjs.locale("fr");
@@ -69,7 +69,7 @@ const AppointmentCalendar = ({
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur">
           <button type="button" onClick={goToPreviousMonth} className="rounded-full px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15">
-            Préc.
+            PrÃ©c.
           </button>
           <div className="rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-900">
             {currentMonth.format("MMMM YYYY")}
@@ -161,3 +161,5 @@ const AppointmentCalendar = ({
 };
 
 export default AppointmentCalendar;
+
+

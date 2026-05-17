@@ -1,4 +1,4 @@
-import dayjs from "dayjs";
+﻿import dayjs from "dayjs";
 
 const hoursRange = (start = 8, end = 18) => {
   const arr = [];
@@ -44,7 +44,7 @@ const AppointmentAgenda = ({ date, items = [], onConfirm, onCancel }) => {
                   <div key={it.id} className="rounded-lg border p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <div className="font-bold text-slate-900">{it.appointment_time || "-"} — {it.description || "Rendez-vous"}</div>
+                        <div className="font-bold text-slate-900">{it.appointment_time || "-"} â€” {it.description || "Rendez-vous"}</div>
                         <div className="mt-1 text-sm text-slate-600">Automobiliste: {it.automobiliste_name || it.automobiliste_user_id}</div>
                         <div className="text-sm text-slate-600">Garage: {it.garage_name || it.garage_id}</div>
                       </div>
@@ -68,3 +68,5 @@ const AppointmentAgenda = ({ date, items = [], onConfirm, onCancel }) => {
 };
 
 export default AppointmentAgenda;
+
+

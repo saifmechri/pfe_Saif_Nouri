@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CHAT SERVICE
  * 
  * Real-time messaging between users and garages.
@@ -116,3 +116,5 @@ export const extractConversationAndMessage = (response) => {
     message: payload?.message || null
   };
 };
+
+

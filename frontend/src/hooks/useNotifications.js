@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { fetchNotifications, markNotificationAsRead, deleteNotification } from "../services/notifications";
 
 /**
- * Hook personnalisé pour gérer les notifications
- * Récupère les notifications à intervalle régulier
+ * Hook personnalisÃ© pour gÃ©rer les notifications
+ * RÃ©cupÃ¨re les notifications Ã  intervalle rÃ©gulier
  */
 export const useNotifications = (pollingInterval = 10000) => {
   const [notifications, setNotifications] = useState([]);
@@ -73,3 +73,5 @@ export const useNotifications = (pollingInterval = 10000) => {
 };
 
 export default useNotifications;
+
+

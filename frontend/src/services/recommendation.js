@@ -1,4 +1,4 @@
-/**
+﻿/**
  * RECOMMENDATION SERVICE
  * 
  * Interfaces with AUTO BOT recommendation engine backend API.
@@ -21,7 +21,7 @@ import API from "./api";
  *   - page: int (default: 1)
  *   - limit: 1-50 (default: 10)
  *   - minInterventionScore: 0-100 (filter by urgency)
- *   - urgency: 'URGENT' | 'RECOMMANDÉ' | 'FUTUR' (optional)
+ *   - urgency: 'URGENT' | 'RECOMMANDÃ‰' | 'FUTUR' (optional)
  * 
  * @returns {Promise} Response with recommendations array:
  *   Each recommendation includes:
@@ -49,3 +49,5 @@ export const getDynamicRecommendations = (params = {}) => {
 export const getGarageServicesById = (garageId, params = {}) => {
   return API.get(`/garages/${garageId}/services`, { params });
 };
+
+

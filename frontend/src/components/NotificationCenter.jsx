@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { Bell, X, Check } from "lucide-react";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -16,13 +16,13 @@ const NotificationCenter = ({ notifications = [], onMarkAsRead, onDelete, isLoad
   const getNotificationIcon = (type) => {
     switch (type?.toLowerCase()) {
       case "appointment":
-        return "📅";
+        return "ðŸ“…";
       case "message":
-        return "💬";
+        return "ðŸ’¬";
       case "alert":
-        return "⚠️";
+        return "âš ï¸";
       default:
-        return "ℹ️";
+        return "â„¹ï¸";
     }
   };
 
@@ -168,3 +168,5 @@ const NotificationCenter = ({ notifications = [], onMarkAsRead, onDelete, isLoad
 };
 
 export default NotificationCenter;
+
+

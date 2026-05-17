@@ -1,10 +1,10 @@
-/**
- * 📊 ALGORITHMES DE RECOMMANDATION
+﻿/**
+ * ðŸ“Š ALGORITHMES DE RECOMMANDATION
  * Fonctions de scoring pour interventions et garages
  */
 
 /**
- * ✅ FONCTION 1: Calculer distance Haversine entre 2 points GPS
+ * âœ… FONCTION 1: Calculer distance Haversine entre 2 points GPS
  */
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371; // Rayon Terre en km
@@ -22,18 +22,18 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * ✅ FONCTION 2: Convertir distance en score (0-10)
+ * âœ… FONCTION 2: Convertir distance en score (0-10)
  */
 function getDistanceScore(distanceKm) {
-  if (distanceKm < 5) return 10;
-  if (distanceKm < 10) return 8;
-  if (distanceKm < 20) return 6;
-  if (distanceKm < 30) return 4;
-  return 2;
+  const distance = Number(distanceKm);
+  if (!Number.isFinite(distance) || distance < 0) return 0;
+
+  const score = 10 - (distance * 0.35);
+  return Math.max(1, Number(score.toFixed(2)));
 }
 
 /**
- * ✅ FONCTION 3: Calculer score intervalle kilométrage (0-100)
+ * âœ… FONCTION 3: Calculer score intervalle kilométrage (0-100)
  */
 function getKilometrationScore(kmActuel, kmRecommande) {
   if (!kmRecommande) return 0;
@@ -42,7 +42,7 @@ function getKilometrationScore(kmActuel, kmRecommande) {
 }
 
 /**
- * ✅ FONCTION 4: Calculer score intervalle temps (0-100)
+ * âœ… FONCTION 4: Calculer score intervalle temps (0-100)
  */
 function getDateScore(dateLastIntervention, joursRecommandes) {
   if (!joursRecommandes) return 0;
@@ -56,15 +56,16 @@ function getDateScore(dateLastIntervention, joursRecommandes) {
 }
 
 /**
- * ✅ FONCTION 5: Convertir rating (0-5) en score (0-10)
+ * âœ… FONCTION 5: Convertir rating (0-5) en score (0-10)
  */
 function getRatingScore(rating) {
-  if (!rating) return 5;
-  return (rating / 5) * 10;
+  const parsed = Number(rating);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.max(0, Math.min(10, (parsed / 5) * 10));
 }
 
 /**
- * ✅ FONCTION 6: Score disponibilité du garage
+ * âœ… FONCTION 6: Score disponibilitÃ© du garage
  */
 function getAvailabilityScore(garage) {
   if (garage.isOpen) return 10;
@@ -72,7 +73,7 @@ function getAvailabilityScore(garage) {
 }
 
 /**
- * ✅ FONCTION 7: Calculer score TOTAL d'une intervention
+ * âœ… FONCTION 7: Calculer score TOTAL d'une intervention
  * Poids: Kilométrage 40% + Date 30% + Type véhicule 10%
  */
 function calculateInterventionScore(vehicle, lastIntervention, interventionType) {
@@ -94,7 +95,7 @@ function calculateInterventionScoreDetailed(vehicle, lastIntervention, intervent
   let vehicleTypeMultiplier = 1.0;
   if (vehicle.type === 'Diesel') vehicleTypeMultiplier = 1.2;
   if (vehicle.type === 'SUV') vehicleTypeMultiplier = 1.15;
-  if (vehicle.type === 'Électrique') vehicleTypeMultiplier = 0.8;
+  if (vehicle.type === 'Ã‰lectrique') vehicleTypeMultiplier = 0.8;
   const typeContribution = vehicleTypeMultiplier * 10;
 
   const totalRaw = kmContribution + dateContribution + typeContribution;
@@ -112,8 +113,8 @@ function calculateInterventionScoreDetailed(vehicle, lastIntervention, intervent
 }
 
 /**
- * ✅ FONCTION 8: Calculer score TOTAL d'un garage
- * Poids: Distance 40% + Rating 35% + Disponibilité 25%
+ * âœ… FONCTION 8: Calculer score TOTAL d'un garage
+ * Poids: Distance 40% + Rating 35% + DisponibilitÃ© 25%
  */
 function calculateGarageScore(userLat, userLon, garage) {
   const detail = calculateGarageScoreDetailed(userLat, userLon, garage);
@@ -151,10 +152,10 @@ function calculateGarageScoreDetailed(userLat, userLon, garage) {
 }
 
 /**
- * ✅ DÉTERMINER URGENCE basé sur le kilométrage
- * Règles:
+ * âœ… DÃ‰TERMINER URGENCE basÃ© sur le kilométrage
+ * RÃ¨gles:
  * - km_actuel >= km_recommande => URGENT
- * - km_restant <= 1000 => RECOMMANDÉ
+ * - km_restant <= 1000 => RECOMMANDÃ‰
  * - sinon => FUTUR
  */
 function getUrgency(kmActuel, kmRecommande) {
@@ -168,7 +169,7 @@ function getUrgency(kmActuel, kmRecommande) {
   const remaining = Math.max(0, recommended - current);
 
   if (current >= recommended) return 'URGENT';
-  if (remaining <= 1000) return 'RECOMMANDÉ';
+  if (remaining <= 1000) return 'RECOMMANDÃ‰';
   return 'FUTUR';
 }
 
@@ -185,3 +186,5 @@ module.exports = {
   calculateGarageScoreDetailed,
   getUrgency
 };
+
+

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, Package, TriangleAlert, Trash2, BarChart3, Users, CalendarRange, Award } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -142,7 +142,7 @@ const AdminDashboard = () => {
       <div className="mt-4 flex items-center justify-between px-2">
         <div className="text-sm text-slate-600">Total: <span className="font-medium">{auditItems.length}</span></div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { if (auditPage > 1) { loadAudit({ page: auditPage - 1, limit: auditLimit, action: actionFilter || null, entity: entityFilter || null, adminEmail: adminEmailFilter || null }); } }} className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-50">Préc</button>
+          <button onClick={() => { if (auditPage > 1) { loadAudit({ page: auditPage - 1, limit: auditLimit, action: actionFilter || null, entity: entityFilter || null, adminEmail: adminEmailFilter || null }); } }} className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 hover:bg-slate-50">PrÃ©c</button>
           <button onClick={() => { if (auditPage < auditPages) { loadAudit({ page: auditPage + 1, limit: auditLimit, action: actionFilter || null, entity: entityFilter || null, adminEmail: adminEmailFilter || null }); } }} className="rounded-lg bg-sky-600 px-3 py-1 text-sm font-semibold text-white hover:bg-sky-700">Suiv</button>
         </div>
       </div>
@@ -189,8 +189,8 @@ const AdminDashboard = () => {
       if (status === 401) {
         localStorage.removeItem("token");
         localStorage.removeItem("admin_session");
-        setError("Votre session a expiré. Veuillez vous reconnecter pour continuer.");
-        // Redirection vers login admin après 2 secondes
+        setError("Votre session a expirÃ©. Veuillez vous reconnecter pour continuer.");
+        // Redirection vers login admin aprÃ¨s 2 secondes
         setTimeout(() => {
           navigate("/admin/login");
         }, 2000);
@@ -216,7 +216,7 @@ const AdminDashboard = () => {
     { label: "Garages", value: counts.totalGarages, icon: Store, tone: "from-blue-500 to-cyan-500" },
     { label: "Pièces", value: counts.totalPieces, icon: Package, tone: "from-purple-500 to-pink-500" },
     { label: "Signalements ouverts", value: counts.pendingReports, icon: TriangleAlert, tone: "from-amber-500 to-orange-500" },
-    { label: "Signalements résolus", value: counts.resolvedReports, icon: CheckCircle2, tone: "from-emerald-500 to-teal-500" }
+    { label: "Signalements rÃ©solus", value: counts.resolvedReports, icon: CheckCircle2, tone: "from-emerald-500 to-teal-500" }
   ]), [counts]);
 
   const kpiCards = useMemo(() => ([
@@ -321,9 +321,9 @@ const AdminDashboard = () => {
             <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#64748b]">Dashboard admin</p>
-                <h1 className="mt-2 text-3xl font-black text-[#13243f] md:text-4xl">Gestion du contenu et modération</h1>
+                <h1 className="mt-2 text-3xl font-black text-[#13243f] md:text-4xl">Gestion du contenu et modÃ©ration</h1>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-[#5f6f87]">
-                  Consulter le dashboard global • Valider ou refuser les garages ajoutés • Valider ou refuser les pièces ajoutées • Supprimer ou désactiver du contenu • Gérer les signalements utilisateurs
+                  Consulter le dashboard global â€¢ Valider ou refuser les garages ajoutés â€¢ Valider ou refuser les pièces ajoutées â€¢ Supprimer ou dÃ©sactiver du contenu â€¢ GÃ©rer les signalements utilisateurs
                 </p>
               </div>
 
@@ -401,23 +401,23 @@ const AdminDashboard = () => {
           {activeTab === "overview" && (
             <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
               <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
-                <h2 className="text-xl font-black text-[#13243f]">Priorités du jour</h2>
+                <h2 className="text-xl font-black text-[#13243f]">PrioritÃ©s du jour</h2>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-2xl bg-[#f3f7fd] p-4">
-                    <p className="text-sm text-[#607089]">Garages à gérer</p>
+                    <p className="text-sm text-[#607089]">Garages Ã  gÃ©rer</p>
                     <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : garages.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#fef6e8] p-4">
-                    <p className="text-sm text-[#7a6330]">Signalements à traiter</p>
+                    <p className="text-sm text-[#7a6330]">Signalements Ã  traiter</p>
                     <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pendingReports.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#f5f3ff] p-4">
-                    <p className="text-sm text-[#6b5b95]">Pièces à gérer</p>
+                    <p className="text-sm text-[#6b5b95]">Pièces Ã  gÃ©rer</p>
                     <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pieces.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#f0fdf4] p-4">
                     <p className="text-sm text-[#347a34]">Actions rapides</p>
-                    <p className="mt-2 text-sm text-[#5f6f87]">Gérer garages, pièces et signalements</p>
+                    <p className="mt-2 text-sm text-[#5f6f87]">GÃ©rer garages, pièces et signalements</p>
                   </div>
                 </div>
               </div>
@@ -425,10 +425,10 @@ const AdminDashboard = () => {
               <div className="rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_18px_40px_rgba(26,43,75,0.08)] backdrop-blur">
                 <h2 className="text-xl font-black text-[#13243f]">Guide rapide</h2>
                 <div className="mt-5 space-y-3 text-sm text-[#5f6f87]">
-                  <p>• Gérer les garages depuis l'onglet garages.</p>
-                  <p>• Gérer les pièces depuis l'onglet pièces.</p>
-                  <p>• Traiter les signalements via le tab signalements.</p>
-                  <p>• Rafraîchir les données après chaque décision.</p>
+                  <p>â€¢ GÃ©rer les garages depuis l'onglet garages.</p>
+                  <p>â€¢ GÃ©rer les pièces depuis l'onglet pièces.</p>
+                  <p>â€¢ Traiter les signalements via le tab signalements.</p>
+                  <p>â€¢ RafraÃ®chir les donnÃ©es aprÃ¨s chaque dÃ©cision.</p>
                 </div>
               </div>
             </div>
@@ -461,7 +461,7 @@ const AdminDashboard = () => {
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#64748b]">Statistiques & KPI</p>
                     <h2 className="mt-2 text-2xl font-black text-[#13243f]">Vue analytique du dashboard admin</h2>
-                    <p className="mt-2 text-sm text-[#5f6f87]">Synthèse des utilisateurs, RDV et garages les plus actifs.</p>
+                    <p className="mt-2 text-sm text-[#5f6f87]">SynthÃ¨se des utilisateurs, RDV et garages les plus actifs.</p>
                   </div>
                   <div className="rounded-2xl bg-[#f8fbff] px-4 py-3 text-sm text-[#5f6f87]">
                     <span className="font-bold text-[#13243f]">{dashboardStats?.garages?.newGaragesLast30Days || 0}</span> nouveaux garages sur 30 jours
@@ -471,7 +471,7 @@ const AdminDashboard = () => {
                 <div className="mt-6 grid gap-4 xl:grid-cols-2">
                   <div className="rounded-3xl border border-[#e7edf6] bg-[#fbfdff] p-5">
                     <div className="mb-4 flex items-center justify-between">
-                      <h3 className="text-lg font-bold text-[#13243f]">Utilisateurs par rôle</h3>
+                      <h3 className="text-lg font-bold text-[#13243f]">Utilisateurs par rÃ´le</h3>
                       <BarChart3 className="h-5 w-5 text-[#5b6b84]" />
                     </div>
                     <div className="h-80 w-full">
@@ -561,7 +561,7 @@ const AdminDashboard = () => {
                       <th className="px-4 py-3 font-semibold">Nom</th>
                       <th className="px-4 py-3 font-semibold">Adresse</th>
                       <th className="px-4 py-3 font-semibold">Email</th>
-                      <th className="px-4 py-3 font-semibold">Propriétaire</th>
+                      <th className="px-4 py-3 font-semibold">PropriÃ©taire</th>
                       <th className="px-4 py-3 font-semibold">Statut</th>
                       <th className="px-4 py-3 font-semibold">Actions</th>
                     </tr>
@@ -616,7 +616,7 @@ const AdminDashboard = () => {
                               className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-70"
                             >
                               {actionLoading.type === "garage" && actionLoading.id === garage.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldAlert className="h-4 w-4" />}
-                              Désactiver
+                              DÃ©sactiver
                             </button>
                             <button
                               type="button"
@@ -642,7 +642,7 @@ const AdminDashboard = () => {
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-xl font-black text-[#13243f]">Gestion des pièces</h2>
-                  <p className="mt-1 text-sm text-[#66758d]">Toutes les pièces publiées sur la plateforme.</p>
+                  <p className="mt-1 text-sm text-[#66758d]">Toutes les pièces publiÃ©es sur la plateforme.</p>
                 </div>
                 <span className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-purple-700">
                   {pieces.length} pièces
@@ -714,7 +714,7 @@ const AdminDashboard = () => {
                           )}
                           {piece.is_validated !== false && (
                             <div className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">
-                              Validée
+                              ValidÃ©e
                             </div>
                           )}
                         </td>
@@ -741,7 +741,7 @@ const AdminDashboard = () => {
               <div className="mt-6 grid gap-4">
                 {!loading && pendingReports.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-[#d9e4f1] bg-[#fbfdff] px-5 py-8 text-sm text-[#6b7a90]">
-                    Aucun signalement à traiter.
+                    Aucun signalement Ã  traiter.
                   </div>
                 )}
 
@@ -768,7 +768,7 @@ const AdminDashboard = () => {
                           className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-70"
                         >
                           {actionLoading.type === "report" && actionLoading.id === report.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                          Résoudre
+                          RÃ©soudre
                         </button>
                         <button
                           type="button"
@@ -790,7 +790,7 @@ const AdminDashboard = () => {
                           value={reportNoteById[report.id] || ""}
                           onChange={(event) => setReportNoteById((current) => ({ ...current, [report.id]: event.target.value }))}
                           className="w-full rounded-2xl border border-[#dce6f1] bg-white px-4 py-3 text-sm text-[#13243f] outline-none transition placeholder:text-[#a0afc1] focus:border-[#3b82f6]"
-                          placeholder="Décris l'action prise ou le motif du rejet"
+                          placeholder="DÃ©cris l'action prise ou le motif du rejet"
                         />
                       </label>
                     </div>
@@ -806,3 +806,5 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+

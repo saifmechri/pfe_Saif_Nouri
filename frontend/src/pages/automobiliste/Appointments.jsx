@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+﻿import { useMemo, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -26,6 +26,7 @@ const AutomobilisteAppointments = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState(""); // "success" or "error"
   const [selectedServices, setSelectedServices] = useState([]);
+  const [selectedServiceChoice, setSelectedServiceChoice] = useState("");
   const [form, setForm] = useState({
     garageId: "",
     vehicleId: "",
@@ -85,6 +86,7 @@ const AutomobilisteAppointments = () => {
   useEffect(() => {
     if (!form.garageId) {
       setAvailableServices([]);
+      setSelectedServiceChoice("");
       return;
     }
 
@@ -93,9 +95,11 @@ const AutomobilisteAppointments = () => {
         const res = await getServicesByGarage(form.garageId);
         const items = res.data?.data?.items || res.data?.data || res.data || [];
         setAvailableServices(Array.isArray(items) ? items : []);
+        setSelectedServiceChoice("");
       } catch (err) {
         console.error(err);
         setAvailableServices([]);
+        setSelectedServiceChoice("");
       }
     })();
   }, [form.garageId]);
@@ -135,8 +139,8 @@ const AutomobilisteAppointments = () => {
       const statusLabel = status === "confirmed" ? "confirmé" : "annulé";
       setNotification({
         type: "appointment",
-        title: status === "confirmed" ? "✓ Rendez-vous confirmé" : "✕ Rendez-vous annulé",
-        body: `Votre rendez-vous a été ${statusLabel}.`
+        title: status === "confirmed" ? "âœ“ Rendez-vous confirmé" : "âœ• Rendez-vous annulé",
+        body: `Votre rendez-vous a Ã©tÃ© ${statusLabel}.`
       });
       setSelectedAppointment(apt);
 
@@ -147,7 +151,7 @@ const AutomobilisteAppointments = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
+    if (!window.confirm("ÃŠtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
     try {
       await deleteAppointment(id);
       fetchAppointments();
@@ -160,10 +164,25 @@ const AutomobilisteAppointments = () => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const toggleService = (serviceId) => {
+  const getServiceLabel = (service) => service?.name || service?.title || service?.label || String(service);
+
+  const addSelectedService = () => {
+    if (!selectedServiceChoice) return;
+
+    setSelectedServices((current) => (current.includes(selectedServiceChoice) ? current : [...current, selectedServiceChoice]));
+    setSelectedServiceChoice("");
+  };
+
+  const removeSelectedService = (serviceLabel) => {
+    setSelectedServices((current) => current.filter((value) => value !== serviceLabel));
+  };
+
+  const toggleService = (service) => {
+    const serviceLabel = getServiceLabel(service);
     setSelectedServices((current) => {
-      const id = String(serviceId);
-      return current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
+      return current.includes(serviceLabel)
+        ? current.filter((value) => value !== serviceLabel)
+        : [...current, serviceLabel];
     });
   };
 
@@ -186,7 +205,7 @@ const AutomobilisteAppointments = () => {
 
       // Validate date
       if (!isDateValid(form.appointmentDate)) {
-        throw new Error("Veuillez sélectionner une date valide (au moins 2 heures à l'avance)");
+        throw new Error("Veuillez sélectionner une date valide (au moins 2 heures Ã  l'avance)");
       }
 
       // Validate time if provided
@@ -211,12 +230,12 @@ const AutomobilisteAppointments = () => {
       const selectedGarage = garages.find((garage) => Number(garage.id) === Number(form.garageId));
       setNotification({
         type: "appointment",
-        title: "✓ Rendez-vous réservé",
-        body: `Votre demande a été envoyée à ${selectedGarage?.name || selectedGarage?.nom || "votre garage"}.`
+        title: "âœ“ Rendez-vous réservé",
+        body: `Votre demande a Ã©tÃ© envoyÃ©e Ã  ${selectedGarage?.name || selectedGarage?.nom || "votre garage"}.`
       });
 
       setMessageType("success");
-      setMessage("✓ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
+      setMessage("âœ“ Rendez-vous créé avec succès! Le garage rÃ©pondra dans les 24 heures.");
       setForm({
         garageId: "",
         vehicleId: "",
@@ -226,12 +245,13 @@ const AutomobilisteAppointments = () => {
         remark: ""
       });
       setSelectedServices([]);
+      setSelectedServiceChoice("");
       fetchAppointments();
     } catch (err) {
       setMessageType("error");
       setMessage(
         err.response?.data?.data?.errors 
-          ? Object.values(err.response.data.data.errors).join(" • ")
+          ? Object.values(err.response.data.data.errors).join(" â€¢ ")
           : err.response?.data?.message 
           ? err.response.data.message
           : err.message 
@@ -283,7 +303,7 @@ const AutomobilisteAppointments = () => {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700">Réservation</p>
                 <h2 className="mt-2 text-2xl font-black text-slate-900">Prendre un rendez-vous</h2>
-                <p className="mt-2 text-sm text-slate-600">Choisissez un garage, un véhicule et les services souhaités.</p>
+                <p className="mt-2 text-sm text-slate-600">Choisissez un garage, un véhicule et les services souhaitÃ©s.</p>
               </div>
               <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">Automobiliste</div>
             </div>
@@ -298,7 +318,7 @@ const AutomobilisteAppointments = () => {
                   required
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 >
-                  <option value="">Sélectionnez un garage</option>
+                  <option value="">SÃ©lectionnez un garage</option>
                   {garages.map((garage) => (
                     <option key={garage.id} value={garage.id}>
                       {garage.name || garage.nom || `Garage ${garage.id}`}
@@ -315,11 +335,11 @@ const AutomobilisteAppointments = () => {
                   onChange={handleFormChange}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 >
-                  <option value="">Sélectionnez un véhicule</option>
+                  <option value="">SÃ©lectionnez un véhicule</option>
                   {vehicules.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
                       {vehicle.modele_voiture || vehicle.modele || `Véhicule ${vehicle.id}`}{" "}
-                      {vehicle.matricule_voiture ? `· ${vehicle.matricule_voiture}` : ""}
+                      {vehicle.matricule_voiture ? `Â· ${vehicle.matricule_voiture}` : ""}
                     </option>
                   ))}
                 </select>
@@ -336,7 +356,7 @@ const AutomobilisteAppointments = () => {
                   required
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 />
-                <p className="mt-1 text-xs text-slate-500">Minimum 2 heures à l'avance</p>
+                <p className="mt-1 text-xs text-slate-500">Minimum 2 heures Ã  l'avance</p>
               </div>
 
               <div>
@@ -356,32 +376,57 @@ const AutomobilisteAppointments = () => {
               <div className="lg:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-slate-700">Services (optionnel)</label>
                 {availableServices.length > 0 ? (
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {availableServices.slice(0, 6).map((service) => {
-                      const serviceId = service.id || service.name;
-                      const active = selectedServices.includes(String(serviceId));
-                      return (
-                        <button
-                          key={serviceId}
-                          type="button"
-                          onClick={() => toggleService(serviceId)}
-                          className={`rounded-xl border px-3 py-3 text-left text-sm font-medium transition ${
-                            active
-                              ? "border-amber-400 bg-amber-50 text-amber-700"
-                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">⚙️</span>
-                            <span className="line-clamp-2">{service.name || service.title || service}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                      <select
+                        value={selectedServiceChoice}
+                        onChange={(event) => setSelectedServiceChoice(event.target.value)}
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                      >
+                        <option value="">Choisissez un service</option>
+                        {availableServices.map((service) => {
+                          const serviceLabel = getServiceLabel(service);
+                          return (
+                            <option key={service.id || serviceLabel} value={serviceLabel}>
+                              {serviceLabel}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={addSelectedService}
+                        disabled={!selectedServiceChoice}
+                        className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+
+                    {selectedServices.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedServices.map((serviceLabel) => (
+                          <button
+                            key={serviceLabel}
+                            type="button"
+                            onClick={() => removeSelectedService(serviceLabel)}
+                            className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
+                            title="Cliquer pour retirer"
+                          >
+                            {serviceLabel} Ã—
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-xs text-slate-500">
+                      Les services sélectionnés seront enregistrés dans le rendez-vous. Cliquez sur un service pour le retirer.
+                    </p>
                   </div>
                 ) : (
                   <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-                    Sélectionnez un garage pour charger ses services.
+                    SÃ©lectionnez un garage pour charger ses services.
                   </p>
                 )}
               </div>
@@ -405,7 +450,7 @@ const AutomobilisteAppointments = () => {
                   name="remark"
                   value={form.remark}
                   onChange={handleFormChange}
-                  placeholder="Précisez des détails pour le garage"
+                  placeholder="PrÃ©cisez des détails pour le garage"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 placeholder:text-slate-400 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 />
               </div>
@@ -485,3 +530,5 @@ const AutomobilisteAppointments = () => {
 };
 
 export default AutomobilisteAppointments;
+
+

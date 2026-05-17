@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+﻿import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useContext } from "react";
-import Home from "../pages/Home"; // situé directement dans pages/
+import Home from "../pages/Home"; // situÃ© directement dans pages/
 import Login from "../pages/auth/login";
 import Register from "../pages/auth/Register";
 import AdminLogin from "../pages/auth/AdminLogin";
@@ -17,7 +17,7 @@ import CataloguePieces from "../pages/vendeur/CataloguePieces";
 import ComparaisonPrix from "../pages/vendeur/ComparaisonPrix";
 import ChatCenter from "../pages/chat/ChatCenter";
 
-// Import des pages spécifiques aux rôles
+// Import des pages spÃ©cifiques aux rÃ´les
 import AutomobilisteDashboard from "../pages/automobiliste/Dashboard";   // exemple
 import GarageDashboard from "../pages/garage/Dashboard";                 // exemple
 import GarageAppointments from "../pages/garage/Appointments";
@@ -42,7 +42,7 @@ const AppRouter = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
 
-        {/* Redirection vers le dashboard approprié - DOIT être avant les routes avec wildcard */}
+        {/* Redirection vers le dashboard appropriÃ© - DOIT être avant les routes avec wildcard */}
         <Route
           path="/dashboard"
           element={
@@ -52,7 +52,7 @@ const AppRouter = () => {
           }
         />
 
-        {/* Tableaux de bord protégés par rôle */}
+        {/* Tableaux de bord protÃ©gÃ©s par rÃ´le */}
         <Route
           path="/automobiliste/recommandations"
           element={
@@ -255,3 +255,4 @@ const AppRouter = () => {
 };
 
 export default AppRouter;
+

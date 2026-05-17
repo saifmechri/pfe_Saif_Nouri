@@ -1,10 +1,11 @@
-import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import { Calendar, Clock, CheckCircle2, XCircle, Clock3, ChevronRight } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import { Link } from "react-router-dom";
 import { listAppointments, updateAppointment } from "../../services/appointments";
 import { getCompleteProfileById } from "../../services/user";
+import { formatAppointmentDate } from "../../utils/appointmentConstants";
 dayjs.locale("fr");
 
 const GarageDashboardAppointments = ({ garageId }) => {
@@ -114,13 +115,13 @@ const GarageDashboardAppointments = ({ garageId }) => {
             <p className="mt-1 text-3xl font-black text-amber-900">{stats.pending}</p>
           </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-            <p className="text-xs font-bold text-emerald-700">CONFIRMÉ</p>
+            <p className="text-xs font-bold text-emerald-700">CONFIRMÃ‰</p>
             <p className="mt-1 text-3xl font-black text-emerald-900">
               {stats.confirmed}
             </p>
           </div>
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center">
-            <p className="text-xs font-bold text-rose-700">ANNULÉ</p>
+            <p className="text-xs font-bold text-rose-700">ANNULÃ‰</p>
             <p className="mt-1 text-3xl font-black text-rose-900">{stats.cancelled}</p>
           </div>
         </div>
@@ -130,7 +131,7 @@ const GarageDashboardAppointments = ({ garageId }) => {
       {pendingAppointments.length > 0 && (
         <div className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
           <h3 className="text-lg font-black text-slate-900 mb-4">
-            🔔 Demandes en attente ({pendingAppointments.length})
+            ðŸ”” Demandes en attente ({pendingAppointments.length})
           </h3>
           <div className="space-y-3">
             {pendingAppointments.map((apt) => (
@@ -144,7 +145,7 @@ const GarageDashboardAppointments = ({ garageId }) => {
                   </p>
                   <div className="mt-2 flex items-center gap-2 text-sm text-slate-700">
                     <Calendar className="h-4 w-4" />
-                    {dayjs(apt.appointment_date).format("dddd D MMMM YYYY")}
+                    {formatAppointmentDate(apt.appointment_date)}
                   </div>
                   {apt.appointment_time && (
                     <div className="flex items-center gap-2 text-sm text-slate-700 mt-1">
@@ -183,7 +184,7 @@ const GarageDashboardAppointments = ({ garageId }) => {
       {/* All Appointments */}
       <div className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
         <h3 className="text-lg font-black text-slate-900 mb-4">
-          📋 Tous les rendez-vous ({appointments.length})
+          ðŸ“‹ Tous les rendez-vous ({appointments.length})
         </h3>
 
         {loading ? (
@@ -226,16 +227,16 @@ const GarageDashboardAppointments = ({ garageId }) => {
                         }`}
                       >
                         {apt.status === "confirmed"
-                          ? "✓ Confirmé"
+                          ? "âœ“ Confirmé"
                           : apt.status === "cancelled"
-                          ? "✕ Annulé"
-                          : "⏳ En attente"}
+                          ? "âœ• Annulé"
+                          : "â³ En attente"}
                       </span>
                     </div>
                     <div className="mt-2 flex flex-col gap-1 text-sm text-slate-700">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        {dayjs(apt.appointment_date).format("dddd D MMMM YYYY")}
+                        {formatAppointmentDate(apt.appointment_date)}
                       </div>
                       {apt.appointment_time && (
                         <div className="flex items-center gap-2">
@@ -270,7 +271,7 @@ const GarageDashboardAppointments = ({ garageId }) => {
             onClick={() => fetchAppointments()}
             className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
           >
-            🔄 Actualiser les demandes
+            ðŸ”„ Actualiser les demandes
           </button>
           <Link
             to="/garage/appointments"
@@ -286,3 +287,5 @@ const GarageDashboardAppointments = ({ garageId }) => {
 };
 
 export default GarageDashboardAppointments;
+
+

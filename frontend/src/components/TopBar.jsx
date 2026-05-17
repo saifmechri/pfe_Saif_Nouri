@@ -1,4 +1,4 @@
-import { useContext } from "react";
+﻿import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import NotificationCenter from "./NotificationCenter";
 import useNotifications from "../hooks/useNotifications";
@@ -19,9 +19,9 @@ const TopBar = ({ onLogout }) => {
           <div className="hidden sm:block">
             <p className="text-sm font-semibold text-slate-900">{user?.name || "Utilisateur"}</p>
             <p className="text-xs text-slate-500 capitalize">
-              {user?.role === "automobiliste" ? "🚗 Automobiliste" :
-               user?.role === "garage" ? "🔧 Garage" :
-               user?.role === "vendeur" ? "📦 Vendeur" :
+              {user?.role === "automobiliste" ? "ðŸš— Automobiliste" :
+               user?.role === "garage" ? "ðŸ”§ Garage" :
+               user?.role === "vendeur" ? "ðŸ“¦ Vendeur" :
                user?.role}
             </p>
           </div>
@@ -53,3 +53,5 @@ const TopBar = ({ onLogout }) => {
 };
 
 export default TopBar;
+
+

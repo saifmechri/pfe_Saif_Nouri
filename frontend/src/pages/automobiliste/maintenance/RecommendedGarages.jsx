@@ -1,4 +1,4 @@
-import { ArrowRight, Clock, MapPin, Sparkles, Star } from 'lucide-react';
+﻿import { ArrowRight, Clock, MapPin, Sparkles, Star } from 'lucide-react';
 
 const availabilityTone = (isOpen) => (isOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200');
 
@@ -27,16 +27,16 @@ const RecommendedGarages = ({ garages = [], onReserve }) => {
     <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
       <div className="border-b border-slate-100 bg-[linear-gradient(135deg,#0f172a_0%,#0f766e_100%)] px-5 py-5 text-white">
         <p className="text-xs font-bold uppercase tracking-[0.24em] text-teal-100/80">Recommandation intelligente</p>
-        <h3 className="mt-1 text-2xl font-black tracking-tight">Garages recommandés</h3>
-        <p className="mt-1 text-sm text-teal-50/90">Classement par distance GPS, rating, disponibilité et adéquation maintenance.</p>
+        <h3 className="mt-1 text-2xl font-black tracking-tight">Garages recommandÃ©s</h3>
+        <p className="mt-1 text-sm text-teal-50/90">Classement par distance GPS, rating, disponibilitÃ© et adÃ©quation maintenance.</p>
       </div>
 
       <div className="space-y-4 bg-slate-50 px-5 py-5">
         {garages.length === 0 ? (
           <div className="rounded-[28px] border border-dashed border-slate-200 bg-white p-6 text-center">
             <Sparkles className="mx-auto h-8 w-8 text-slate-400" />
-            <p className="mt-3 text-base font-bold text-slate-900">Aucun garage ne correspond à cette session</p>
-            <p className="mt-1 text-sm text-slate-500">Essayez d’élargir la zone de distance ou vérifiez les garages actifs.</p>
+            <p className="mt-3 text-base font-bold text-slate-900">Aucun garage ne correspond Ã  cette session</p>
+            <p className="mt-1 text-sm text-slate-500">Essayez dâ€™Ã©largir la zone de distance ou vÃ©rifiez les garages actifs.</p>
           </div>
         ) : (
           garages.map((garage, index) => (
@@ -50,7 +50,7 @@ const RecommendedGarages = ({ garages = [], onReserve }) => {
                   </div>
                   <p className="mt-1 flex items-center gap-1 text-sm text-slate-500">
                     <MapPin className="h-4 w-4" />
-                    <span>{garage.address || 'Adresse non renseignée'}</span>
+                    <span>{garage.address || 'Adresse non renseignÃ©e'}</span>
                   </p>
                 </div>
 
@@ -71,10 +71,10 @@ const RecommendedGarages = ({ garages = [], onReserve }) => {
                 <div className="rounded-3xl bg-slate-50 p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
                     <Clock className="h-4 w-4 text-slate-700" />
-                    Disponibilité
+                    DisponibilitÃ©
                   </div>
                   <p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-sm font-black ${availabilityTone(garage.isOpen)}`}>
-                    {garage.isOpen ? 'Ouvert' : 'Fermé'}
+                    {garage.isOpen ? 'Ouvert' : 'FermÃ©'}
                   </p>
                 </div>
               </div>
@@ -90,7 +90,7 @@ const RecommendedGarages = ({ garages = [], onReserve }) => {
               </div>
 
               <div className="mt-5 flex items-center justify-between gap-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Réservation recommandée</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Réservation recommandÃ©e</p>
                 <button
                   type="button"
                   onClick={() => onReserve?.(garage)}
@@ -109,3 +109,4 @@ const RecommendedGarages = ({ garages = [], onReserve }) => {
 };
 
 export default RecommendedGarages;
+

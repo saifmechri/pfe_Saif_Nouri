@@ -10,8 +10,8 @@ const {
 
 const DEFAULT_INTERVENTION_TYPES = [
   { id: 'default-vidange', type: 'vidange', km_recommande: 10000, jours_recommandes: 180 },
-  { id: 'default-revision', type: 'rÃ©vision', km_recommande: 20000, jours_recommandes: 365 },
-  { id: 'default-reparation', type: 'rÃ©paration', km_recommande: 40000, jours_recommandes: 730 }
+  { id: 'default-revision', type: 'révision', km_recommande: 20000, jours_recommandes: 365 },
+  { id: 'default-reparation', type: 'réparation', km_recommande: 40000, jours_recommandes: 730 }
 ];
 
 // Convertit en nombre avec fallback si valeur absente/invalide.
@@ -67,7 +67,7 @@ function normalizeUrgency(value) {
   return null;
 }
 
-// Retourne la derniÃ¨re intervention pour un type et un vÃ©hicule.
+// Retourne la derniÃ¨re intervention pour un type et un véhicule.
 async function getLastInterventionByType(vehicleId, type) {
   const result = await pool.query(
     `SELECT id, date_intervention, kilometrage, created_at
@@ -551,7 +551,7 @@ async function getRecommendations(req, res) {
     );
 
     if (userResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Utilisateur non trouvÃ©' });
+      return res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
     }
 
     const user = userResult.rows[0];
@@ -579,7 +579,7 @@ async function getRecommendations(req, res) {
         success: true,
         data: [],
         decision: buildFallbackDecision({ service: 'Révision' }),
-        message: 'Aucun vÃ©hicule trouvÃ©'
+        message: 'Aucun véhicule trouvé'
       });
     }
 
@@ -611,7 +611,7 @@ async function getRecommendations(req, res) {
         success: true,
         data: [],
         decision: buildFallbackDecision({ vehicle: vehicles[0], service: 'Révision' }),
-        message: 'Aucun garage trouvÃ©'
+        message: 'Aucun garage trouvé'
       });
     }
 
@@ -670,7 +670,7 @@ async function getRecommendations(req, res) {
               adresse: garage.adresse,
               telephone: garage.telephone,
               distance_km: garageDetail.distanceKm,
-              rating: parseFloat(garage.rating) || 3.5,
+              rating: Number.isFinite(Number(garage.rating)) ? Number(garage.rating) : null,
               score_global: parseFloat(garageDetail.total.toFixed(2)),
               score_breakdown: garageDetail,
               isOpen: Boolean(garage.is_open)
@@ -822,4 +822,6 @@ async function getRecommendations(req, res) {
 }
 
 module.exports = { getRecommendations };
+
+
 

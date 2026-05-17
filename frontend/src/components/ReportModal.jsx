@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { submitReport } from "../services/reports";
 
 /**
@@ -64,11 +64,11 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
   };
 
   const reasonOptions = [
-    { value: "spam", label: "Spam ou contenu répétitif" },
+    { value: "spam", label: "Spam ou contenu rÃ©pÃ©titif" },
     { value: "insulte", label: "Insulte ou contenu offensant" },
     { value: "fraude", label: "Fraude ou arnaque" },
     { value: "faux", label: "Information fausse" },
-    { value: "inapproprie", label: "Contenu inapproprié" },
+    { value: "inapproprie", label: "Contenu inappropriÃ©" },
     { value: "autre", label: "Autre raison" }
   ];
 
@@ -81,26 +81,26 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
           disabled={loading}
           className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed"
         >
-          ✕
+          âœ•
         </button>
 
         {/* Success State */}
         {success ? (
           <div className="text-center">
-            <div className="mb-4 text-5xl">✓</div>
+            <div className="mb-4 text-5xl">âœ“</div>
             <h3 className="mb-2 text-xl font-bold text-green-600">Merci!</h3>
             <p className="text-gray-600">
-              Votre signalement a été envoyé à nos modérateurs.
+              Votre signalement a Ã©tÃ© envoyÃ© Ã  nos modÃ©rateurs.
             </p>
           </div>
         ) : (
           <>
             {/* Header */}
             <h2 className="mb-2 text-2xl font-bold text-[#1a2b4b]">
-              Signaler un problème
+              Signaler un problÃ¨me
             </h2>
             <p className="mb-4 text-sm text-gray-600">
-              Aidez-nous à maintenir une communauté saine
+              Aidez-nous Ã  maintenir une communautÃ© saine
               {entityName && <span>: <strong>{entityName}</strong></span>}
             </p>
 
@@ -124,7 +124,7 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
                   disabled={loading}
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
                 >
-                  <option value="">-- Sélectionnez une raison --</option>
+                  <option value="">-- SÃ©lectionnez une raison --</option>
                   {reasonOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
@@ -136,13 +136,13 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
               {/* Details */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Détails supplémentaires (optionnel)
+                  Détails supplÃ©mentaires (optionnel)
                 </label>
                 <textarea
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
                   disabled={loading}
-                  placeholder="Décrivez le problème en détail..."
+                  placeholder="DÃ©crivez le problÃ¨me en détail..."
                   rows={4}
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
                 />
@@ -175,3 +175,5 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
 };
 
 export default ReportModal;
+
+

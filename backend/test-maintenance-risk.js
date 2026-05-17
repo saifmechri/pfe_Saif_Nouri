@@ -1,4 +1,4 @@
-const { computeMaintenanceRisk } = require('./services/maintenanceRiskScoring');
+﻿const { computeMaintenanceRisk } = require('./services/maintenanceRiskScoring');
 
 // Test with sample data
 const testInterventions = [
@@ -29,3 +29,5 @@ const result = computeMaintenanceRisk(currentKm, testVehicle, testInterventions)
 
 console.log('=== MAINTENANCE RISK SCORING TEST ===');
 console.log(JSON.stringify(result, null, 2));
+
+

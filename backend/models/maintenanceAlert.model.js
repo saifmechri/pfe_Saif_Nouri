@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const createMaintenanceAlert = async ({ vehicleId, userId, alertType, kmTrigger, daysTrigger, lastKm, lastDate }) => {
   const result = await pool.query(
@@ -81,7 +81,7 @@ const deleteAlert = async (alertId) => {
 };
 
 const checkDueAlerts = async (vehicleId, currentKm, currentDate) => {
-  // Retourne les alertes qui sont dues (basé sur km ou jours)
+  // Retourne les alertes qui sont dues (basÃ© sur km ou jours)
   const result = await pool.query(
     `SELECT * FROM maintenance_alerts 
      WHERE vehicle_id = $1 AND is_active = true
@@ -104,3 +104,5 @@ module.exports = {
   deleteAlert,
   checkDueAlerts
 };
+
+

@@ -1,4 +1,4 @@
-import { useState, useContext } from "react";
+﻿import { useState, useContext } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Lock, Mail, AlertCircle, Loader2 } from "lucide-react";
 import { AuthContext } from "../../context/AuthContext";
@@ -23,7 +23,7 @@ const AdminLogin = () => {
     } catch (err) {
       setError(
         err?.response?.data?.message ||
-        "Erreur d'authentification. Vérifiez vos identifiants."
+        "Erreur d'authentification. VÃ©rifiez vos identifiants."
       );
     } finally {
       setLoading(false);
@@ -111,7 +111,7 @@ const AdminLogin = () => {
           {/* Info Box */}
           <div className="mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-700/50">
             <p className="text-xs text-blue-300">
-              <strong>Identifiants démo:</strong> utilisez les credentials fournis pour accéder au tableau de bord administrateur.
+              <strong>Identifiants dÃ©mo:</strong> utilisez les credentials fournis pour accÃ©der au tableau de bord administrateur.
             </p>
           </div>
         </div>
@@ -122,7 +122,7 @@ const AdminLogin = () => {
             to="/"
             className="text-sm text-slate-400 hover:text-slate-200 transition"
           >
-            ← Retour à l'accueil
+            â† Retour Ã  l'accueil
           </Link>
         </div>
       </div>
@@ -131,3 +131,5 @@ const AdminLogin = () => {
 };
 
 export default AdminLogin;
+
+

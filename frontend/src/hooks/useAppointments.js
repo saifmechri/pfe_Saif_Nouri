@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+﻿import { useState, useCallback, useEffect } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 import { createAppointment, updateAppointment, deleteAppointment, listAppointments } from '../services/appointments';
@@ -93,7 +93,7 @@ export const useAppointmentForm = (garageId = null, onSuccess = null) => {
           notes: JSON.stringify(notesPayload)
         });
 
-        setSuccess('✓ Rendez-vous réservé avec succès');
+        setSuccess('âœ“ Rendez-vous réservé avec succès');
         
         // Reset form
         setForm({
@@ -209,7 +209,7 @@ export const useAppointments = (statusFilter = 'all') => {
 
   const handleDelete = useCallback(
     async (id) => {
-      if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce rendez-vous ?')) return;
+      if (!window.confirm('ÃŠtes-vous sûr de vouloir supprimer ce rendez-vous ?')) return;
       try {
         await deleteAppointment(id);
         setAppointments((prev) => prev.filter((a) => a.id !== id));
@@ -229,7 +229,7 @@ export const useAppointments = (statusFilter = 'all') => {
           prev.map((a) => (a.id === id ? { ...a, status } : a))
         );
       } catch (err) {
-        setError('Erreur lors de la mise à jour');
+        setError('Erreur lors de la mise Ã  jour');
         console.error(err);
       }
     },
@@ -288,7 +288,7 @@ export const useGarageAppointments = () => {
           prev.map((a) => (a.id === id ? { ...a, status } : a))
         );
       } catch (err) {
-        setError('Erreur lors de la mise à jour');
+        setError('Erreur lors de la mise Ã  jour');
         console.error(err);
       }
     },
@@ -307,3 +307,5 @@ export const useGarageAppointments = () => {
     handleDecision
   };
 };
+
+

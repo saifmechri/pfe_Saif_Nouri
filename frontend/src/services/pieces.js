@@ -1,4 +1,4 @@
-import API from "./api";
+﻿import API from "./api";
 
 export const getPieces = (params = {}) => {
   return API.get("/pieces", { params });
@@ -27,3 +27,5 @@ export const comparePieceAcrossVendors = (params = {}) => {
 export const getPieceSellerLocations = (params = {}) => {
   return API.get("/pieces/seller-locations", { params });
 };
+
+

@@ -1,5 +1,5 @@
-/**
- * 🔍 DATA VALIDATION & CLEANING UTILITIES
+﻿/**
+ * ðŸ” DATA VALIDATION & CLEANING UTILITIES
  * Ensures data integrity for recommendation engine
  */
 
@@ -8,7 +8,7 @@ const MAX_ANNUAL_MILEAGE = 50000; // ~137 km/day is normal
 const MILEAGE_JUMP_THRESHOLD = 200000; // Flag suspicious jumps
 
 /**
- * ✅ Validate if a mileage value is realistic and safe
+ * âœ… Validate if a mileage value is realistic and safe
  * @param {number} mileage - The mileage to validate
  * @returns {Object} { isValid: boolean, error?: string }
  */
@@ -26,19 +26,19 @@ function validateMileage(mileage) {
 
   // Cannot be negative
   if (km < 0) {
-    return { isValid: false, error: 'Kilométrage ne peut pas être négatif' };
+    return { isValid: false, error: 'Kilométrage ne peut pas être nÃ©gatif' };
   }
 
   // Cannot exceed realistic maximum
   if (km > MAX_REALISTIC_MILEAGE) {
-    return { isValid: false, error: `Kilométrage ne peut pas dépasser ${MAX_REALISTIC_MILEAGE} km` };
+    return { isValid: false, error: `Kilométrage ne peut pas dÃ©passer ${MAX_REALISTIC_MILEAGE} km` };
   }
 
   return { isValid: true };
 }
 
 /**
- * ✅ Validate if a date is realistic (not in the future)
+ * âœ… Validate if a date is realistic (not in the future)
  * @param {string|Date} date - The date to validate
  * @param {boolean} allowFuture - Allow future dates (for testing)
  * @returns {Object} { isValid: boolean, error?: string }
@@ -66,7 +66,7 @@ function validateInterventionDate(date, allowFuture = false) {
 }
 
 /**
- * ✅ Validate if a mileage progression is logical
+ * âœ… Validate if a mileage progression is logical
  * @param {number} lastMileage - Previous recorded mileage
  * @param {number} newMileage - New mileage to record
  * @returns {Object} { isValid: boolean, warning?: string }
@@ -80,7 +80,7 @@ function validateMileageProgression(lastMileage, newMileage) {
   if (newMileage < lastMileage) {
     return { 
       isValid: false, 
-      error: `Kilométrage ne peut pas diminuer (${lastMileage} km → ${newMileage} km)` 
+      error: `Kilométrage ne peut pas diminuer (${lastMileage} km â†’ ${newMileage} km)` 
     };
   }
 
@@ -89,7 +89,7 @@ function validateMileageProgression(lastMileage, newMileage) {
   if (jump > MILEAGE_JUMP_THRESHOLD) {
     return { 
       isValid: true, 
-      warning: `Saut important détecté: +${jump} km depuis la dernière intervention` 
+      warning: `Saut important dÃ©tectÃ©: +${jump} km depuis la derniÃ¨re intervention` 
     };
   }
 
@@ -97,7 +97,7 @@ function validateMileageProgression(lastMileage, newMileage) {
 }
 
 /**
- * ✅ Clean and validate intervention history for a vehicle
+ * âœ… Clean and validate intervention history for a vehicle
  * @param {Array} interventions - Raw interventions from database
  * @returns {Array} Cleaned, sorted, deduplicated interventions
  */
@@ -158,7 +158,7 @@ function cleanInterventionHistory(interventions) {
 }
 
 /**
- * ✅ Get the latest valid intervention by type
+ * âœ… Get the latest valid intervention by type
  * @param {Array} cleanedInterventions - Already cleaned intervention array
  * @param {string} type - Intervention type to search for
  * @returns {Object|null} Latest intervention of that type, or null
@@ -178,7 +178,7 @@ function getLatestByType(cleanedInterventions, type) {
 }
 
 /**
- * ✅ Calculate vehicle's effective current mileage
+ * âœ… Calculate vehicle's effective current mileage
  * @param {Object} vehicle - Vehicle object
  * @param {Array} cleanedInterventions - Cleaned intervention history
  * @returns {number|null} Effective current mileage, or null if unreliable
@@ -234,7 +234,7 @@ function getEffectiveVehicleMileage(vehicle, cleanedInterventions) {
 }
 
 /**
- * ✅ Build intervention history summary for logging
+ * âœ… Build intervention history summary for logging
  * @param {Array} cleanedInterventions - Cleaned intervention array
  * @returns {Object} Summary with counts, date range, mileage range
  */
@@ -295,3 +295,5 @@ module.exports = {
   MAX_ANNUAL_MILEAGE,
   MILEAGE_JUMP_THRESHOLD
 };
+
+

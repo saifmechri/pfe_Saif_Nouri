@@ -1,4 +1,4 @@
-const maintenanceAlertModel = require('../models/maintenanceAlert.model');
+﻿const maintenanceAlertModel = require('../models/maintenanceAlert.model');
 const notificationService = require('./notificationService');
 
 const create = async (payload) => {
@@ -31,14 +31,14 @@ const checkAndNotifyDueAlerts = async (vehicleId, currentKm, userId, vehicleName
     const dueAlerts = await maintenanceAlertModel.checkDueAlerts(vehicleId, currentKm);
     
     for (const alert of dueAlerts) {
-      const title = `Entretien dû pour ${vehicleName}`;
+      const title = `Entretien dÃ» pour ${vehicleName}`;
       const alertLabels = {
         'oil_change': 'Vidange',
         'tire_rotation': 'Rotation des pneus',
-        'brake_check': 'Vérification des freins',
+        'brake_check': 'VÃ©rification des freins',
         'filter_change': 'Changement des filtres',
         'inspection': 'Inspection',
-        'custom': 'Entretien personnalisé'
+        'custom': 'Entretien personnalisÃ©'
       };
       
       const body = `${alertLabels[alert.alert_type] || alert.alert_type} - Prenez rendez-vous avec un garage`;
@@ -67,3 +67,5 @@ module.exports = {
   remove,
   checkAndNotifyDueAlerts
 };
+
+

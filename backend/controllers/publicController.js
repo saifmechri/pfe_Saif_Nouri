@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PUBLIC CONTROLLER - Exposes non-authenticated endpoints for public statistics
  * 
  * This controller handles public-facing API endpoints that do not require authentication.
@@ -69,3 +69,5 @@ const getPublicStats = async (req, res) => {
 module.exports = {
   getPublicStats
 };
+
+

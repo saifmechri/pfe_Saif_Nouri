@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 // Calcul de distance Haversine (en km)
 const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
@@ -31,17 +31,17 @@ const uniqueTerms = (terms) => [...new Set((terms || []).filter(Boolean))];
 const interventionKeywordMap = {
   vidange: ['vidange', 'huile', 'filtre', 'filtres', 'lubrifiant', 'entretien'],
   frein: ['frein', 'freins', 'plaquette', 'plaquettes', 'disque', 'disques', 'freinage'],
-  pneus: ['pneu', 'pneus', 'parallélisme', 'paralleisme', 'équilibrage', 'equilibrage', 'géométrie', 'geometrie'],
-  diagnostic: ['diagnostic', 'valise', 'obd', 'ecu', 'calculateur', 'lecture défauts', 'effacement défauts'],
+  pneus: ['pneu', 'pneus', 'parallÃ©lisme', 'paralleisme', 'Ã©quilibrage', 'equilibrage', 'gÃ©omÃ©trie', 'geometrie'],
+  diagnostic: ['diagnostic', 'valise', 'obd', 'ecu', 'calculateur', 'lecture dÃ©fauts', 'effacement dÃ©fauts'],
   climatisation: ['clim', 'climatisation', 'recharge climatisation', 'gaz clim'],
-  batterie: ['batterie', 'alternateur', 'démarreur', 'demarreur'],
+  batterie: ['batterie', 'alternateur', 'dÃ©marreur', 'demarreur'],
   moteur: ['moteur', 'injecteur', 'injecteurs', 'courroie', 'distribution'],
-  carrosserie: ['carrosserie', 'peinture', 'tôlerie', 'tolerie', 'débosselage', 'debosselage'],
+  carrosserie: ['carrosserie', 'peinture', 'tÃ´lerie', 'tolerie', 'dÃ©bosselage', 'debosselage'],
   vitrage: ['pare-brise', 'pare brise', 'vitrage', 'optiques'],
-  direction: ['crémaillère', 'cremaillere', 'direction', 'suspension', 'amortisseurs'],
-  transmission: ['boîte', 'boite', 'embrayage', 'transmission', 'vidange boîte', 'vidange boite'],
-  échappement: ['échappement', 'echappement', 'catalyseur', 'pollution'],
-  électrique: ['électricité', 'electricite', 'électrique', 'electrique', 'câblage', 'cablage', 'fusible']
+  direction: ['crÃ©maillÃ¨re', 'cremaillere', 'direction', 'suspension', 'amortisseurs'],
+  transmission: ['boÃ®te', 'boite', 'embrayage', 'transmission', 'vidange boÃ®te', 'vidange boite'],
+  Ã©chappement: ['Ã©chappement', 'echappement', 'catalyseur', 'pollution'],
+  électrique: ['Ã©lectricitÃ©', 'electricite', 'électrique', 'electrique', 'cÃ¢blage', 'cablage', 'fusible']
 };
 
 const buildInterventionKeywords = (type, description) => {
@@ -81,15 +81,15 @@ const getMatchedTerms = (garageTerms, interventionTerms) => {
   );
 };
 
-// Vérifie la disponibilité (basée sur work_hours)
+// VÃ©rifie la disponibilitÃ© (basÃ©e sur work_hours)
 const isGarageAvailable = (workHours, isOpen) => {
   if (!isOpen) return false;
-  if (!workHours) return true; // Suppose ouvert par défaut
+  if (!workHours) return true; // Suppose ouvert par dÃ©faut
   
   try {
     const hoursData = JSON.parse(workHours);
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0-6 (dimanche à samedi)
+    const dayOfWeek = today.getDay(); // 0-6 (dimanche Ã  samedi)
     const currentTime = today.getHours() * 60 + today.getMinutes();
 
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -106,13 +106,13 @@ const isGarageAvailable = (workHours, isOpen) => {
 
     return currentTime >= startTime && currentTime <= endTime;
   } catch (e) {
-    return true; // Par défaut disponible si erreur parsing
+    return true; // Par dÃ©faut disponible si erreur parsing
   }
 };
 
-// Récupère les garages et les score
+// RÃ©cupÃ¨re les garages et les score
 const matchGaragesForVehicle = async (vehicleId, maxDistance = 50) => {
-  // Récupère le véhicule et l'utilisateur (pour les coordonnées)
+  // RÃ©cupÃ¨re le véhicule et l'utilisateur (pour les coordonnÃ©es)
   const vehicleResult = await pool.query(
     `SELECT v.id, v.user_id, u.latitude, u.longitude 
      FROM vehicules v 
@@ -146,7 +146,7 @@ const matchGaragesForVehicle = async (vehicleId, maxDistance = 50) => {
     latestIntervention?.description
   );
 
-  // Récupère tous les garages avec leurs services
+  // RÃ©cupÃ¨re tous les garages avec leurs services
   const garagesResult = await pool.query(`
     SELECT 
       g.id,
@@ -190,22 +190,22 @@ const matchGaragesForVehicle = async (vehicleId, maxDistance = 50) => {
         ? Math.min(100, (matchedTerms.length / interventionTerms.length) * 100)
         : 0;
 
-      // Scoring (normalisé 0-100)
+      // Scoring (normalisÃ© 0-100)
       // Distance: plus proche = meilleur score (max 100 pour <1km, min 0 pour maxDistance)
       const distanceScore = Math.max(0, 100 - (distance / maxDistance) * 100);
 
-      // Rating: directement 0-100 (supposé 0-5, donc *20)
+      // Rating: directement 0-100 (supposÃ© 0-5, donc *20)
       const ratingScore = (garage.rating || 3.5) * 20;
 
-      // Prix: suppose prix moyen entre 50-500€, plus bas = meilleur
+      // Prix: suppose prix moyen entre 50-500â‚¬, plus bas = meilleur
       const priceScore = garage.avg_price
         ? Math.max(0, 100 - (garage.avg_price / 500) * 100)
         : 50;
 
-      // Disponibilité: +20 si disponible, -30 si non disponible
+      // DisponibilitÃ©: +20 si disponible, -30 si non disponible
       const availabilityScore = isAvailable ? 20 : -30;
 
-      // Score total (pondéré)
+      // Score total (pondÃ©rÃ©)
       const totalScore =
         distanceScore * 0.3 + // 30% distance
         ratingScore * 0.3 + // 30% rating
@@ -263,3 +263,5 @@ module.exports = {
   isGarageAvailable,
   matchGaragesForVehicle
 };
+
+

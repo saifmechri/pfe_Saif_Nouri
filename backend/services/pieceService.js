@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 const { AppError } = require('../utils/appError');
 
 const ALLOWED_SORT_FIELDS = new Set(['nom', 'reference', 'prix_unitaire', 'created_at', 'updated_at']);
@@ -17,7 +17,7 @@ const normalizeText = (value) => {
 const parsePositiveNumber = (value, fieldName) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new AppError(`${fieldName} doit être supérieur à 0`, 400, 'INVALID_PRICE');
+    throw new AppError(`${fieldName} doit être supÃ©rieur Ã  0`, 400, 'INVALID_PRICE');
   }
 
   return parsed;
@@ -49,7 +49,8 @@ const buildSortClause = (sortBy, sortOrder) => {
   const normalizedSortBy = ALLOWED_SORT_FIELDS.has(sortBy) ? sortBy : 'created_at';
   const normalizedSortOrder = ALLOWED_SORT_ORDERS.has(String(sortOrder).toLowerCase()) ? String(sortOrder).toUpperCase() : 'DESC';
 
-  return `${normalizedSortBy} ${normalizedSortOrder}`;
+  // always qualify with pieces table alias to avoid ambiguous column references when joining users/roles
+  return `p.${normalizedSortBy} ${normalizedSortOrder}`;
 };
 
 const mapPieceRow = (row) => ({
@@ -69,8 +70,23 @@ const mapPieceRow = (row) => ({
   is_validated: row.is_validated === null || row.is_validated === undefined ? false : Boolean(row.is_validated),
   created_at: row.created_at,
   updated_at: row.updated_at,
-  deleted_at: row.deleted_at || null
+  deleted_at: row.deleted_at || null,
+  seller_name: row.seller_name || null,
+  seller_phone: row.seller_phone || null,
+  seller_email: row.seller_email || null,
+  seller_store_name: row.seller_store_name || null,
+  seller_store_address: row.seller_store_address || null,
+  seller_role: row.seller_role || null
 });
+
+const getSellerDisplayName = (row) => {
+  const sellerRole = String(row.seller_role || '').toLowerCase();
+  if (sellerRole === 'admin') {
+    return 'admin';
+  }
+
+  return row.seller_name || null;
+};
 
 const mapStockMovementRow = (row) => ({
   id: row.id,
@@ -383,36 +399,67 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
 
   const query = `
     SELECT
-      id,
-      user_id,
-      nom,
-      reference,
-      description,
-      photo_url,
-      prix_unitaire,
-      stock,
-      condition,
-      zone_geographique,
-        marque,
-        modele,
-        categorie,
-      created_at,
-      updated_at,
-      deleted_at,
+      p.id,
+      p.user_id,
+      p.nom,
+      p.reference,
+      p.description,
+      p.photo_url,
+      p.prix_unitaire,
+      p.stock,
+      p.condition,
+      p.zone_geographique,
+      p.marque,
+      p.modele,
+      p.categorie,
+      p.created_at,
+      p.updated_at,
+      p.deleted_at,
+      u.name AS seller_name,
+      u.phone AS seller_phone,
+      u.email AS seller_email,
+      u.store_name AS seller_store_name,
+      u.store_address AS seller_store_address,
+      LOWER(r.name) AS seller_role,
       COUNT(*) OVER() AS total_count
-    FROM pieces
-    WHERE deleted_at IS NULL${searchClause.sql}
+    FROM pieces p
+    LEFT JOIN users u ON u.id = p.user_id
+    LEFT JOIN roles r ON r.id = u.role_id
+    WHERE p.deleted_at IS NULL${searchClause.sql}
     ORDER BY ${orderByClause}
     LIMIT $${searchClause.params.length + 1}
     OFFSET $${searchClause.params.length + 2}
   `;
 
   const params = [...searchClause.params, safeLimit, offset];
-  const result = await pool.query(query, params);
+  let result;
+  try {
+    result = await pool.query(query, params);
+  } catch (err) {
+    // Retry once for transient connection timeout / termination errors
+    const msg = String(err && err.message || '').toLowerCase();
+    if (msg.includes('connection timeout') || msg.includes('terminated') || msg.includes('timeout')) {
+      try {
+        await new Promise((r) => setTimeout(r, 200));
+        result = await pool.query(query, params);
+      } catch (retryErr) {
+        console.error('getPieces retry failed', retryErr);
+        throw retryErr;
+      }
+    } else {
+      throw err;
+    }
+  }
   const totalItems = result.rows.length > 0 ? Number(result.rows[0].total_count) : 0;
 
   return {
-    items: result.rows.map(mapPieceRow),
+    items: result.rows.map((row) => {
+      const mappedRow = mapPieceRow(row);
+      return {
+        ...mappedRow,
+        seller_name: getSellerDisplayName(row)
+      };
+    }),
     pagination: {
       page: safePage,
       limit: safeLimit,
@@ -424,9 +471,17 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
 
 const getPieceById = async (id) => {
   const result = await pool.query(
-    `SELECT id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at
-     FROM pieces
-     WHERE id = $1 AND deleted_at IS NULL`,
+    `SELECT p.id, p.user_id, p.nom, p.reference, p.description, p.photo_url, p.prix_unitaire, p.stock, p.condition, p.zone_geographique, p.marque, p.modele, p.categorie, p.created_at, p.updated_at, p.deleted_at,
+            u.name AS seller_name,
+            u.phone AS seller_phone,
+            u.email AS seller_email,
+            u.store_name AS seller_store_name,
+            u.store_address AS seller_store_address,
+            LOWER(r.name) AS seller_role
+     FROM pieces p
+     LEFT JOIN users u ON u.id = p.user_id
+     LEFT JOIN roles r ON r.id = u.role_id
+     WHERE p.id = $1 AND p.deleted_at IS NULL`,
     [id]
   );
 
@@ -434,7 +489,10 @@ const getPieceById = async (id) => {
     throw new AppError('Piece non trouvee', 404, 'PIECE_NOT_FOUND');
   }
 
-  return mapPieceRow(result.rows[0]);
+  return {
+    ...mapPieceRow(result.rows[0]),
+    seller_name: getSellerDisplayName(result.rows[0])
+  };
 };
 
 const updatePiece = async (id, payload) => {
@@ -658,5 +716,8 @@ module.exports = {
   deletePiece,
   adjustPieceStock,
   setPieceStock,
-  getPieceStockMovements
+  getPieceStockMovements,
+  comparePieceAcrossVendors,
+  getPieceSellerLocations
 };
+

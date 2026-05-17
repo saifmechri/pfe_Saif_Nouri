@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, CalendarClock, Gauge, Wrench } from 'lucide-react';
+﻿import { AlertTriangle, CheckCircle2, CalendarClock, Gauge, Wrench } from 'lucide-react';
 
 const urgencyVariants = {
   urgent: {
@@ -43,6 +43,13 @@ const formatDate = (value) => {
 const formatKm = (value) => {
   if (value === null || value === undefined || value === '') return 'N/A';
   return `${Number(value).toLocaleString('fr-FR')} km`;
+};
+
+const normalizeUrgencyLevel = (value) => {
+  const normalized = String(value || '').toUpperCase();
+  if (normalized === 'URGENT') return 'urgent';
+  if (normalized === 'BIENTOT' || normalized === 'BIENTÃ”T') return 'soon';
+  return 'ok';
 };
 
 const StatCard = ({ icon: Icon, label, value, helper, tone = 'slate' }) => {
@@ -90,7 +97,9 @@ const ProgressBar = ({ value, tone }) => {
 };
 
 const AlertCard = ({ vehicle, urgency, mileage, temporal, lastIntervention }) => {
-  const variant = urgencyVariants[urgency?.level] || urgencyVariants.future;
+  const variantKey = normalizeUrgencyLevel(urgency?.state || urgency?.level);
+  const variant = urgencyVariants[variantKey] || urgencyVariants.future;
+  const tone = variantKey === 'urgent' ? 'rose' : variantKey === 'soon' ? 'amber' : 'emerald';
   const Icon = variant.icon;
 
   return (
@@ -101,7 +110,7 @@ const AlertCard = ({ vehicle, urgency, mileage, temporal, lastIntervention }) =>
             <div className="flex flex-wrap items-center gap-3">
               <span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.22em] ${variant.badge}`}>
                 <Icon className="h-4 w-4" />
-                Urgence maintenance: {urgency?.label || 'PLANIFIÉ'}
+                Urgence maintenance: {urgency?.label || 'PLANIFIÃ‰'}
               </span>
               {vehicle?.modele_voiture && (
                 <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-sm font-semibold text-slate-700">
@@ -115,15 +124,15 @@ const AlertCard = ({ vehicle, urgency, mileage, temporal, lastIntervention }) =>
               )}
             </div>
             <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              {urgency?.label || 'PLANIFIÉ'} - {urgency?.message || 'Suivi intelligent de votre véhicule'}
+              {urgency?.label || 'PLANIFIÃ‰'} - {urgency?.message || 'Suivi intelligent de votre véhicule'}
             </h2>
             <p className={`mt-3 max-w-2xl text-sm font-medium leading-7 ${variant.accent}`}>
-              {urgency?.message || 'Le système analyse le kilométrage, la dernière intervention et les échéances pour anticiper la prochaine maintenance.'}
+              {urgency?.message || 'Le systÃ¨me analyse le kilométrage, la derniÃ¨re intervention et les Ã©chÃ©ances pour anticiper la prochaine maintenance.'}
             </p>
           </div>
 
           <div className="rounded-[28px] border border-white/80 bg-white/75 p-5 shadow-sm backdrop-blur">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Dernière intervention</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">DerniÃ¨re intervention</p>
             <p className="mt-2 text-xl font-black text-slate-900">{lastIntervention?.type || 'Aucune intervention enregistrée'}</p>
             <p className="mt-1 text-sm font-medium text-slate-600">{formatDate(lastIntervention?.date)}</p>
             <div className="mt-4 flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3">
@@ -132,7 +141,7 @@ const AlertCard = ({ vehicle, urgency, mileage, temporal, lastIntervention }) =>
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Garage</p>
-                <p className="text-sm font-semibold text-slate-800">{lastIntervention?.garageName || 'Non renseigné'}</p>
+                <p className="text-sm font-semibold text-slate-800">{lastIntervention?.garageName || 'Non renseignÃ©'}</p>
               </div>
             </div>
           </div>
@@ -144,34 +153,34 @@ const AlertCard = ({ vehicle, urgency, mileage, temporal, lastIntervention }) =>
           <div className="grid gap-4 md:grid-cols-2">
             <StatCard
               icon={Gauge}
-              label="État kilométrique"
+              label="Ã‰tat kilomÃ©trique"
               value={formatKm(mileage?.currentKm)}
               helper={`Prochain seuil: ${formatKm(mileage?.nextRevisionKm)}`}
-              tone={urgency?.level === 'urgent' ? 'rose' : urgency?.level === 'soon' ? 'amber' : 'emerald'}
+              tone={tone}
             />
             <StatCard
               icon={CalendarClock}
-              label="État temporel"
+              label="Ã‰tat temporel"
               value={formatDate(temporal?.nextRevisionDate)}
-              helper={`Dernière révision: ${formatDate(temporal?.lastInterventionDate)}`}
-              tone={urgency?.level === 'urgent' ? 'rose' : urgency?.level === 'soon' ? 'amber' : 'emerald'}
+              helper={`DerniÃ¨re révision: ${formatDate(temporal?.lastInterventionDate)}`}
+              tone={tone}
             />
           </div>
 
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <div>
               <div className="flex items-center justify-between text-sm font-medium text-slate-600">
-                <span>Progression kilométrique</span>
+                <span>Progression kilomÃ©trique</span>
                 <span className="font-bold text-slate-900">{Number(mileage?.progressPercent || 0).toFixed(1)}%</span>
               </div>
-              <ProgressBar value={mileage?.progressPercent} tone={urgency?.level === 'urgent' ? 'rose' : urgency?.level === 'soon' ? 'amber' : 'emerald'} />
+              <ProgressBar value={mileage?.progressPercent} tone={tone} />
             </div>
             <div>
               <div className="flex items-center justify-between text-sm font-medium text-slate-600">
                 <span>Progression temporelle</span>
                 <span className="font-bold text-slate-900">{Number(temporal?.progressPercent || 0).toFixed(1)}%</span>
               </div>
-              <ProgressBar value={temporal?.progressPercent} tone={urgency?.level === 'urgent' ? 'rose' : urgency?.level === 'soon' ? 'amber' : 'emerald'} />
+              <ProgressBar value={temporal?.progressPercent} tone={tone} />
             </div>
           </div>
         </div>
@@ -183,12 +192,12 @@ const AlertCard = ({ vehicle, urgency, mileage, temporal, lastIntervention }) =>
               <p className="mt-1 text-2xl font-black text-slate-950">{formatDate(temporal?.nextRevisionDate)}</p>
             </div>
             <div className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.18em] ${variant.badge}`}>
-              {urgency?.label || 'PLANIFIÉ'}
+              {urgency?.label || 'PLANIFIÃ‰'}
             </div>
           </div>
           <div className="mt-4 space-y-3 rounded-3xl bg-slate-50 p-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-slate-500">Km recommandés</span>
+              <span className="text-slate-500">Km recommandÃ©s</span>
               <span className="font-bold text-slate-900">{formatKm(mileage?.kmRecommended)}</span>
             </div>
             <div className="flex items-center justify-between text-sm">
@@ -201,7 +210,7 @@ const AlertCard = ({ vehicle, urgency, mileage, temporal, lastIntervention }) =>
             </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-slate-600">
-            {urgency?.message || 'Les calculs s’appuient sur la dernière intervention et la progression actuelle du véhicule.'}
+            {urgency?.message || 'Les calculs sâ€™appuient sur la derniÃ¨re intervention et la progression actuelle du véhicule.'}
           </p>
         </div>
       </div>
@@ -210,3 +219,4 @@ const AlertCard = ({ vehicle, urgency, mileage, temporal, lastIntervention }) =>
 };
 
 export default AlertCard;
+

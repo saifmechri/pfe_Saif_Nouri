@@ -1,1 +1,2 @@
-export { default } from "./RecommendationsAssistant";
+﻿export { default } from "./RecommendationsAssistant";
+

@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+﻿import { Navigate } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 
@@ -9,7 +9,7 @@ const RoleBasedRedirect = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirection selon le rôle de l'utilisateur
+  // Redirection selon le rÃ´le de l'utilisateur
   switch (user.role) {
     case "automobiliste":
       return <Navigate to="/automobiliste" replace />;
@@ -25,3 +25,5 @@ const RoleBasedRedirect = () => {
 };
 
 export default RoleBasedRedirect;
+
+

@@ -1,9 +1,9 @@
-// VEHICLE MANAGEMENT CONTROLLER
+﻿// VEHICLE MANAGEMENT CONTROLLER
 // Handles vehicle CRUD and related operations for users.
 
 const { pool } = require("../db");
 
-const ALLOWED_VEHICLE_TYPES = ["Essence", "Diesel", "SUV", "Électrique"];
+const ALLOWED_VEHICLE_TYPES = ["Essence", "Diesel", "SUV", "Ã‰lectrique"];
 
 const validateVehiculePayload = (payload) => {
   const { modele_voiture, matricule_voiture, kilometrage_voiture, type_vehicule } = payload;
@@ -211,3 +211,5 @@ module.exports = {
   updateVehicule,
   deleteVehicule
 };
+
+

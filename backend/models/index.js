@@ -1,4 +1,4 @@
-const userModel = require('./user.model');
+﻿const userModel = require('./user.model');
 const garageModel = require('./garage.model');
 let interventionModel;
 try {
@@ -12,3 +12,5 @@ module.exports = {
   garageModel,
   interventionModel
 };
+
+

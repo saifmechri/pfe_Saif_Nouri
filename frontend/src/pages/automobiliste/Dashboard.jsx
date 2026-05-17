@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import {
   getVehicules,
   createVehicule,
@@ -14,6 +14,7 @@ import { listAppointments, deleteAppointment } from "../../services/appointments
 import { Calendar, Clock, MapPin, Trash2, Plus, ChevronRight } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
+import { formatAppointmentDate, parseAppointmentNotes } from "../../utils/appointmentConstants";
 dayjs.locale("fr");
 
 const AutomobilisteDashboard = () => {
@@ -92,7 +93,7 @@ const AutomobilisteDashboard = () => {
   };
 
   const handleDeleteAppointment = async (id) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
+    if (!window.confirm("ÃŠtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
     try {
       await deleteAppointment(id);
       await fetchAppointments();
@@ -134,6 +135,9 @@ const AutomobilisteDashboard = () => {
   const fetchHistorique = async () => {
     setHistoriqueLoading(true);
     setHistoriqueError("");
+    // Clear previous snapshot to avoid duplicates while reloading
+    setHistoriqueByVehicule([]);
+    setHistoriqueLoaded(false);
 
     try {
       let vehiculesList = vehicules;
@@ -394,11 +398,12 @@ const AutomobilisteDashboard = () => {
   };
 
   const handleDeleteIntervention = async (vehicleId, interventionId) => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette intervention ?")) return;
+    if (!window.confirm("ÃŠtes-vous sûr de vouloir supprimer cette intervention ?")) return;
     
     setInterventionDeletingId(interventionId);
     try {
       await interventionsApi.deleteIntervention(vehicleId, interventionId);
+      window.dispatchEvent(new CustomEvent('maintenance:refresh', { detail: { vehicleId } }));
       setSuccessMessage("Intervention supprimée avec succès");
       setHistoriqueLoaded(false);
       await fetchHistorique();
@@ -411,7 +416,7 @@ const AutomobilisteDashboard = () => {
   };
 
   const handleDelete = async (vehiculeId) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce véhicule ?")) {
+    if (window.confirm("ÃŠtes-vous sûr de vouloir supprimer ce véhicule ?")) {
       setError("");
       setLoading(true);
       try {
@@ -676,7 +681,7 @@ const AutomobilisteDashboard = () => {
                           <div className="flex items-center gap-2">
                             <Calendar className="h-5 w-5 text-slate-600" />
                             <span className="font-bold text-slate-900">
-                              {dayjs(apt.appointment_date).format("dddd D MMMM YYYY")}
+                              {formatAppointmentDate(apt.appointment_date)}
                             </span>
                           </div>
                           <div className="mt-2 flex items-center gap-2 text-sm text-slate-700">
@@ -687,6 +692,15 @@ const AutomobilisteDashboard = () => {
                             <p className="mt-3 text-sm text-slate-700">
                               <strong>Service:</strong> {apt.description}
                             </p>
+                          )}
+                          {parseAppointmentNotes(apt.notes).services.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {parseAppointmentNotes(apt.notes).services.map((service) => (
+                                <span key={service} className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700">
+                                  {service}
+                                </span>
+                              ))}
+                            </div>
                           )}
                           {apt.notes && (
                             <p className="mt-2 text-xs text-slate-600">
@@ -705,10 +719,10 @@ const AutomobilisteDashboard = () => {
                             }`}
                           >
                             {apt.status === "confirmed"
-                              ? "✓ Confirmé"
+                              ? "âœ“ Confirmé"
                               : apt.status === "cancelled"
-                              ? "✕ Annulé"
-                              : "⏳ En attente"}
+                              ? "âœ• Annulé"
+                              : "â³ En attente"}
                           </span>
                           {apt.status === "pending" && (
                             <button
@@ -835,7 +849,7 @@ const AutomobilisteDashboard = () => {
                           onChange={handleInterventionFieldChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded"
                           rows="3"
-                          placeholder="Écrire manuellement, ex: Filtre à huile x1, Huile moteur 5W30 x4L"
+                          placeholder="Ã‰crire manuellement, ex: Filtre Ã  huile x1, Huile moteur 5W30 x4L"
                         />
                       </label>
                     </div>
@@ -916,7 +930,7 @@ const AutomobilisteDashboard = () => {
                                 <p><span className="font-semibold">Date :</span> {intervention.date_intervention || "-"}</p>
                                 <p><span className="font-semibold">Type :</span> {intervention.type || "-"}</p>
                                 <p><span className="font-semibold">Kilométrage :</span> {intervention.kilometrage ?? "-"}</p>
-                                <p><span className="font-semibold">Coût total :</span> {intervention.cout_total ?? "0"} TND</p>
+                                <p><span className="font-semibold">CoÃ»t total :</span> {intervention.cout_total ?? "0"} TND</p>
                               </div>
 
                               {(intervention.garage_nom || intervention.garage_adresse) && (
@@ -964,3 +978,4 @@ const AutomobilisteDashboard = () => {
 };
 
 export default AutomobilisteDashboard;
+

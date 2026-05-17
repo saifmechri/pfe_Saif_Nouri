@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Appointment Validation Utilities
  * Validates appointment data for business logic constraints
  */
@@ -38,12 +38,12 @@ const validateAppointmentDate = (appointmentDate, minAdvanceHours = APPOINTMENT_
   // Check not in past (accounting for timezone)
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (apptDate < today) {
-    return { valid: false, error: 'La date du rendez-vous ne peut pas être dans le passé' };
+    return { valid: false, error: 'La date du rendez-vous ne peut pas être dans le passÃ©' };
   }
 
   // Check minimum advance booking
   if (apptDate.getTime() - now.getTime() < minAdvanceHours * 60 * 60 * 1000) {
-    return { valid: false, error: `Le rendez-vous doit être réservé au moins ${minAdvanceHours} heures à l'avance` };
+    return { valid: false, error: `Le rendez-vous doit être réservé au moins ${minAdvanceHours} heures Ã  l'avance` };
   }
 
   return { valid: true, error: null };
@@ -95,11 +95,11 @@ const validateDescription = (description) => {
 
   const desc = String(description).trim();
   if (desc.length < 5) {
-    return { valid: false, error: 'La description doit contenir au moins 5 caractères' };
+    return { valid: false, error: 'La description doit contenir au moins 5 caractÃ¨res' };
   }
 
   if (desc.length > 500) {
-    return { valid: false, error: 'La description ne doit pas dépasser 500 caractères' };
+    return { valid: false, error: 'La description ne doit pas dÃ©passer 500 caractÃ¨res' };
   }
 
   return { valid: true, error: null };
@@ -118,7 +118,7 @@ const validateStatus = (status) => {
   if (!APPOINTMENT_CONSTANTS.VALID_STATUSES.includes(String(status).toLowerCase())) {
     return { 
       valid: false, 
-      error: `Statut invalide. Valeurs acceptées: ${APPOINTMENT_CONSTANTS.VALID_STATUSES.join(', ')}` 
+      error: `Statut invalide. Valeurs acceptÃ©es: ${APPOINTMENT_CONSTANTS.VALID_STATUSES.join(', ')}` 
     };
   }
 
@@ -210,3 +210,5 @@ module.exports = {
   validateAppointmentCreation,
   validateAppointmentUpdate
 };
+
+

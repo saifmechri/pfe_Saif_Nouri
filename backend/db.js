@@ -1,4 +1,4 @@
-const { Pool } = require('pg');
+﻿const { Pool } = require('pg');
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const DB_USER = process.env.DB_USER || 'postgres';
@@ -17,7 +17,7 @@ const USE_SSL = RAW_DB_SSL
   : Boolean(DATABASE_URL && !isDatabaseUrlLocal);
 const DB_POOL_MAX = Number(process.env.DB_POOL_MAX || 10);
 const DB_POOL_IDLE_TIMEOUT_MS = Number(process.env.DB_POOL_IDLE_TIMEOUT_MS || 10000);
-const DB_POOL_CONNECTION_TIMEOUT_MS = Number(process.env.DB_POOL_CONNECTION_TIMEOUT_MS || 10000);
+const DB_POOL_CONNECTION_TIMEOUT_MS = Number(process.env.DB_POOL_CONNECTION_TIMEOUT_MS || 30000);
 
 const sslConfig = USE_SSL ? { rejectUnauthorized: false } : false;
 
@@ -45,16 +45,17 @@ const pool = DATABASE_URL
     });
 
 const testConnection = async () => {
-  await pool.query('SELECT 1');
+  await runWithRetries(() => pool.query('SELECT 1'), { attempts: 5, delayMs: 500 });
 };
 
 const initDatabase = async () => {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS roles (
-      id INTEGER PRIMARY KEY,
-      name VARCHAR(50) UNIQUE NOT NULL
-    )
-  `);
+  await runWithRetries(async () => {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id INTEGER PRIMARY KEY,
+        name VARCHAR(50) UNIQUE NOT NULL
+      )
+    `);
 
   await pool.query(`
     INSERT INTO roles (id, name)
@@ -242,6 +243,7 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS is_open BOOLEAN DEFAULT true');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+  await pool.query("ALTER TABLE garages ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'en_attente'");
 
   await pool.query('UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL');
   await pool.query('UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');
@@ -253,6 +255,41 @@ const initDatabase = async () => {
   await pool.query('UPDATE pieces SET is_validated = COALESCE(is_validated, false) WHERE is_validated IS NULL');
 
   await pool.query('UPDATE garages SET is_open = COALESCE(is_open, true) WHERE is_open IS NULL');
+  await pool.query("UPDATE garages SET status = CASE WHEN COALESCE(is_validated, false) = true THEN 'actif' ELSE 'en_attente' END WHERE status IS NULL OR status = ''");
+
+  await pool.query(`
+    ALTER TABLE chat_conversations
+      DROP CONSTRAINT IF EXISTS chk_chat_conversation_pair,
+      DROP CONSTRAINT IF EXISTS chk_chat_conversation_type
+  `);
+
+  await pool.query(`
+    ALTER TABLE chat_conversations
+      ADD CONSTRAINT chk_chat_conversation_type
+      CHECK (conversation_type IN ('automobiliste_garage', 'automobiliste_vendeur', 'garage_vendeur'))
+  `);
+
+  await pool.query(`
+    ALTER TABLE chat_conversations
+      ADD CONSTRAINT chk_chat_conversation_pair
+      CHECK (
+        (
+          conversation_type = 'automobiliste_garage'
+          AND garage_id IS NOT NULL
+          AND vendeur_user_id IS NULL
+        )
+        OR (
+          conversation_type = 'automobiliste_vendeur'
+          AND vendeur_user_id IS NOT NULL
+          AND garage_id IS NULL
+        )
+        OR (
+          conversation_type = 'garage_vendeur'
+          AND garage_id IS NOT NULL
+          AND vendeur_user_id IS NOT NULL
+        )
+      )
+  `);
 
   await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
 
@@ -351,11 +388,33 @@ const initDatabase = async () => {
   await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_piece_id ON intervention_pieces (piece_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_intervention_pieces_intervention_id ON intervention_pieces (intervention_id)');
   await pool.query('CREATE INDEX IF NOT EXISTS idx_piece_stock_movements_piece_id ON piece_stock_movements (piece_id, created_at DESC)');
-  await pool.query('CREATE INDEX IF NOT EXISTS idx_piece_stock_movements_user_id ON piece_stock_movements (user_id, created_at DESC)');
-};
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_piece_stock_movements_user_id ON piece_stock_movements (user_id, created_at DESC)');
+    }, { attempts: 4, delayMs: 500 });
+  };
 
+// Helper: run an async executor with retries on transient connection errors
+async function runWithRetries(executor, { attempts = 3, delayMs = 1000 } = {}) {
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await executor();
+    } catch (err) {
+      lastErr = err;
+      const msg = String(err && err.message || '').toLowerCase();
+      const isTransient = msg.includes('connection') || msg.includes('timeout') || msg.includes('terminated') || err.code === 'ECONNRESET';
+      if (!isTransient) {
+        throw err;
+      }
+      // wait before retrying
+      await new Promise((r) => setTimeout(r, delayMs * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
 module.exports = {
   pool,
   testConnection,
   initDatabase
 };
+
+

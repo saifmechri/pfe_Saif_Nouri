@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AUTHENTICATION CONTROLLER
  * Handles user registration, login, and account management
  * Supports 3 roles: automobiliste, garage, admin
@@ -17,7 +17,7 @@ const isValidBcryptHash = (value) => {
 };
 
 /**
- * Crée un nouvel utilisateur avec validation métier minimale et hash du mot de passe.
+ * CrÃ©e un nouvel utilisateur avec validation mÃ©tier minimale et hash du mot de passe.
  */
 // REGISTER
 const register = async (req, res) => {
@@ -39,23 +39,23 @@ const register = async (req, res) => {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
-        message: "Le mot de passe doit contenir au moins 6 caractères",
+        message: "Le mot de passe doit contenir au moins 6 caractÃ¨res",
         error: { code: 'VALIDATION_ERROR' }
       });
     }
 
-    // Vérifier si l'email existe déjà
+    // Vérifier si l'email existe dÃ©jÃ 
     const emailAlreadyUsed = await emailExists(email);
     if (emailAlreadyUsed) {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
-        message: "Cet email existe déjà",
+        message: "Cet email existe dÃ©jÃ ",
         error: { code: 'EMAIL_ALREADY_EXISTS' }
       });
     }
 
-    // Mapper le rôle vers role_id
+    // Mapper le rÃ´le vers role_id
     const roleMap = {
       automobiliste: 1,
       garage: 2,
@@ -68,19 +68,19 @@ const register = async (req, res) => {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
-        message: "Rôle invalide",
+        message: "RÃ´le invalide",
         error: { code: 'INVALID_ROLE' }
       });
     }
 
-    // Combiner nom et prénom
+    // Combiner nom et prÃ©nom
     const fullName = `${prenom} ${nom}`;
 
     // Hasher le mot de passe avec bcrypt
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Insérer le nouvel utilisateur
+    // InsÃ©rer le nouvel utilisateur
     const newUser = await createUser({
       name: fullName,
       email,
@@ -107,7 +107,7 @@ const register = async (req, res) => {
 };
 
 /**
- * Authentifie un utilisateur et retourne un token JWT + profil simplifié.
+ * Authentifie un utilisateur et retourne un token JWT + profil simplifiÃ©.
  */
 // LOGIN
 const login = async (req, res) => {
@@ -126,7 +126,7 @@ const login = async (req, res) => {
 
     console.log('[LOGIN ATTEMPT] Email:', email);
 
-    // Récupérer l'utilisateur ET son rôle
+    // RÃ©cupÃ©rer l'utilisateur ET son rÃ´le
     const user = await findUserByEmail(email);
     
     if (!user) {
@@ -146,7 +146,7 @@ const login = async (req, res) => {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
-        message: "Compte incomplet: mot de passe non défini",
+        message: "Compte incomplet: mot de passe non dÃ©fini",
         error: { code: 'ACCOUNT_INCOMPLETE' }
       });
     }
@@ -166,18 +166,18 @@ const login = async (req, res) => {
       });
     }
 
-    // Vérifier que le compte n'est pas bloqué
+    // Vérifier que le compte n'est pas bloquÃ©
     if (!user.is_validated) {
-      console.log('[LOGIN FAIL] Compte bloqué pour ID:', user.id);
+      console.log('[LOGIN FAIL] Compte bloquÃ© pour ID:', user.id);
       return sendApiResponse(res, {
         statusCode: 403,
         success: false,
-        message: "Ce compte a été bloqué par l'administrateur. Veuillez contacter le support.",
+        message: "Ce compte a Ã©tÃ© bloquÃ© par l'administrateur. Veuillez contacter le support.",
         error: { code: 'ACCOUNT_BLOCKED' }
       });
     }
 
-    // Vérifier l'état du garage si l'utilisateur est garage
+    // Vérifier l'Ã©tat du garage si l'utilisateur est garage
     if (user.role_name === 'garage') {
       const { findGarageIdentityByUserId } = require('../models/garage.model');
       const garage = await findGarageIdentityByUserId(user.id);
@@ -187,18 +187,18 @@ const login = async (req, res) => {
         const garageData = garageDetail.rows[0];
         
         if (garageData && !garageData.is_open) {
-          console.log('[LOGIN FAIL] Garage bloqué pour user ID:', user.id);
+          console.log('[LOGIN FAIL] Garage bloquÃ© pour user ID:', user.id);
           return sendApiResponse(res, {
             statusCode: 403,
             success: false,
-            message: "Votre garage a été bloqué par l'administrateur. Veuillez contacter le support.",
+            message: "Votre garage a Ã©tÃ© bloquÃ© par l'administrateur. Veuillez contacter le support.",
             error: { code: 'GARAGE_BLOCKED' }
           });
         }
       }
     }
 
-    // Générer le token JWT
+    // GÃ©nÃ©rer le token JWT
     const token = jwt.sign(
       { 
         id: user.id,
@@ -255,3 +255,4 @@ const login = async (req, res) => {
 };
 
 module.exports = { register, login };
+

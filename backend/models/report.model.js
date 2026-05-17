@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 // Creates a new report entry submitted by a user.
 const createReport = async ({ reporter_user_id, reported_entity_type, reported_entity_id, reason, details }) => {
@@ -61,3 +61,5 @@ module.exports = {
   updateReportStatus,
   deleteReport
 };
+
+

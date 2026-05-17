@@ -1,4 +1,4 @@
-const path = require("path");
+﻿const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 
@@ -8,7 +8,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configuration du nommage et de la destination des fichiers uploadés.
+// Configuration du nommage et de la destination des fichiers uploadÃ©s.
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
     cb(null, uploadDir);
@@ -38,7 +38,7 @@ const fileFilter = (_req, file, cb) => {
   }
 };
 
-// Middleware prêt à l'emploi pour l'upload photo véhicule.
+// Middleware prÃªt Ã  l'emploi pour l'upload photo véhicule.
 const uploadVehiculePhoto = multer({
   storage,
   fileFilter,
@@ -46,3 +46,5 @@ const uploadVehiculePhoto = multer({
 });
 
 module.exports = { uploadVehiculePhoto };
+
+

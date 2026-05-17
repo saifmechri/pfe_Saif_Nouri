@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import interventionsApi from '../../services/interventions';
 
 const formatDate = (value) => {
-  if (!value) return '—';
+  if (!value) return 'â€”';
   const dt = new Date(value);
   if (Number.isNaN(dt.getTime())) return value;
   return dt.toLocaleDateString('fr-FR');
@@ -56,7 +56,7 @@ const VehicleHistory = () => {
                   <div className="text-sm text-gray-600">{formatDate(it.date_intervention)}</div>
                 </div>
                 <div className="text-right">
-                  <div>{it.garage_nom || '—'}</div>
+                  <div>{it.garage_nom || 'â€”'}</div>
                   <div className="text-sm text-gray-600">{it.kilometrage ? `${it.kilometrage} km` : ''}</div>
                 </div>
               </div>
@@ -74,12 +74,12 @@ const VehicleHistory = () => {
                       </span>
                     ))
                   ) : (
-                    <span className="text-sm text-gray-500">Aucune pièce associée</span>
+                    <span className="text-sm text-gray-500">Aucune pièce associÃ©e</span>
                   )}
                 </div>
               </div>
               <div className="mt-3 flex gap-2 justify-end">
-                <Link to={`/vehicules/${vehicleId}/interventions/${it.id}`} className="text-sm text-blue-600">Gérer les pièces</Link>
+                <Link to={`/vehicules/${vehicleId}/interventions/${it.id}`} className="text-sm text-blue-600">GÃ©rer les pièces</Link>
               </div>
             </div>
           ))}
@@ -90,3 +90,5 @@ const VehicleHistory = () => {
 };
 
 export default VehicleHistory;
+
+

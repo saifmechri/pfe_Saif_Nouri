@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GARAGE MANAGEMENT SYSTEM
  * 
  * Handles garage profiles, services, location tracking, and ratings.
@@ -39,6 +39,7 @@ const mapGarageRow = (row) => ({
   longitude: row.longitude === null ? null : Number(row.longitude),
   rating: row.rating === null ? null : Number(row.rating),
   is_open: row.is_open === null ? true : Boolean(row.is_open),
+  status: row.status || 'en_attente',
   created_at: row.created_at,
   updated_at: row.updated_at
 });
@@ -248,10 +249,13 @@ const createGarage = asyncHandler(async (req, res) => {
     }
   }
 
+  // Determine initial status: admin-created garages become 'actif', others 'en_attente'
+  const initialStatus = (role === 'admin') ? (normalizeOptionalString(req.body?.status) || 'actif') : 'en_attente';
+
   const insertResult = await pool.query(
-    `INSERT INTO garages (user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, COALESCE($17, true), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-     RETURNING id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at`,
+    `INSERT INTO garages (user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, status, is_open, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, COALESCE($18, true), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+     RETURNING id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, status, is_open, created_at, updated_at`,
     [
       ownerUserId,
       garageName,
@@ -271,8 +275,7 @@ const createGarage = asyncHandler(async (req, res) => {
       req.body?.rating === undefined || req.body?.rating === null || req.body?.rating === ''
         ? 3.5
         : parseNullableNumber(req.body?.rating, 'rating'),
-      // is_validated: admins create validated garages by default
-      (role === 'admin' ? true : (req.body?.is_validated === undefined ? false : Boolean(req.body?.is_validated))),
+      initialStatus,
       req.body?.is_open
     ]
   );
@@ -337,8 +340,8 @@ const listGarages = asyncHandler(async (req, res) => {
   if (!includeClosed) {
     whereClauses.push('g.is_open = true');
   }
-  // Only show admin-validated garages in public listings
-  whereClauses.push('COALESCE(g.is_validated, false) = true');
+  // Only show admin-validated (status = 'actif') garages in public listings
+  whereClauses.push("g.status = 'actif'");
 
   if (search) {
     params.push(`%${search}%`);
@@ -791,7 +794,7 @@ const uploadGaragePhotos = asyncHandler(async (req, res) => {
 });
 
 const getFilterOptions = asyncHandler(async (req, res) => {
-  // Récupérer les specialités distinctes depuis store_specialties des utilisateurs garage
+  // RÃ©cupÃ©rer les specialitÃ©s distinctes depuis store_specialties des utilisateurs garage
   const specialtiesResult = await pool.query(`
     SELECT DISTINCT TRIM(specialty) AS specialty
     FROM (
@@ -803,7 +806,7 @@ const getFilterOptions = asyncHandler(async (req, res) => {
     ORDER BY specialty ASC
   `);
 
-  // Récupérer les services distinctes depuis garage_services
+  // RÃ©cupÃ©rer les services distinctes depuis garage_services
   const servicesResult = await pool.query(`
     SELECT DISTINCT LOWER(TRIM(gs.name)) AS service_name
     FROM garage_services gs
@@ -811,7 +814,7 @@ const getFilterOptions = asyncHandler(async (req, res) => {
     ORDER BY service_name ASC
   `);
 
-  // Récupérer les marques distinctes depuis vehicle_brands dans garages
+  // RÃ©cupÃ©rer les marques distinctes depuis vehicle_brands dans garages
   const brandsResult = await pool.query(`
     SELECT DISTINCT TRIM(brand) AS brand
     FROM (
@@ -845,3 +848,5 @@ module.exports = {
   uploadGaragePhotos,
   getFilterOptions
 };
+
+

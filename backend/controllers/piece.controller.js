@@ -1,8 +1,36 @@
-const { asyncHandler } = require('../middlewares/asyncHandler');
+﻿const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
+const { pool } = require('../db');
 const pieceService = require('../services/pieceService');
 const { logger } = require('../utils/logger');
+
+const resolvePieceOwnerId = async (user = {}) => {
+  const parsedUserId = Number.parseInt(user.id, 10);
+  if (Number.isInteger(parsedUserId) && parsedUserId > 0) {
+    return parsedUserId;
+  }
+
+  if (user.role !== 'admin' || !user.email) {
+    return null;
+  }
+
+  const result = await pool.query(
+    `SELECT u.id
+     FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE LOWER(u.email) = LOWER($1)
+       AND LOWER(r.name) = 'admin'
+     LIMIT 1`,
+    [user.email]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return Number.parseInt(result.rows[0].id, 10);
+};
 
 const createPiece = asyncHandler(async (req, res) => {
   logger.info('POST /api/pieces payload received', {
@@ -31,9 +59,11 @@ const createPiece = asyncHandler(async (req, res) => {
       : null
   });
 
+  const ownerId = await resolvePieceOwnerId(req.user || {});
+
   const payload = {
     ...(req.body || {}),
-    user_id: req.user?.id || null,
+    user_id: ownerId,
     is_validated: req.user?.role === 'admin'
   };
 
@@ -60,7 +90,7 @@ const getAllPieces = asyncHandler(async (req, res) => {
   });
 
   return sendApiResponse(res, {
-    message: 'Liste des pieces recuperée avec succes',
+    message: 'Liste des pieces recuperÃ©e avec succes',
     data: pieces
   });
 });
@@ -74,7 +104,7 @@ const getPieceById = asyncHandler(async (req, res) => {
   const piece = await pieceService.getPieceById(pieceId);
 
   return sendApiResponse(res, {
-    message: 'Piece recuperée avec succes',
+    message: 'Piece recuperÃ©e avec succes',
     data: piece
   });
 });
@@ -189,3 +219,4 @@ module.exports = {
   comparePiecesAcrossVendors,
   getPieceSellerLocations
 };
+

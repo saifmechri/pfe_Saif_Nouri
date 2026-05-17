@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const DEFAULT_KM_RECOMMENDED = 5000;
 const DEFAULT_DAYS_RECOMMENDED = 180;
@@ -32,7 +32,7 @@ const calculateNextRevisionForVehicle = async (vehicleId) => {
     ? Number(latestIntervention.jours_recommandes)
     : DEFAULT_DAYS_RECOMMENDED;
 
-  // Récupère le véhicule pour accéder au km courant
+  // RÃ©cupÃ¨re le véhicule pour accÃ©der au km courant
   const vehicleResult = await pool.query(
     `SELECT kilometrage_voiture FROM vehicules WHERE id = $1`,
     [vehicleId]
@@ -44,13 +44,13 @@ const calculateNextRevisionForVehicle = async (vehicleId) => {
   
   const currentKm = vehicleResult.rows[0].kilometrage_voiture || 0;
 
-  // Calcule la prochaine révision basée sur les km
+  // Calcule la prochaine révision basÃ©e sur les km
   let nextRevisionKm = null;
   if (Number.isFinite(Number(latestIntervention.kilometrage))) {
     nextRevisionKm = Number(latestIntervention.kilometrage) + kmRecommended;
   }
 
-  // Calcule la prochaine révision basée sur les jours
+  // Calcule la prochaine révision basÃ©e sur les jours
   let nextRevisionDate = null;
   if (daysRecommended > 0) {
     const lastDate = new Date(latestIntervention.date_intervention);
@@ -95,3 +95,5 @@ const calculateNextRevisionForVehicle = async (vehicleId) => {
 module.exports = {
   calculateNextRevisionForVehicle
 };
+
+

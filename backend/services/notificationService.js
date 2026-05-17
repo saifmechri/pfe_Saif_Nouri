@@ -1,4 +1,4 @@
-const notificationModel = require('../models/notification.model');
+﻿const notificationModel = require('../models/notification.model');
 
 const createForUser = async (payload) => {
   return notificationModel.createNotification(payload);
@@ -27,3 +27,5 @@ module.exports = {
   markAllRead,
   remove
 };
+
+

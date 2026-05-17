@@ -1,4 +1,4 @@
-const ReportModel = require('../models/report.model');
+﻿const ReportModel = require('../models/report.model');
 
 // Creates a new report submitted by a user (automobiliste, garage, vendeur).
 const createReport = async (req, res) => {
@@ -110,3 +110,5 @@ module.exports = {
   resolveReport,
   dismissReport
 };
+
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PlatformLayout from '../../components/PlatformLayout';
 import {
@@ -128,9 +128,9 @@ const AlertsPage = () => {
                   Urgence: {urgency?.label}
                 </h2>
                 <p className="text-gray-700 mt-2">
-                  {urgency?.level === 'urgent' && 'Révision urgente. Une maintenance immédiate est recommandée.'}
-                  {urgency?.level === 'bientot' && 'Révision bientôt nécessaire. Planifiez une visite prochainement.'}
-                  {urgency?.level === 'aucun' && 'Aucune révision urgente. Votre véhicule est à jour.'}
+                  {urgency?.level === 'urgent' && 'Révision urgente. Une maintenance immÃ©diate est recommandÃ©e.'}
+                  {urgency?.level === 'bientot' && 'Révision bientÃ´t nÃ©cessaire. Planifiez une visite prochainement.'}
+                  {urgency?.level === 'aucun' && 'Aucune révision urgente. Votre véhicule est Ã  jour.'}
                 </p>
               </div>
             </div>
@@ -142,7 +142,7 @@ const AlertsPage = () => {
             <div className="bg-white bg-opacity-70 p-4 rounded-lg">
               <div className="flex items-center space-x-2 mb-3">
                 <Gauge className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-gray-900">État Kilométrique</h3>
+                <h3 className="font-semibold text-gray-900">Ã‰tat KilomÃ©trique</h3>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -177,11 +177,11 @@ const AlertsPage = () => {
             <div className="bg-white bg-opacity-70 p-4 rounded-lg">
               <div className="flex items-center space-x-2 mb-3">
                 <Calendar className="w-5 h-5 text-green-600" />
-                <h3 className="font-semibold text-gray-900">État Temporel</h3>
+                <h3 className="font-semibold text-gray-900">Ã‰tat Temporel</h3>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Dernière révision</span>
+                  <span className="text-gray-600">DerniÃ¨re révision</span>
                   <span className="font-semibold text-gray-900">{formatDate(revision.lastInterventionDate)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -212,7 +212,7 @@ const AlertsPage = () => {
           {/* Type d'intervention */}
           <div className="mt-4 p-3 bg-white bg-opacity-70 rounded-lg">
             <p className="text-sm text-gray-600">
-              Dernière intervention: <span className="font-semibold text-gray-900">{revision.lastInterventionType}</span>
+              DerniÃ¨re intervention: <span className="font-semibold text-gray-900">{revision.lastInterventionType}</span>
             </p>
           </div>
         </div>
@@ -240,3 +240,5 @@ const AlertsPage = () => {
 };
 
 export default AlertsPage;
+
+

@@ -1,4 +1,4 @@
-import API from "./api";
+﻿import API from "./api";
 
 // Cette section regroupe le CRUD du profil garage.
 export const listGarages = (params = {}) => {
@@ -36,7 +36,7 @@ export const deleteGarage = (garageId) => {
   return API.delete(`/garages/${garageId}`);
 };
 
-// Cette section gère les services proposés par un garage.
+// Cette section gÃ¨re les services proposés par un garage.
 export const getServicesByGarage = (garageId, params = {}) => {
   return API.get(`/garages/${garageId}/services`, { params });
 };
@@ -79,7 +79,9 @@ export const deleteGarageReview = (garageId, reviewId) => {
 };
 
 
-// Cette section g�re les options de filtres disponibles
+// Cette section gère les options de filtres disponibles
 export const getFilterOptions = () => {
   return API.get('/garages/filter-options');
 };
+
+

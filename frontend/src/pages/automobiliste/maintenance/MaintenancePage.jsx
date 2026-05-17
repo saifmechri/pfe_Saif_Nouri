@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -82,6 +82,15 @@ const MaintenancePage = () => {
 
   useEffect(() => {
     let isMounted = true;
+    const onRefresh = (ev) => {
+      if (!isMounted) return;
+      const vid = Number(ev?.detail?.vehicleId);
+      if (Number.isInteger(vid) && vid === parsedVehicleId) {
+        loadData();
+      }
+    };
+
+    window.addEventListener('maintenance:refresh', onRefresh);
 
     const loadData = async () => {
       try {
@@ -106,7 +115,7 @@ const MaintenancePage = () => {
             dayjs().format('YYYY-MM-DD');
           setSelectedDate(nextSelected);
         } else {
-          setError(dashboardResult.reason?.response?.data?.message || dashboardResult.reason?.message || 'Erreur lors du chargement des données de maintenance');
+          setError(dashboardResult.reason?.response?.data?.message || dashboardResult.reason?.message || 'Erreur lors du chargement des donnÃ©es de maintenance');
         }
 
         if (recommendationResult.status === 'fulfilled') {
@@ -129,6 +138,7 @@ const MaintenancePage = () => {
 
     return () => {
       isMounted = false;
+      window.removeEventListener('maintenance:refresh', onRefresh);
     };
   }, [parsedVehicleId]);
 
@@ -180,18 +190,18 @@ const MaintenancePage = () => {
               Auto Bot - Alertes & Maintenance
             </p>
             <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
-              Suivi intelligent de l’entretien automobile
+              Suivi intelligent de lâ€™entretien automobile
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              Vue consolidée des alertes urgentes, de l’état kilométrique, du planning des entretiens et des garages recommandés selon la situation réelle du véhicule.
+              Vue consolidÃ©e des alertes urgentes, de lâ€™Ã©tat kilomÃ©trique, du planning des entretiens et des garages recommandÃ©s selon la situation rÃ©elle du véhicule.
             </p>
           </div>
 
           <div className="rounded-[28px] border border-slate-200 bg-white/80 px-5 py-4 shadow-sm backdrop-blur">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Véhicule actif</p>
             <p className="mt-1 text-xl font-black text-slate-950">{dashboard?.vehicle?.modele_voiture || 'Véhicule sélectionné'}</p>
-            <p className="mt-1 text-sm font-medium text-slate-600">{dashboard?.vehicle?.matricule_voiture || 'Matricule non renseigné'}</p>
-            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Dernière révision {formatDate(dashboard?.lastIntervention?.date)}</p>
+            <p className="mt-1 text-sm font-medium text-slate-600">{dashboard?.vehicle?.matricule_voiture || 'Matricule non renseignÃ©'}</p>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">DerniÃ¨re révision {formatDate(dashboard?.lastIntervention?.date)}</p>
           </div>
         </div>
 
@@ -227,3 +237,4 @@ const MaintenancePage = () => {
 };
 
 export default MaintenancePage;
+

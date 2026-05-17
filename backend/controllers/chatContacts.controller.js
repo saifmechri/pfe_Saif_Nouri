@@ -1,4 +1,4 @@
-const { asyncHandler } = require('../middlewares/asyncHandler');
+﻿const { asyncHandler } = require('../middlewares/asyncHandler');
 const {
   searchGarageContacts,
   searchVendeurContacts,
@@ -64,18 +64,33 @@ const listChatContacts = asyncHandler(async (req, res) => {
     });
   }
 
-  const automobilistes = await searchAutomobilisteContacts({ query: q, limit });
+  const itemsSource = role === 'garage'
+    ? await searchVendeurContacts({ query: q, limit })
+    : await searchAutomobilisteContacts({ query: q, limit });
 
-  const items = automobilistes
+  const items = itemsSource
     .filter((item) => Number(item.id) !== currentUserId)
-    .map((item) => ({
-      id: Number(item.id),
-      role: 'automobiliste',
-      label: item.name,
-      subtitle: item.email || item.phone || '',
-      conversationType: role === 'garage' ? 'automobiliste_garage' : 'automobiliste_vendeur',
-      startPayload: { automobilisteId: Number(item.id) }
-    }));
+    .map((item) => {
+      if (role === 'garage') {
+        return {
+          id: Number(item.id),
+          role: 'vendeur',
+          label: item.store_name || item.name,
+          subtitle: item.email || item.store_address || '',
+          conversationType: 'garage_vendeur',
+          startPayload: { vendeurId: Number(item.id) }
+        };
+      }
+
+      return {
+        id: Number(item.id),
+        role: 'automobiliste',
+        label: item.name,
+        subtitle: item.email || item.phone || '',
+        conversationType: 'automobiliste_vendeur',
+        startPayload: { automobilisteId: Number(item.id) }
+      };
+    });
 
   return res.json({
     success: true,
@@ -89,3 +104,5 @@ const listChatContacts = asyncHandler(async (req, res) => {
 module.exports = {
   listChatContacts
 };
+
+

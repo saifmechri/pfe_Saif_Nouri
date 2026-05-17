@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const { pool } = require("../db");
 const { sendApiResponse } = require("../utils/apiResponse");
@@ -12,10 +12,10 @@ const { isAdmin, isProfessional, isGarage, isVendeur, isAutomobiliste, isVendeur
 router.post("/register", register);
 router.post("/login", login);
 
-// Route protégée - nécessite un token JWT valide
+// Route protÃ©gÃ©e - nÃ©cessite un token JWT valide
 router.get("/profile", verifyToken, (req, res) => {
   return sendApiResponse(res, {
-    message: 'Profil récupéré avec succès',
+    message: 'Profil rÃ©cupÃ©rÃ© avec succès',
     data: { user: req.user },
     extra: { ...req.user, user: req.user }
   });
@@ -35,7 +35,7 @@ router.delete("/profile", verifyToken, deleteProfile);
 router.put("/profile/password", verifyToken, changePassword);
 
 // ============================================
-// EXEMPLES DE ROUTES PROTÉGÉES PAR RÔLE
+// EXEMPLES DE ROUTES PROTÃ‰GÃ‰ES PAR RÃ”LE
 // ============================================
 
 // Route accessible SEULEMENT aux admins
@@ -48,7 +48,7 @@ router.get("/admin/users", verifyToken, isAdmin, async (req, res) => {
        ORDER BY u.created_at DESC`
     );
     return sendApiResponse(res, {
-      message: 'Utilisateurs récupérés avec succès',
+      message: 'Utilisateurs rÃ©cupÃ©rÃ©s avec succès',
       data: { users: users.rows },
       extra: { users: users.rows }
     });
@@ -146,7 +146,7 @@ router.get("/vendeur/mes-annonces", verifyToken, isVendeurOrAdmin, (req, res) =>
   });
 });
 
-// Route accessible à tous les utilisateurs authentifiés (sans restriction de rôle)
+// Route accessible Ã  tous les utilisateurs authentifiÃ©s (sans restriction de rÃ´le)
 router.get("/profile-complet", verifyToken, async (req, res) => {
   try {
     const result = await pool.query(
@@ -157,7 +157,7 @@ router.get("/profile-complet", verifyToken, async (req, res) => {
       [req.user.id]
     );
     return sendApiResponse(res, {
-      message: 'Profil complet récupéré avec succès',
+      message: 'Profil complet rÃ©cupÃ©rÃ© avec succès',
       data: { user: result.rows[0] },
       extra: { user: result.rows[0] }
     });
@@ -202,7 +202,7 @@ router.get("/profile-complet/:id", verifyToken, async (req, res) => {
     }
 
     return sendApiResponse(res, {
-      message: 'Profil vendeur récupéré avec succès',
+      message: 'Profil vendeur rÃ©cupÃ©rÃ© avec succès',
       data: { user: result.rows[0] },
       extra: { user: result.rows[0] }
     });
@@ -218,3 +218,4 @@ router.get("/profile-complet/:id", verifyToken, async (req, res) => {
 });
 
 module.exports = router;
+

@@ -1,10 +1,10 @@
-import React from "react";
+﻿import React from "react";
 import { MapPin } from "lucide-react";
 import { formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
 /**
  * Composant de badge de distance professionnel
- * @param {number} distance - Distance en kilomètres
+ * @param {number} distance - Distance en kilomÃ¨tres
  * @param {boolean} showLabel - Afficher le label descriptif
  */
 export const DistanceBadge = ({ distance, showLabel = true }) => {
@@ -25,8 +25,8 @@ export const DistanceBadge = ({ distance, showLabel = true }) => {
 };
 
 /**
- * Composant de carte de distance détaillée
- * @param {number} distance - Distance en kilomètres
+ * Composant de carte de distance dÃ©taillÃ©e
+ * @param {number} distance - Distance en kilomÃ¨tres
  */
 export const DistanceCard = ({ distance }) => {
   if (distance === null || distance === undefined) {
@@ -55,3 +55,5 @@ export const DistanceCard = ({ distance }) => {
 };
 
 export default DistanceBadge;
+
+

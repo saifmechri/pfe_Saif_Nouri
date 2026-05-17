@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 /**
  * Log an audit action to the database.
@@ -23,3 +23,5 @@ async function logAction({ adminEmail, action, entity = null, entityId = null, d
 }
 
 module.exports = { logAction };
+
+

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const { check, param, body } = require('express-validator');
 const router = express.Router({ mergeParams: true });
 const { verifyToken } = require('../middlewares/authMiddleware');
@@ -73,3 +73,5 @@ router.patch('/:id', updateInterventionValidation, verifyToken, interventionCont
 router.delete('/:id', interventionIdParam, validateRequest, verifyToken, interventionController.deleteIntervention);
 
 module.exports = router;
+
+

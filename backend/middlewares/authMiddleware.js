@@ -1,4 +1,4 @@
-const jwt = require("jsonwebtoken");
+﻿const jwt = require("jsonwebtoken");
 const { findUserForAuthById } = require("../models/user.model");
 
 const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
@@ -21,7 +21,7 @@ const fetchUserForToken = async (userId) => {
         throw error;
       }
 
-      // Petit retry pour les coupures réseau transitoires (Supabase/PG over TLS).
+      // Petit retry pour les coupures rÃ©seau transitoires (Supabase/PG over TLS).
       await wait(150);
     }
   }
@@ -30,8 +30,8 @@ const fetchUserForToken = async (userId) => {
 };
 
 /**
- * Vérifie le JWT, charge l'utilisateur courant et attache req.user.
- * Bloque la requête avec 401 si le token est absent, expiré ou invalide.
+ * VÃ©rifie le JWT, charge l'utilisateur courant et attache req.user.
+ * Bloque la requÃªte avec 401 si le token est absent, expirÃ© ou invalide.
  */
 const verifyToken = async (req, res, next) => {
   try {
@@ -128,3 +128,5 @@ const verifyToken = async (req, res, next) => {
 };
 
 module.exports = { verifyToken };
+
+

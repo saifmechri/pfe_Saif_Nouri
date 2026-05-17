@@ -1,4 +1,4 @@
-const { asyncHandler } = require('../middlewares/asyncHandler');
+﻿const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
 const garageMatchingService = require('../services/garageMatchingService');
@@ -34,7 +34,7 @@ const matchGarages = asyncHandler(async (req, res) => {
   const matchedGarages = await garageMatchingService.matchGarages(vehicleId, maxDistance);
 
   return sendApiResponse(res, {
-    message: `${matchedGarages.length} garages trouves et classés`,
+    message: `${matchedGarages.length} garages trouves et classÃ©s`,
     data: matchedGarages
   });
 });
@@ -42,3 +42,5 @@ const matchGarages = asyncHandler(async (req, res) => {
 module.exports = {
   matchGarages
 };
+
+

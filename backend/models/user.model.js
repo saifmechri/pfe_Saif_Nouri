@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const createUser = async ({ name, email, password, phone, roleId }) => {
   const result = await pool.query(
@@ -60,3 +60,5 @@ module.exports = {
   findUserForAuthById,
   hasRole
 };
+
+

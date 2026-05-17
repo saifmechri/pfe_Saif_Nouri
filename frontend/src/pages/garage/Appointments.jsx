@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+﻿import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -110,8 +110,8 @@ const GarageAppointments = () => {
       // Show notification
       setNotification({
         type: "appointment",
-        title: status === "confirmed" ? "✓ Rendez-vous confirmé" : "✕ Rendez-vous annulé",
-        body: `La demande de ${apt?.automobiliste_name || "l'automobiliste"} a été ${status === "confirmed" ? "confirmée" : "annulée"}.`
+        title: status === "confirmed" ? "âœ“ Rendez-vous confirmé" : "âœ• Rendez-vous annulé",
+        body: `La demande de ${apt?.automobiliste_name || "l'automobiliste"} a Ã©tÃ© ${status === "confirmed" ? "confirmée" : "annulée"}.`
       });
       setSelectedAppointment(apt);
 
@@ -127,19 +127,19 @@ const GarageAppointments = () => {
       if (decision === "propose" && proposalData) {
         setNotification({
           type: "appointment",
-          title: "📅 Proposition de date envoyée",
-          body: `Une alternative pour ${proposalData.proposalDate} à ${proposalData.proposalTime} a été proposée à l'automobiliste.`
+          title: "ðŸ“… Proposition de date envoyÃ©e",
+          body: `Une alternative pour ${proposalData.proposalDate} Ã  ${proposalData.proposalTime} a Ã©tÃ© proposée Ã  l'automobiliste.`
         });
       } else if (decision === "accept") {
         setNotification({
           type: "appointment",
-          title: "✓ Rendez-vous confirmé",
-          body: `Confirmé pour ${apt?.appointment_date} à ${apt?.appointment_time || 'sans heure spécifiée'}`
+          title: "âœ“ Rendez-vous confirmé",
+          body: `Confirmé pour ${apt?.appointment_date} Ã  ${apt?.appointment_time || 'sans heure spÃ©cifiÃ©e'}`
         });
       } else if (decision === "reject") {
         setNotification({
           type: "appointment",
-          title: "✕ Rendez-vous refusé",
+          title: "âœ• Rendez-vous refusé",
           body: `Refusé pour ${apt?.appointment_date}`
         });
       }
@@ -284,14 +284,14 @@ const GarageAppointments = () => {
               {/* Calendar View */}
               <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
                 <AppointmentCalendar
-                  title="Demandes reçues"
+                  title="Demandes reÃ§ues"
                   items={appointments}
                   selectedDate={selectedDate}
                   onSelectDate={setSelectedDate}
                   getItemDate={(item) => normalizeAppointmentDate(item)}
                   getItemStatus={(item) => item.status}
                   getItemLabel={(item) =>
-                    `${item.appointment_time ? `${item.appointment_time} · ` : ""}${item.description || "Demande"}`
+                    `${item.appointment_time ? `${item.appointment_time} Â· ` : ""}${item.description || "Demande"}`
                   }
                 />
 
@@ -299,7 +299,7 @@ const GarageAppointments = () => {
                   <div className="flex items-center justify-between gap-3 mb-4">
                     <div>
                       <h2 className="text-xl font-black text-slate-900">Demandes du jour</h2>
-                      <p className="text-sm text-slate-600">Filtrées sur la date sélectionnée.</p>
+                      <p className="text-sm text-slate-600">FiltrÃ©es sur la date sélectionnée.</p>
                     </div>
                     <div className="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold text-slate-700">
                       {filteredAppointments.length}
@@ -330,7 +330,7 @@ const GarageAppointments = () => {
                           <div className="flex-1">
                             <div className="font-bold text-slate-900">
                               {formatAppointmentDate(a.appointment_date)}
-                              {a.appointment_time && ` à ${a.appointment_time}`}
+                              {a.appointment_time && ` Ã  ${a.appointment_time}`}
                             </div>
                             <div className="mt-1 text-sm font-medium text-slate-700">
                               {a.automobiliste_name || `Automobiliste #${a.automobiliste_user_id}`}
@@ -349,10 +349,10 @@ const GarageAppointments = () => {
                             }`}
                           >
                             {a.status === "confirmed"
-                              ? "✓ Confirmé"
+                              ? "âœ“ Confirmé"
                               : a.status === "cancelled"
-                              ? "✕ Annulé"
-                              : "⏳ Attente"}
+                              ? "âœ• Annulé"
+                              : "â³ Attente"}
                           </span>
                         </div>
 
@@ -362,13 +362,13 @@ const GarageAppointments = () => {
                               onClick={() => handleDecision(a.id, "accept")}
                               className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
                             >
-                              ✓ Valider
+                              âœ“ Valider
                             </button>
                             <button
                               onClick={() => handleDecision(a.id, "reject")}
                               className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
                             >
-                              ✕ Refuser
+                              âœ• Refuser
                             </button>
                           </div>
                         )}
@@ -396,3 +396,5 @@ const GarageAppointments = () => {
 };
 
 export default GarageAppointments;
+
+

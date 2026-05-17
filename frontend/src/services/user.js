@@ -1,4 +1,4 @@
-/**
+﻿/**
  * USER / AUTHENTICATION SERVICE
  *
  * Handles profile retrieval and account actions for authenticated users.
@@ -44,3 +44,4 @@ export const changePassword = (passwords) => {
 export const deleteAccount = (confirmPassword) => {
   return API.delete('/auth/profile', { data: { confirmPassword } });
 };
+

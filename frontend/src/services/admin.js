@@ -1,4 +1,4 @@
-import API from './api';
+﻿import API from './api';
 
 // Admin login
 export const adminLogin = (email, password) => {
@@ -122,3 +122,5 @@ export const approvePiece = (pieceId) => {
 export const rejectPiece = (pieceId) => {
   return API.post(`/admin/pieces/${pieceId}/reject`);
 };
+
+

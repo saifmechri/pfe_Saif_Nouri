@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 
 const resolvedApiBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
 
@@ -19,7 +19,7 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor pour gérer automatiquement les sessions expirées.
+// Interceptor pour gÃ©rer automatiquement les sessions expirÃ©es.
 API.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -29,7 +29,7 @@ API.interceptors.response.use(
 
     const isAuthError =
       status === 401 &&
-      (code === "TOKEN_EXPIRED" || code === "TOKEN_INVALID" || message === "Token expiré" || message === "Token invalide");
+      (code === "TOKEN_EXPIRED" || code === "TOKEN_INVALID" || message === "Token expirÃ©" || message === "Token invalide");
 
     if (isAuthError) {
       localStorage.removeItem("token");
@@ -43,3 +43,4 @@ API.interceptors.response.use(
 );
 
 export default API;
+

@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 const { sendApiResponse } = require('../utils/apiResponse');
 
 const parseWorkHours = (workHours) => {
@@ -94,3 +94,5 @@ const getAvailability = async (req, res) => {
 module.exports = {
   getAvailability
 };
+
+

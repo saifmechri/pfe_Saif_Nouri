@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import { Calendar, Clock, Plus, ChevronRight, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
@@ -24,7 +24,7 @@ const AutomobilisteDashboardAppointments = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Êtes-vous sûr ?")) return;
+    if (!window.confirm("ÃŠtes-vous sûr ?")) return;
     try {
       await deleteAppointment(id);
       await fetchAppointments();
@@ -83,7 +83,7 @@ const AutomobilisteDashboardAppointments = () => {
             </p>
           </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-            <p className="text-xs font-bold text-emerald-700">CONFIRMÉS</p>
+            <p className="text-xs font-bold text-emerald-700">CONFIRMÃ‰S</p>
             <p className="mt-1 text-3xl font-black text-emerald-900">
               {appointments.filter((a) => a.status === "confirmed").length}
             </p>
@@ -101,7 +101,7 @@ const AutomobilisteDashboardAppointments = () => {
       {upcomingAppointments.length > 0 && (
         <div className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
           <h3 className="text-lg font-black text-slate-900 mb-4">
-            📅 À venir ({upcomingAppointments.length})
+            ðŸ“… À venir ({upcomingAppointments.length})
           </h3>
           <div className="space-y-3">
             {upcomingAppointments.map((apt) => (
@@ -127,8 +127,8 @@ const AutomobilisteDashboardAppointments = () => {
                         }`}
                       >
                         {apt.status === "confirmed"
-                          ? "✓ Confirmé"
-                          : "⏳ En attente"}
+                          ? "âœ“ Confirmé"
+                          : "â³ En attente"}
                       </span>
                     </div>
                     <div className="mt-2 flex flex-col gap-1 text-sm text-slate-700">
@@ -159,7 +159,7 @@ const AutomobilisteDashboardAppointments = () => {
       {/* All Appointments */}
       <div className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
         <h3 className="text-lg font-black text-slate-900 mb-4">
-          📋 Tous mes rendez-vous ({appointments.length})
+          ðŸ“‹ Tous mes rendez-vous ({appointments.length})
         </h3>
 
         {loading ? (
@@ -206,10 +206,10 @@ const AutomobilisteDashboardAppointments = () => {
                       }`}
                     >
                       {apt.status === "confirmed"
-                        ? "✓ Confirmé"
+                        ? "âœ“ Confirmé"
                         : apt.status === "cancelled"
-                        ? "✕ Annulé"
-                        : "⏳ En attente"}
+                        ? "âœ• Annulé"
+                        : "â³ En attente"}
                     </span>
                   </div>
                   <div className="mt-2 flex flex-col gap-1 text-sm text-slate-700">
@@ -252,13 +252,13 @@ const AutomobilisteDashboardAppointments = () => {
             onClick={() => fetchAppointments()}
             className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
           >
-            🔄 Actualiser
+            ðŸ”„ Actualiser
           </button>
           <button
             onClick={() => window.open("/automobiliste/appointments", "_blank")}
             className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
-            Gérer mes rendez-vous
+            GÃ©rer mes rendez-vous
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -268,3 +268,5 @@ const AutomobilisteDashboardAppointments = () => {
 };
 
 export default AutomobilisteDashboardAppointments;
+
+

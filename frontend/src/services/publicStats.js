@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PUBLIC STATS SERVICE
  * 
  * Service for fetching public platform statistics.
@@ -32,3 +32,5 @@ import API from './api';
 export const getPublicStats = () => {
   return API.get('/public/stats');
 };
+
+

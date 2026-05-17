@@ -1,3 +1,8 @@
+﻿// =====================================
+// REACT COMPONENT: CataloguePieces.jsx
+// FOLDER: vendeur
+// =====================================
+
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin, Navigation2, Package, TrendingDown } from "lucide-react";
@@ -41,7 +46,7 @@ const zoneFilters = [
 ];
 
 const marques = [
-  "Audi", "BMW", "BYD", "Changan", "Chery", "Chevrolet", "Citroën", "Cupra",
+  "Audi", "BMW", "BYD", "Changan", "Chery", "Chevrolet", "CitroÃ«n", "Cupra",
   "Daewoo", "Dacia", "DFM", "FAW", "Fiat", "Ford", "Foton", "Geely", "Great Wall",
   "Haval", "Honda", "Hyundai", "Isuzu", "JAC", "Jeep", "Kia", "Lada", "Land Rover",
   "MG", "Mitsubishi", "Nissan", "Peugeot", "Renault", "Rolls-Royce", "Seat", "Skoda",
@@ -55,7 +60,7 @@ const modelsByMarque = {
   "Changan": ["Alsvin", "CS15", "CS35", "CS55", "CS75", "Eado", "Hunter", "UNI-T"],
   "Chery": ["Arrizo 5", "Arrizo 8", "Tiggo 2", "Tiggo 3", "Tiggo 4", "Tiggo 7", "Tiggo 8"],
   "Chevrolet": ["Aveo", "Camaro", "Captiva", "Cruze", "Malibu", "Spark", "Tahoe", "Trailblazer"],
-  "Citroën": ["C1", "C3", "C4", "C5", "C-Elysee", "Berlingo", "Jumpy", "Jumper"],
+  "CitroÃ«n": ["C1", "C3", "C4", "C5", "C-Elysee", "Berlingo", "Jumpy", "Jumper"],
   "Cupra": ["Ateca", "Born", "Formentor", "Leon", "Tavascan", "Terramar"],
   "Daewoo": ["Cielo", "Espero", "Kalos", "Lanos", "Leganza", "Matiz", "Nubira"],
   "Dacia": ["Duster", "Jogger", "Lodgy", "Logan", "Sandero", "Spring"],
@@ -95,16 +100,16 @@ const modelsByMarque = {
 
 const categories = [
   "Moteur",
-  "Échappement",
+  "Ã‰chappement",
   "Intérieur",
   "Refroidissement et Climatisation",
   "Freinage",
-  "Train Avant-Arrière",
+  "Train Avant-ArriÃ¨re",
   "Roue",
   "Carrosserie latérale gauche",
   "Pièces latérale droite",
   "Toit voiture",
-  "Carrosserie Arrière",
+  "Carrosserie ArriÃ¨re",
   "Pièces Face Avant",
   "Accessoires",
   "Huiles et Fluides",
@@ -114,13 +119,14 @@ const categories = [
 const chatRouteByRole = {
   automobiliste: "/automobiliste/messages",
   garage: "/garage/messages",
-  vendeur: "/vendeur/messages"
+  vendeur: "/vendeur/messages",
+  admin: "/vendeur/messages"
 };
 
 const marqueStyleByName = {
   Audi: "from-slate-100 to-white",
   BMW: "from-sky-100 to-white",
-  Citroën: "from-red-100 to-white",
+  CitroÃn: "from-red-100 to-white",
   Ford: "from-blue-100 to-white",
   Hyundai: "from-indigo-100 to-white",
   Peugeot: "from-zinc-100 to-white",
@@ -130,21 +136,21 @@ const marqueStyleByName = {
 };
 
 const categoryVisual = {
-  Moteur: { icon: "⚙", color: "from-zinc-100 to-white" },
-  "Échappement": { icon: "🛠", color: "from-slate-100 to-white" },
-  "Intérieur": { icon: "🪑", color: "from-stone-100 to-white" },
-  "Refroidissement et Climatisation": { icon: "❄", color: "from-cyan-100 to-white" },
-  Freinage: { icon: "🛑", color: "from-rose-100 to-white" },
-  "Train Avant-Arrière": { icon: "🧩", color: "from-violet-100 to-white" },
-  Roue: { icon: "⭕", color: "from-slate-100 to-white" },
-  "Carrosserie latérale gauche": { icon: "🚘", color: "from-indigo-100 to-white" },
-  "Pièces latérale droite": { icon: "🚗", color: "from-blue-100 to-white" },
-  "Toit voiture": { icon: "⬒", color: "from-zinc-100 to-white" },
-  "Carrosserie Arrière": { icon: "🔧", color: "from-gray-100 to-white" },
-  "Pièces Face Avant": { icon: "🚙", color: "from-emerald-100 to-white" },
-  Accessoires: { icon: "🧰", color: "from-amber-100 to-white" },
-  "Huiles et Fluides": { icon: "🧴", color: "from-yellow-100 to-white" },
-  Batterie: { icon: "🔋", color: "from-lime-100 to-white" }
+  Moteur: { icon: "âš™", color: "from-zinc-100 to-white" },
+  "Ã‰chappement": { icon: "ðŸ› ", color: "from-slate-100 to-white" },
+  "Intérieur": { icon: "ðŸª‘", color: "from-stone-100 to-white" },
+  "Refroidissement et Climatisation": { icon: "â„", color: "from-cyan-100 to-white" },
+  Freinage: { icon: "ðŸ›‘", color: "from-rose-100 to-white" },
+  "Train Avant-ArriÃ¨re": { icon: "ðŸ§©", color: "from-violet-100 to-white" },
+  Roue: { icon: "â­•", color: "from-slate-100 to-white" },
+  "Carrosserie latérale gauche": { icon: "ðŸš˜", color: "from-indigo-100 to-white" },
+  "Pièces latérale droite": { icon: "ðŸš—", color: "from-blue-100 to-white" },
+  "Toit voiture": { icon: "â¬’", color: "from-zinc-100 to-white" },
+  "Carrosserie ArriÃ¨re": { icon: "ðŸ”§", color: "from-gray-100 to-white" },
+  "Pièces Face Avant": { icon: "ðŸš™", color: "from-emerald-100 to-white" },
+  Accessoires: { icon: "ðŸ§°", color: "from-amber-100 to-white" },
+  "Huiles et Fluides": { icon: "ðŸ§´", color: "from-yellow-100 to-white" },
+  Batterie: { icon: "ðŸ”‹", color: "from-lime-100 to-white" }
 };
 
 const getMarqueInitials = (marque) =>
@@ -171,7 +177,7 @@ const brandLogoDomains = {
   Changan: "changan.com",
   Chery: "cheryinternational.com",
   Chevrolet: "chevrolet.com",
-  "Citroën": "citroen.com",
+  "CitroÃ«n": "citroen.com",
   Cupra: "cupraofficial.com",
   Daewoo: "daewoo.com",
   Dacia: "dacia.com",
@@ -448,6 +454,14 @@ const buildPieceLocationSearchUrl = (piece) => {
   return buildGoogleMapsSearchUrl(parts.join(", "));
 };
 
+const getPieceVendorDisplayName = (piece) => {
+  if (String(piece?.seller_role || "").toLowerCase() === "admin") {
+    return "admin";
+  }
+
+  return piece?.seller_store_name || piece?.seller_name || "Vendeur";
+};
+
 const CataloguePieces = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -608,7 +622,7 @@ const CataloguePieces = () => {
   const handleSaveLocation = () => {
     if (newPiece.latitude && newPiece.longitude) {
       setShowMapModal(false);
-      // Localisation sauvegardée dans newPiece state
+      // Localisation sauvegardÃ©e dans newPiece state
     } else {
       alert("Veuillez sélectionner un lieu sur la carte");
     }
@@ -746,7 +760,7 @@ const CataloguePieces = () => {
     if (targetPiece) {
       if (editParam === "true") {
         // Open edit form
-        openEditPieceModal(targetPiece);
+        void openEditPieceModal(targetPiece);
       } else if (viewParam === "true") {
         // Show piece details
         openPieceDetails(targetPiece);
@@ -855,8 +869,18 @@ const CataloguePieces = () => {
       return visibleItems;
     }
 
+    const hasValidOwnSellerId = Number.isInteger(ownSellerId) && ownSellerId > 0;
+
+    if (canManagePieces && catalogScope === "private" && hasValidOwnSellerId) {
+      return visibleItems.filter((item) => Number(item.user_id) === ownSellerId || item.user_id === null || item.user_id === undefined);
+    }
+
+    if (canManagePieces && catalogScope === "private" && user?.role === "admin") {
+      return visibleItems.filter((item) => item.user_id === null || item.user_id === undefined);
+    }
+
     if (canManagePieces && catalogScope === "private") {
-      return visibleItems.filter((item) => Number(item.user_id) === ownSellerId);
+      return [];
     }
 
     return visibleItems;
@@ -1240,24 +1264,45 @@ const CataloguePieces = () => {
     setShowCreateModal(true);
   };
 
-  const openEditPieceModal = (piece) => {
-    setEditingPieceId(piece.id);
+  const openEditPieceModal = async (piece) => {
+    const pieceId = Number(piece?.id);
+    if (!Number.isInteger(pieceId) || pieceId <= 0) {
+      setCreateError("Impossible de charger cette piece pour modification.");
+      return;
+    }
+
+    let targetPiece = piece;
+    if (!targetPiece?.nom || !targetPiece?.reference) {
+      try {
+        const response = await getPieceById(pieceId);
+        targetPiece = response?.data?.data ?? response?.data ?? targetPiece;
+      } catch (_error) {
+        // Keep the local snapshot if the refresh fails.
+      }
+    }
+
+    if (!targetPiece) {
+      setCreateError("Impossible de charger cette piece pour modification.");
+      return;
+    }
+
+    setEditingPieceId(pieceId);
     setCreateError("");
     setCreateSuccess("");
     setNewPiece({
-      nom: piece.nom || "",
-      reference: piece.reference || "",
-      description: piece.description || "",
-      prix_unitaire: piece.prix_unitaire !== undefined && piece.prix_unitaire !== null ? String(piece.prix_unitaire) : "",
-      stock: piece.stock !== undefined && piece.stock !== null ? String(piece.stock) : "0",
-      condition: piece.condition || "Neuf",
-      zone_geographique: piece.zone_geographique || "",
-      marque: piece.marque || "",
-      modele: piece.modele || "",
-      categorie: piece.categorie || "",
+      nom: targetPiece.nom || "",
+      reference: targetPiece.reference || "",
+      description: targetPiece.description || "",
+      prix_unitaire: targetPiece.prix_unitaire !== undefined && targetPiece.prix_unitaire !== null ? String(targetPiece.prix_unitaire) : "",
+      stock: targetPiece.stock !== undefined && targetPiece.stock !== null ? String(targetPiece.stock) : "0",
+      condition: targetPiece.condition || "Neuf",
+      zone_geographique: targetPiece.zone_geographique || "",
+      marque: targetPiece.marque || "",
+      modele: targetPiece.modele || "",
+      categorie: targetPiece.categorie || "",
       photo_piece: null,
-      latitude: piece.latitude || null,
-      longitude: piece.longitude || null
+      latitude: targetPiece.latitude || null,
+      longitude: targetPiece.longitude || null
     });
     setSelectedPiece(null);
     setShowCreateModal(true);
@@ -1271,12 +1316,12 @@ const CataloguePieces = () => {
   };
 
   const syncPiecesList = () => {
-    // Réinitialiser à la page 1 et forcer un refresh complet
+    // Réinitialiser Ã  la page 1 et forcer un refresh complet
     setPage(1);
-    // Déclencher un refresh en changeant appliedFilters
+    // DÃ©clencher un refresh en changeant appliedFilters
     setAppliedFilters((prev) => ({
       ...prev,
-      _refreshToken: Date.now() // Force React à voir un changement
+      _refreshToken: Date.now() // Force React Ã  voir un changement
     }));
   };
 
@@ -1314,29 +1359,43 @@ const CataloguePieces = () => {
         return;
       }
 
-      const formData = new FormData();
-      formData.append("nom", normalizedNom);
-      formData.append("reference", normalizedReference);
-      formData.append("description", String(newPiece.description || "").trim());
-      formData.append("prix_unitaire", String(parsedPrice));
-      formData.append("stock", String(parsedStock));
-      formData.append("condition", newPiece.condition || "Neuf");
-      formData.append("zone_geographique", String(newPiece.zone_geographique || "").trim());
-      formData.append("marque", String(newPiece.marque || "").trim());
-      formData.append("modele", String(newPiece.modele || "").trim());
-      formData.append("categorie", String(newPiece.categorie || "").trim());
-      
-      if (newPiece.latitude) formData.append("latitude", newPiece.latitude);
-      if (newPiece.longitude) formData.append("longitude", newPiece.longitude);
-
-      if (newPiece.photo_piece) {
-        formData.append("photo_piece", newPiece.photo_piece);
-      }
-
       if (editingPieceId) {
-        await updatePiece(editingPieceId, formData);
+        // The update endpoint expects a JSON body (no multipart). Build a plain payload.
+        const payload = {
+          nom: normalizedNom,
+          reference: normalizedReference,
+          description: String(newPiece.description || "").trim(),
+          prix_unitaire: parsedPrice,
+          stock: parsedStock,
+          condition: newPiece.condition || "Neuf",
+          zone_geographique: String(newPiece.zone_geographique || "").trim(),
+          marque: String(newPiece.marque || "").trim(),
+          modele: String(newPiece.modele || "").trim(),
+          categorie: String(newPiece.categorie || "").trim()
+        };
+
+        await updatePiece(editingPieceId, payload);
         setCreateSuccess("Piece modifiee avec succes.");
       } else {
+        const formData = new FormData();
+        formData.append("nom", normalizedNom);
+        formData.append("reference", normalizedReference);
+        formData.append("description", String(newPiece.description || "").trim());
+        formData.append("prix_unitaire", String(parsedPrice));
+        formData.append("stock", String(parsedStock));
+        formData.append("condition", newPiece.condition || "Neuf");
+        formData.append("zone_geographique", String(newPiece.zone_geographique || "").trim());
+        formData.append("marque", String(newPiece.marque || "").trim());
+        formData.append("modele", String(newPiece.modele || "").trim());
+        formData.append("categorie", String(newPiece.categorie || "").trim());
+
+        if (newPiece.latitude) formData.append("latitude", newPiece.latitude);
+        if (newPiece.longitude) formData.append("longitude", newPiece.longitude);
+
+        if (newPiece.photo_piece) {
+          formData.append("photo_piece", newPiece.photo_piece);
+        }
+
         await createPiece(formData);
         setCreateSuccess("Piece ajoutee avec succes.");
       }
@@ -1362,7 +1421,7 @@ const CataloguePieces = () => {
       
       syncPiecesList();
       
-      // Fermer la modale après 1.5 secondes
+      // Fermer la modale aprÃ¨s 1.5 secondes
       setTimeout(() => {
         setShowCreateModal(false);
       }, 1500);
@@ -1446,10 +1505,11 @@ const CataloguePieces = () => {
 
   const handleContactVendorChat = async () => {
     const sellerUserId = resolveOwnerIdForStore(selectedPieceVendor || selectedPiece);
+    const allowedRolesForChat = ["automobiliste", "vendeur", "garage", "admin"];
     const targetMessagesPath = chatRouteByRole[user?.role] || "/login";
 
-    if (user?.role !== "automobiliste" && user?.role !== "admin") {
-      navigate(targetMessagesPath);
+    if (!user?.role || !allowedRolesForChat.includes(user.role)) {
+      navigate("/login");
       return;
     }
 
@@ -1460,8 +1520,9 @@ const CataloguePieces = () => {
 
     try {
       setError("");
+      const conversationType = user?.role === "garage" ? "garage_vendeur" : "automobiliste_vendeur";
       const response = await startChatConversation({
-        conversationType: "automobiliste_vendeur",
+        conversationType,
         vendeurId: Number(sellerUserId),
         historyLimit: 50
       });
@@ -1523,7 +1584,7 @@ const CataloguePieces = () => {
           <div className="mb-5 text-center">
             <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Magasin du Vendeur</h1>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
-              Gérez les pièces, les photos et les compatibilités dans un espace cohérent avec l’identité visuelle de la plateforme.
+              Gérez les pièces, les photos et les compatibilités dans un espace cohérent avec lâ€™identité visuelle de la plateforme.
             </p>
             {isStoreView && (
               <div className="mt-3">
@@ -1601,7 +1662,7 @@ const CataloguePieces = () => {
 
               <div className="mb-4 flex gap-2">
                 <div className="flex flex-1 items-center rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-[0_10px_20px_rgba(15,23,42,0.05)] focus-within:border-blue-300">
-                  <span className="mr-2 text-lg text-slate-500">🔍</span>
+                  <span className="mr-2 text-lg text-slate-500">ðŸ”</span>
                   <input
                     type="text"
                     value={filters.search}
@@ -1676,9 +1737,9 @@ const CataloguePieces = () => {
                             <p className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-bold text-slate-600">Ref: {group.reference || "Sans reference"}</p>
 
                             <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2">
-                              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Offre la moins chère</p>
+                              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Offre la moins chÃ¨re</p>
                               <p className="text-3xl font-black text-amber-700">{Number(cheapest?.prix_unitaire || 0).toFixed(2)} DT</p>
-                              <p className="text-sm text-slate-600">Vendeur: {cheapest?.seller_store_name || cheapest?.seller_name || "Vendeur"}</p>
+                              <p className="text-sm text-slate-600">Vendeur: {getPieceVendorDisplayName(cheapest)}</p>
                             </div>
 
                             <div className="mt-3 flex items-center justify-between">
@@ -1708,7 +1769,7 @@ const CataloguePieces = () => {
                                 onClick={() => openComparisonPage(cheapest)}
                                 className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
                               >
-                                Ouvrir page complète
+                                Ouvrir page complÃ¨te
                               </button>
                             </div>
                           </div>
@@ -1871,7 +1932,7 @@ const CataloguePieces = () => {
                 <h3 className="text-2xl font-black text-slate-900">Services complementaires</h3>
                 <ul className="mt-3 space-y-2 text-lg text-slate-700">
                   {storeServices.map((service) => (
-                    <li key={service}>✓ {service}</li>
+                    <li key={service}>âœ“ {service}</li>
                   ))}
                 </ul>
               </div>
@@ -1894,13 +1955,13 @@ const CataloguePieces = () => {
           )}
         </div>
 
-        {activeTab === "pieces" && canManagePieces && !isStoreView && !isPublicMarketplace && (
+        {activeTab === "pieces" && canManagePieces && !isStoreView && (
           <button
             type="button"
             onClick={openCreatePieceModal}
             className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-8 py-3 text-lg font-extrabold text-white shadow-[0_16px_30px_rgba(30,64,175,0.28)]"
           >
-            ＋ Ajouter une piece
+            ï¼‹ Ajouter une piece
           </button>
         )}
 
@@ -1908,8 +1969,8 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Marques</h3>
-                <button type="button" onClick={() => setShowMarquesModal(false)} className="text-3xl text-slate-500">×</button>
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir â€¢ Marques</h3>
+                <button type="button" onClick={() => setShowMarquesModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                 {marques.map((marque) => {
@@ -1958,11 +2019,11 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-slate-900">Choisir • Modèles</h3>
+                <h3 className="text-4xl font-black text-slate-900">Choisir â€¢ Modèles</h3>
                 <button type="button" onClick={() => setShowModelesModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               {availableModeles.length === 0 ? (
-                <p className="text-slate-500">Sélectionnez d'abord une marque.</p>
+                <p className="text-slate-500">SÃ©lectionnez d'abord une marque.</p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {availableModeles.map((modele) => {
@@ -1988,8 +2049,8 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-slate-900">Choisir • Catégories</h3>
-                <button type="button" onClick={() => setShowCategoriesModal(false)} className="text-3xl text-slate-500">×</button>
+                <h3 className="text-4xl font-black text-slate-900">Choisir â€¢ Catégories</h3>
+                <button type="button" onClick={() => setShowCategoriesModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {categories.map((categorie) => {
@@ -2016,7 +2077,7 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-slate-900">Choisir • Occasion/Neuf</h3>
+                <h3 className="text-4xl font-black text-slate-900">Choisir â€¢ Occasion/Neuf</h3>
                 <button type="button" onClick={() => setShowConditionModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -2032,7 +2093,7 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-slate-900">Choisir • Zone géographique</h3>
+                <h3 className="text-4xl font-black text-slate-900">Choisir â€¢ Zone géographique</h3>
                 <button type="button" onClick={() => setShowZoneModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -2050,7 +2111,7 @@ const CataloguePieces = () => {
             <div className="mx-auto flex h-full w-full max-w-3xl flex-col bg-transparent">
               <div className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/90 px-4 pb-3 pt-4 backdrop-blur-xl">
                 <div className="flex items-center justify-between">
-                  <button type="button" onClick={closePieceForm} className="text-4xl leading-none font-light text-blue-700">‹</button>
+                  <button type="button" onClick={closePieceForm} className="text-4xl leading-none font-light text-blue-700">â€¹</button>
                   <h2 className="text-2xl font-medium text-slate-900">{editingPieceId ? "Modifier une pièce" : "Ajouter une pièce"}</h2>
                   <button
                     type="submit"
@@ -2175,7 +2236,7 @@ const CataloguePieces = () => {
                       name="description"
                       value={newPiece.description}
                       onChange={handleCreateInput}
-                      placeholder="Ajouter une description, des notes ou des précisions sur la pièce"
+                      placeholder="Ajouter une description, des notes ou des prÃ©cisions sur la pièce"
                       rows={5}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-300"
                     />
@@ -2225,7 +2286,7 @@ const CataloguePieces = () => {
             <div className="max-h-[96vh] w-full max-w-6xl overflow-y-auto rounded-none bg-[linear-gradient(180deg,#fffdf9_0%,#faf7f2_100%)] shadow-2xl sm:rounded-3xl">
               <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 pb-3 pt-4 backdrop-blur-xl sm:px-6">
                 <div className="mb-3 flex items-center justify-between">
-                  <button type="button" onClick={() => setSelectedPiece(null)} className="text-4xl leading-none font-light text-blue-700">‹</button>
+                  <button type="button" onClick={() => setSelectedPiece(null)} className="text-4xl leading-none font-light text-blue-700">â€¹</button>
                   <h2 className="text-2xl font-medium text-slate-900">Détails Pièce</h2>
                   <div className="w-8" />
                 </div>
@@ -2240,12 +2301,12 @@ const CataloguePieces = () => {
                 <div className="space-y-4">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <button type="button" onClick={handleOpenVendorStore} className="group flex flex-1 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-5 py-3 text-white shadow-[0_10px_18px_rgba(30,64,175,0.18)]">
-                      <span className="mr-3 text-2xl">🏪</span>
+                      <span className="mr-3 text-2xl">ðŸª</span>
                       <span className="flex flex-col items-start leading-tight">
                         <span className="text-lg font-semibold">Voir magasin de vendeur</span>
                         <span className="text-xs text-blue-100">Pieces + Presentation</span>
                       </span>
-                      <span className="ml-3 text-xl transition-transform group-hover:translate-x-0.5">›</span>
+                      <span className="ml-3 text-xl transition-transform group-hover:translate-x-0.5">â€º</span>
                     </button>
                     {canContactSelectedPieceVendor ? (
                       <button
@@ -2255,7 +2316,7 @@ const CataloguePieces = () => {
                         aria-label="Contacter le vendeur"
                         title="Contacter le vendeur"
                       >
-                        <span>💬</span>
+                        <span>ðŸ’¬</span>
                         <span>Contacter le vendeur</span>
                       </button>
                     ) : (
@@ -2269,7 +2330,7 @@ const CataloguePieces = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
-                        onClick={() => openEditPieceModal(selectedPiece)}
+                        onClick={() => void openEditPieceModal(selectedPiece)}
                         className="rounded-2xl border border-blue-200 bg-white px-4 py-3 text-base font-semibold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
                       >
                         Modifier la piece
@@ -2287,33 +2348,33 @@ const CataloguePieces = () => {
                   <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <div className="space-y-4 text-slate-900">
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">ⓘ</span>
-                        <p className="text-2xl font-black tracking-wide">{selectedPiece.reference}</p>
+                        <span className="mt-1 text-2xl">â“˜</span>
+                        <p className="text-2xl font-black tracking-wide">{selectedPiece.reference || "Référence non renseignÃ©e"}</p>
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">🏷</span>
+                        <span className="mt-1 text-2xl">ðŸ·</span>
                         <div>
-                          <p className="text-2xl font-black">{selectedPiece.nom}</p>
+                          <p className="text-2xl font-black">{selectedPiece.nom || "Pièce sans nom"}</p>
                           <p className="text-base text-slate-500">{selectedPiece.description || "Pas de description"}</p>
                         </div>
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">⚙</span>
+                        <span className="mt-1 text-2xl">âš™</span>
                         <div className="space-y-1">
                           <p className="text-xl font-bold">{selectedPiece.categorie || "Pièce automobile"}</p>
-                          <p className="text-base text-slate-500">{selectedPiece.marque ? `${selectedPiece.marque}${selectedPiece.modele ? ` ${selectedPiece.modele}` : ""}` : "Marque non renseignée"}</p>
+                          <p className="text-base text-slate-500">{selectedPiece.marque ? `${selectedPiece.marque}${selectedPiece.modele ? ` ${selectedPiece.modele}` : ""}` : "Marque non renseignÃ©e"}</p>
                         </div>
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">⚠</span>
+                        <span className="mt-1 text-2xl">âš </span>
                         <p className="text-xl font-bold">{selectedPiece.condition || "Neuf"}</p>
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">📞</span>
+                        <span className="mt-1 text-2xl">ðŸ“ž</span>
                         <p className="text-xl font-bold">{vendorPhone}</p>
                       </div>
                     </div>
@@ -2322,7 +2383,7 @@ const CataloguePieces = () => {
                   <div className="overflow-hidden rounded-[26px] border border-[#e8e0d1] bg-white shadow-[0_12px_24px_rgba(0,0,0,0.05)]">
                     <img
                       src={selectedPiece.photo_url ? (selectedPiece.photo_url.startsWith("http") ? selectedPiece.photo_url : `${backendBaseUrl}${selectedPiece.photo_url}`) : getPieceImageFallback(selectedPiece)}
-                      alt={selectedPiece.nom}
+                      alt={selectedPiece.nom || "Pièce"}
                       className="h-[420px] w-full object-cover"
                     />
                   </div>
@@ -2340,7 +2401,7 @@ const CataloguePieces = () => {
 
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Magasin du vendeur</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">{selectedPiece.seller_store_name || selectedPiece.seller_name || vendorDisplayName}</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{getPieceVendorDisplayName(selectedPiece) || vendorDisplayName}</p>
                       <p className="text-sm text-slate-600">Email: {selectedPiece.seller_email || vendorEmail}</p>
                       <p className="text-sm text-slate-600">Telephone: {selectedPiece.seller_phone || vendorPhone}</p>
                     </div>
@@ -2364,7 +2425,7 @@ const CataloguePieces = () => {
                               .sort((a, b) => Number(a.prix_unitaire) - Number(b.prix_unitaire))
                               .map((offer, index) => (
                                 <tr key={offer.id || `${offer.reference}-${index}`} className={`border-b border-slate-100 ${index === 0 ? "bg-emerald-50" : ""}`}>
-                                  <td className="px-2 py-2 font-semibold text-slate-800">{offer.seller_store_name || offer.seller_name || "Vendeur"}</td>
+                                  <td className="px-2 py-2 font-semibold text-slate-800">{getPieceVendorDisplayName(offer)}</td>
                                   <td className="px-2 py-2 font-black text-blue-700">{Number(offer.prix_unitaire).toFixed(2)} DT {index === 0 ? "(moins cher)" : ""}</td>
                                   <td className="px-2 py-2 text-slate-700">{offer.stock}</td>
                                   <td className="px-2 py-2 text-slate-700">{offer.zone_geographique || "-"}</td>
@@ -2382,12 +2443,12 @@ const CataloguePieces = () => {
                       {getCompatibleVehiclesForPiece(selectedPiece).length > 0 ? (
                         getCompatibleVehiclesForPiece(selectedPiece).map((vehicle, index) => (
                           <div key={`${vehicle}-${index}`} className="flex items-center gap-4 rounded-2xl bg-slate-50 px-3 py-3">
-                            <span className="text-3xl">🚗</span>
+                            <span className="text-3xl">ðŸš—</span>
                             <p className="text-lg font-semibold text-slate-800">{vehicle}</p>
                           </div>
                         ))
                       ) : (
-                        <p className="text-slate-500">Aucun véhicule compatible renseigné.</p>
+                        <p className="text-slate-500">Aucun véhicule compatible renseignÃ©.</p>
                       )}
                     </div>
                   </div>
@@ -2404,7 +2465,7 @@ const CataloguePieces = () => {
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-2xl font-black text-slate-900">Vue comparative dynamique</h3>
-                <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps réel via l'API backend.</p>
+                <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps rÃ©el via l'API backend.</p>
               </div>
               <button 
                 type="button" 
@@ -2412,7 +2473,7 @@ const CataloguePieces = () => {
                   setShowComparisonModal(false);
                 }} 
                 className="text-3xl text-slate-500"
-              >×</button>
+              >Ã—</button>
             </div>
 
             {comparisonLoading ? (
@@ -2431,7 +2492,7 @@ const CataloguePieces = () => {
                     <p className="mt-1 text-3xl font-black text-emerald-700">{Number(comparisonSummary.prix_min || comparisonData.best_offer?.prix_unitaire || 0).toFixed(2)} DT</p>
                   </div>
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Économie max</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Ã‰conomie max</p>
                     <p className="mt-1 text-3xl font-black text-amber-700">{Number(comparisonSummary.economie_max || 0).toFixed(2)} DT</p>
                   </div>
                 </div>
@@ -2452,7 +2513,7 @@ const CataloguePieces = () => {
                       <tbody>
                         {comparisonOffers.map((offer, index) => (
                           <tr key={offer.id || `${offer.vendeur_id}-${index}`} className={`border-b border-slate-100 ${index === 0 ? "bg-emerald-50" : ""}`}>
-                            <td className="px-2 py-2 font-semibold text-slate-800">{offer.vendeur_magasin || offer.vendeur_nom || offer.seller_store_name || offer.seller_name || "Vendeur"}</td>
+                            <td className="px-2 py-2 font-semibold text-slate-800">{getPieceVendorDisplayName(offer)}</td>
                             <td className="px-2 py-2 font-black text-slate-900">{Number(offer.prix_unitaire || offer.price || 0).toFixed(2)} DT {index === 0 ? "(prix minimum)" : ""}</td>
                             <td className="px-2 py-2 text-slate-700">{offer.stock ?? "-"}</td>
                             <td className="px-2 py-2 text-slate-700">{offer.zone_geographique || "-"}</td>
@@ -2465,7 +2526,7 @@ const CataloguePieces = () => {
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-slate-600">Aucune donnée de comparaison disponible.</div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-slate-600">Aucune donnÃ©e de comparaison disponible.</div>
             )}
           </div>
         </div>
@@ -2475,3 +2536,4 @@ const CataloguePieces = () => {
 };
 
 export default CataloguePieces;
+

@@ -1,8 +1,13 @@
-import API from './api';
+﻿import API from './api';
 import { getDynamicRecommendations } from './recommendation';
 
+const buildNoCacheParams = (params = {}) => ({
+  ...params,
+  _: Date.now(),
+});
+
 export const getMaintenanceDashboard = async (vehicleId) => {
-  const response = await API.get('/maintenance', { params: { vehicleId } });
+  const response = await API.get('/maintenance', { params: buildNoCacheParams({ vehicleId }) });
   return response.data?.data ?? response.data ?? null;
 };
 
@@ -13,8 +18,10 @@ export const getMaintenanceRecommendations = async (vehicleId, params = {}) => {
     order: 'desc',
     limit: 6,
     garageLimit: 4,
+    _: Date.now(),
     ...params,
   });
 
   return response.data?.data ?? response.data ?? [];
 };
+

@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 import PlatformLayout from "../../components/PlatformLayout";
 import { comparePieceAcrossVendors } from "../../services/pieces";
+import { extractConversationAndMessages, startChatConversation } from "../../services/chat";
+
+const chatRouteByRole = {
+  automobiliste: "/automobiliste/messages",
+  garage: "/garage/messages",
+  vendeur: "/vendeur/messages",
+  admin: "/vendeur/messages"
+};
 
 const ComparaisonPrix = () => {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -99,6 +109,61 @@ const ComparaisonPrix = () => {
 
   const getSellerPhone = (offer) => offer?.vendeur?.telephone || "-";
 
+  const getSellerOwnerId = (offer) => {
+    if (!offer) return null;
+
+    const vendorProfile = offer?.vendeur && typeof offer.vendeur === "object" ? offer.vendeur : null;
+    const directCandidates = [
+      vendorProfile?.id,
+      offer?.user_id,
+      offer?.vendeur_user_id,
+      offer?.vendor_user_id,
+      offer?.seller_user_id,
+      offer?.owner_id,
+      offer?.vendeur_id,
+      offer?.vendor_id,
+      offer?.seller_id
+    ];
+
+    return directCandidates
+      .map((value) => Number.parseInt(value, 10))
+      .find((value) => Number.isFinite(value) && value > 0) || null;
+  };
+
+  const handleContactSeller = async () => {
+    const sellerUserId = getSellerOwnerId(selectedOffer);
+    const targetMessagesPath = chatRouteByRole[user?.role] || "/login";
+
+    if (!user?.role || !["automobiliste", "vendeur", "garage", "admin"].includes(user.role)) {
+      navigate("/login");
+      return;
+    }
+
+    if (!sellerUserId) {
+      setError("Impossible de trouver le vendeur pour demarrer le chat.");
+      return;
+    }
+
+    try {
+      setError("");
+      const response = await startChatConversation({
+        conversationType: "automobiliste_vendeur",
+        vendeurId: Number(sellerUserId),
+        historyLimit: 50
+      });
+
+      const { conversation } = extractConversationAndMessages(response);
+      if (conversation?.id) {
+        navigate(`${targetMessagesPath}?conversationId=${conversation.id}`);
+        return;
+      }
+
+      navigate(targetMessagesPath);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Impossible de contacter le vendeur par chat.");
+    }
+  };
+
   const submitSearch = (event) => {
     event.preventDefault();
 
@@ -116,7 +181,7 @@ const ComparaisonPrix = () => {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-black tracking-tight text-slate-900">Comparaison prix multi-vendeurs</h1>
-              <p className="mt-1 text-slate-600">Vue dédiée dynamique pour analyser le meilleur prix disponible.</p>
+              <p className="mt-1 text-slate-600">Vue dÃ©diÃ©e dynamique pour analyser le meilleur prix disponible.</p>
             </div>
             <button
               type="button"
@@ -145,7 +210,7 @@ const ComparaisonPrix = () => {
                   />
                   Inclure hors stock
                 </label>
-                <p className="mt-1 text-xs text-slate-500">Affiche aussi les vendeurs qui ont actuellement un stock à 0.</p>
+                <p className="mt-1 text-xs text-slate-500">Affiche aussi les vendeurs qui ont actuellement un stock Ã  0.</p>
               </div>
             </div>
             <div className="mt-3">
@@ -173,7 +238,7 @@ const ComparaisonPrix = () => {
                 onClick={() => runComparison({ name: effectiveName, includeOutOfStock })}
                 className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700"
               >
-                Réessayer
+                RÃ©essayer
               </button>
             </div>
           )}
@@ -182,22 +247,22 @@ const ComparaisonPrix = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">🏪 Vendeurs</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">ðŸª Vendeurs</p>
                   <p className="mt-1 text-4xl font-black text-blue-800">{summary.vendeurs_count ?? sortedOffers.length ?? 0}</p>
                 </div>
                 <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">💸 Prix minimum</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">ðŸ’¸ Prix minimum</p>
                   <p className="mt-1 text-4xl font-black text-emerald-700">{Number(bestPrice).toFixed(2)} DT</p>
                 </div>
                 <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wide text-amber-700">🟧 Économie max</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-700">ðŸŸ§ Ã‰conomie max</p>
                   <p className="mt-1 text-4xl font-black text-amber-700">{Number(economyAmount).toFixed(2)} DT</p>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-emerald-800 shadow-sm">
                 <p className="text-sm font-semibold">
-                  Vous pouvez économiser jusqu'à {Number(economyAmount).toFixed(2)} DT ({Number(economyPercent).toFixed(1)}%).
+                  Vous pouvez Ã©conomiser jusqu'Ã  {Number(economyAmount).toFixed(2)} DT ({Number(economyPercent).toFixed(1)}%).
                 </p>
               </div>
 
@@ -278,8 +343,17 @@ const ComparaisonPrix = () => {
                       <p><span className="font-semibold text-slate-900">Prix:</span> {Number(selectedOffer?.prix_unitaire || 0).toFixed(2)} DT</p>
                       <p><span className="font-semibold text-slate-900">Stock:</span> {selectedOffer?.stock ?? "-"}</p>
                       <p><span className="font-semibold text-slate-900">Zone:</span> {selectedOffer?.zone_geographique || "-"}</p>
-                      <p><span className="font-semibold text-slate-900">État:</span> {selectedOffer?.condition || "-"}</p>
+                      <p><span className="font-semibold text-slate-900">Ã‰tat:</span> {selectedOffer?.condition || "-"}</p>
                       <p><span className="font-semibold text-slate-900">Catégorie:</span> {selectedOffer?.categorie || "-"}</p>
+                    </div>
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={handleContactSeller}
+                        className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
+                      >
+                        Contacter le vendeur
+                      </button>
                     </div>
                   </div>
                 )}
@@ -293,3 +367,5 @@ const ComparaisonPrix = () => {
 };
 
 export default ComparaisonPrix;
+
+

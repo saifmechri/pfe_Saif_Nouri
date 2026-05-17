@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarCheck2, Clock3, MapPin, Navigation, Share2, Star } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -31,7 +31,7 @@ const featuredGarages = [
     latitude: 35.8256,
     longitude: 10.6369,
     rating: 4.7,
-    note: "Garage ajouté manuellement à la carte"
+    note: "Garage ajouté manuellement Ã  la carte"
   },
   {
     id: "featured-gargouri-auto",
@@ -41,7 +41,7 @@ const featuredGarages = [
     latitude: 33.875,
     longitude: 10.857,
     rating: 4.6,
-    note: "Garage ajouté manuellement à la carte"
+    note: "Garage ajouté manuellement Ã  la carte"
   }
 ];
 
@@ -55,79 +55,79 @@ const garageBrandsCatalog = [
 ].sort((a, b) => a.localeCompare(b));
 
 const garageSpecialtyCatalog = [
-  "Mécanique générale",
-  "Tôlerie et Peinture",
-  "Électricité auto",
+  "MÃ©canique générale",
+  "TÃ´lerie et Peinture",
+  "Ã‰lectricitÃ© auto",
   "Services pneumatiques",
   "Diagnostic auto",
   "Services rapides",
   "Vitrage auto",
   "Climatisation auto",
-  "Clé et multimédia",
+  "ClÃ© et multimÃ©dia",
   "Sellerie auto",
   "Maintenance Calculateurs",
   "Tourneur",
-  "Spécialiste crémaillère",
-  "Spécialiste radiateur",
-  "Spécialiste injection",
-  "Échappement / catalyseur",
+  "SpÃ©cialiste crÃ©maillÃ¨re",
+  "SpÃ©cialiste radiateur",
+  "SpÃ©cialiste injection",
+  "Ã‰chappement / catalyseur",
   "Optiques auto",
-  "Spécialiste boîtes de vitesses",
+  "SpÃ©cialiste boÃ®tes de vitesses",
   "Conversions véhicules",
   "Tuning auto",
   "Station lavage",
   "Vente pièces auto neuves",
-  "Vente pièces détachées d’occasion",
+  "Vente pièces dÃ©tachÃ©es dâ€™occasion",
   "Vente accessoires",
   "Station service",
   "Expert automobile",
-  "Auto-école",
-  "Centre contrôle technique",
+  "Auto-Ã©cole",
+  "Centre contrÃ´le technique",
   "Concessionnaire auto neuf",
   "Concessionnaire auto occasion",
-  "Remorquage et dépannage",
+  "Remorquage et dÃ©pannage",
   "Leasing",
-  "Vente de motos & Pièces détachées",
+  "Vente de motos & Pièces dÃ©tachÃ©es",
   "Entretien & réparation Moto",
   "Personnalisation & préparation Moto"
 ];
 
 const garageServicesCatalog = [
-  "Réparation moteur", "Entretien mécanique", "Remplacement moteur", "Spécialiste camion",
-  "Débosselage et carrosserie", "Peinture au four", "Lustrage et polissage", "Peinture jantes",
-  "Diagnostic électrique", "Alternateur / Démarreur", "Batterie", "Câblage et fusibles",
-  "Montage et équilibrage", "Parallélisme / Géométrie", "Réparation crevaison", "Gonflage azote",
-  "Passage à la valise", "Lecture/Effacement défauts", "Programmation calculateurs", "Test de composants",
-  "Vidange et filtres", "Freinage (Plaquettes/Disques)", "Amortisseurs", "Révision saisonnière",
-  "Remplacement pare-brise", "Réparation d'impact", "Vitres teintées / Film solaire", "Rénovation optiques",
-  "Recharge climatisation", "Détection de fuites", "Remplacement compresseur", "Traitement antibactérien",
-  "Double de clé / Programmation", "Installation autoradio / Écrans", "Caméra de recul", "Alarmes",
-  "Sellerie intérieure", "Réparation sièges", "Rénovation cuir", "Housses sur mesure",
+  "Réparation moteur", "Entretien mÃ©canique", "Remplacement moteur", "SpÃ©cialiste camion",
+  "DÃ©bosselage et carrosserie", "Peinture au four", "Lustrage et polissage", "Peinture jantes",
+  "Diagnostic électrique", "Alternateur / DÃ©marreur", "Batterie", "CÃ¢blage et fusibles",
+  "Montage et Ã©quilibrage", "ParallÃ©lisme / GÃ©omÃ©trie", "Réparation crevaison", "Gonflage azote",
+  "Passage Ã  la valise", "Lecture/Effacement dÃ©fauts", "Programmation calculateurs", "Test de composants",
+  "Vidange et filtres", "Freinage (Plaquettes/Disques)", "Amortisseurs", "Révision saisonniÃ¨re",
+  "Remplacement pare-brise", "Réparation d'impact", "Vitres teintÃ©es / Film solaire", "RÃ©novation optiques",
+  "Recharge climatisation", "DÃ©tection de fuites", "Remplacement compresseur", "Traitement antibactÃ©rien",
+  "Double de clÃ© / Programmation", "Installation autoradio / Ã‰crans", "CamÃ©ra de recul", "Alarmes",
+  "Sellerie intérieure", "Réparation siÃ¨ges", "RÃ©novation cuir", "Housses sur mesure",
   "Diagnostic ECU", "Reprogrammation", "Réparation ECU", "Codage modules",
   "Usinage pièces", "Fabrication sur mesure", "Rectification", "Ajustement",
-  "Réparation crémaillère", "Remplacement crémaillère", "Réglage direction", "Diagnostic direction",
-  "Réparation radiateur", "Nettoyage circuit", "Remplacement radiateur", "Purge système",
+  "Réparation crÃ©maillÃ¨re", "Remplacement crÃ©maillÃ¨re", "RÃ©glage direction", "Diagnostic direction",
+  "Réparation radiateur", "Nettoyage circuit", "Remplacement radiateur", "Purge systÃ¨me",
   "Nettoyage injecteurs", "Test injecteurs", "Remplacement injecteurs", "Codage injecteurs",
-  "Réparation ligne échappement", "Remplacement catalyseur", "Soudure échappement", "Diagnostic pollution",
-  "Rénovation phares", "Remplacement optiques", "Polissage optiques", "Réglage feux",
-  "Réparation boîte manuelle", "Réparation boîte automatique", "Vidange boîte", "Diagnostic transmission",
-  "Passage au GPL / Éthanol", "Aménagement utilitaire", "Adaptation handicap", "Conversion électrique",
-  "Kit carrosserie", "Rabaissement (Combinés filetés)", "Éclairage personnalisé", "Optimisation performance",
-  "Lavage haute pression", "Nettoyage intérieur / Shampoing", "Lavage moteur", "Traitement céramique",
+  "Réparation ligne Ã©chappement", "Remplacement catalyseur", "Soudure Ã©chappement", "Diagnostic pollution",
+  "RÃ©novation phares", "Remplacement optiques", "Polissage optiques", "RÃ©glage feux",
+  "Réparation boÃ®te manuelle", "Réparation boÃ®te automatique", "Vidange boÃ®te", "Diagnostic transmission",
+  "Passage au GPL / Ã‰thanol", "AmÃ©nagement utilitaire", "Adaptation handicap", "Conversion électrique",
+  "Kit carrosserie", "Rabaissement (CombinÃ©s filetÃ©s)", "Ã‰clairage personnalisÃ©", "Optimisation performance",
+  "Lavage haute pression", "Nettoyage intérieur / Shampoing", "Lavage moteur", "Traitement cÃ©ramique",
   "Pièces moteur", "Consommables (Filtres/Freins)", "Lubrifiants", "Outillage",
-  "Pièces de casse auto", "Moteurs d'occasion", "Portières / Capots", "Jantes occasion",
+  "Pièces de casse auto", "Moteurs d'occasion", "PortiÃ¨res / Capots", "Jantes occasion",
   "Tapis et housses", "Coffres de toit", "Produits d'entretien", "Gadgets auto",
-  "Carburant (Essence/Diesel)", "Gonflage pneus", "Boutique de dépannage", "Lavage automatique",
-  "Expertise après sinistre", "Estimation valeur véhicule", "Conseil à l'achat", "Litiges mécaniques",
-  "Permis B (Voiture)", "Code de la route", "Conduite accompagnée", "Perfectionnement",
-  "Visite périodique", "Contre-visite", "Contrôle pollution", "Contrôle spécifique (VTC/Taxi)",
+  "Carburant (Essence/Diesel)", "Gonflage pneus", "Boutique de dÃ©pannage", "Lavage automatique",
+  "Expertise aprÃ¨s sinistre", "Estimation valeur véhicule", "Conseil Ã  l'achat", "Litiges mÃ©caniques",
+  "Permis B (Voiture)", "Code de la route", "Conduite accompagnÃ©e", "Perfectionnement",
+  "Visite pÃ©riodique", "Contre-visite", "ContrÃ´le pollution", "ContrÃ´le spÃ©cifique (VTC/Taxi)",
   "Vente véhicules neufs", "Essai routier", "Reprise ancien véhicule", "Financement / Garantie",
-  "Vente occasions révisées", "Garantie occasion",
-  "Dépannage sur place", "Remorquage 24h/24", "Transport longue distance", "Sortie de fourrière",
-  "Location Longue Durée (LLD)", "LOA (Location avec Option d'Achat)", "Gestion de flotte", "Location courte durée",
-  "Vente motos", "Pièces détachées moto", "Accessoires motard", "Casques et équipements",
-  "Révision moto", "Pneumatiques moto", "Kit chaîne et carburation", "Entretien mécanique moto",
-  "Personnalisation moto", "Préparation moteur", "Aménagement esthétique"
+  "Vente occasions rÃ©visÃ©es", "Garantie occasion",
+  "DÃ©pannage sur place", "Remorquage 24h/24", "Transport longue distance", "Sortie de fourriÃ¨re",
+  "Location Longue DurÃ©e (LLD)", "LOA (Location avec Option d'Achat)", "Gestion de flotte", "Location courte durÃ©e",
+  "Vente motos", "Pièces dÃ©tachÃ©es moto", "Accessoires motard", "Casques et équipements",
+  "Révision moto", "Pneumatiques moto", "Kit chaÃ®ne et carburation", "Entretien mÃ©canique moto",
+  "Personnalisation moto", "Préparation moteur", "AmÃ©nagement esthÃ©tique"
 ];
 
 const defaultFilterOptions = {
@@ -171,7 +171,7 @@ const brandLogoDomains = {
   Chery: "cheryinternational.com",
   Chevrolet: "chevrolet.com",
   Citroen: "citroen.com",
-  "Citroën": "citroen.com",
+  "CitroÃ«n": "citroen.com",
   Cupra: "cupraofficial.com",
   Daewoo: "daewoo.com",
   Dacia: "dacia.com",
@@ -388,7 +388,7 @@ const GaragesPage = () => {
     }
 
     if (!err?.response) {
-      return "Serveur API inaccessible. Vérifiez que le backend tourne sur http://localhost:3000.";
+      return "Serveur API inaccessible. VÃ©rifiez que le backend tourne sur http://localhost:3000.";
     }
 
     if (typeof data?.message === "string" && data.message.trim().length > 0) {
@@ -436,7 +436,7 @@ const GaragesPage = () => {
         type="button"
         onClick={onClick}
         disabled={disabled}
-        title={disabled ? "Sélectionnez d'abord Marques, Spécialités ou Services" : ""}
+        title={disabled ? "SÃ©lectionnez d'abord Marques, SpÃ©cialitÃ©s ou Services" : ""}
         className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${disabled ? disabledClass : enabledClass}`}
       >
         {label}{count > 0 ? ` (${count})` : ""}
@@ -498,7 +498,7 @@ const GaragesPage = () => {
     const fallbackItems = splitServiceLines(fallbackText).map((serviceName, index) => ({
       id: `fallback-service-${selectedGarage?.id || 'garage'}-${index}`,
       name: serviceName,
-      description: 'Service renseigné dans la présentation du garage',
+      description: 'Service renseignÃ© dans la prÃ©sentation du garage',
       base_price: null,
       duration_minutes: null
     }));
@@ -653,7 +653,7 @@ const GaragesPage = () => {
           selectedServices.some((service) => includesNormalized(servicesText, service) || includesNormalized(serviceNames, service));
         const travelSchedule = parseScheduleText(garage.travel_hours);
         const availableTravelDays = travelSchedule.filter((entry) => entry.enabled).map((entry) => entry.day);
-        // Déplacement is only valid as secondary filter
+        // DÃ©placement is only valid as secondary filter
         const hasOtherFilters = selectedBrand || selectedSpecialties.length > 0 || selectedServices.length > 0;
         const matchesDeplacement = !hasOtherFilters || selectedDeplacements.length === 0 ||
           selectedDeplacements.some((day) => availableTravelDays.includes(day));
@@ -802,7 +802,7 @@ const GaragesPage = () => {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(`${shareData.text} | ${shareData.url}`);
-        setSuccessMessage("Lien du garage copié.");
+        setSuccessMessage("Lien du garage copiÃ©.");
       }
     } catch {
       // Ignore cancel and unsupported share errors silently.
@@ -877,7 +877,7 @@ const GaragesPage = () => {
                 </span>
                 <h1 className="mt-2 text-3xl font-black tracking-tight text-[#10243f] sm:text-4xl">Carte des garages</h1>
                 <p className="mt-2 max-w-3xl text-sm text-[#5b6f8f] sm:text-[15px]">
-                  Trouvez rapidement le bon garage autour de vous avec des filtres précis, une carte interactive et les avis clients.
+                  Trouvez rapidement le bon garage autour de vous avec des filtres prÃ©cis, une carte interactive et les avis clients.
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -895,7 +895,7 @@ const GaragesPage = () => {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6b7f9f]">Recherche géolocalisée</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6b7f9f]">Recherche gÃ©olocalisÃ©e</p>
             </div>
           </div>
 
@@ -906,8 +906,8 @@ const GaragesPage = () => {
             <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
               <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Marques</h3>
-                <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">×</button>
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir â€¢ Marques</h3>
+                <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                 {filterOptions.brands.map((brand) => {
@@ -956,8 +956,8 @@ const GaragesPage = () => {
             <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
               <div className="max-h-[92vh] w-full max-w-[1100px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Spécialités</h3>
-                <button type="button" onClick={() => setShowSpecialtiesModal(false)} className="text-3xl text-slate-500">×</button>
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir â€¢ SpÃ©cialitÃ©s</h3>
+                <button type="button" onClick={() => setShowSpecialtiesModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filterOptions.specialties.map((speciality) => {
@@ -982,8 +982,8 @@ const GaragesPage = () => {
             <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
               <div className="max-h-[92vh] w-full max-w-[1100px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Services</h3>
-                <button type="button" onClick={() => setShowServicesModal(false)} className="text-3xl text-slate-500">×</button>
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir â€¢ Services</h3>
+                <button type="button" onClick={() => setShowServicesModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filterOptions.services.map((service) => {
@@ -1008,8 +1008,8 @@ const GaragesPage = () => {
             <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
               <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Ouvert</h3>
-                <button type="button" onClick={() => setShowOpenModal(false)} className="text-3xl text-slate-500">×</button>
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir â€¢ Ouvert</h3>
+                <button type="button" onClick={() => setShowOpenModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {filterOptions.openModes.map((option) => {
@@ -1034,8 +1034,8 @@ const GaragesPage = () => {
             <div className="fixed inset-0 z-[3000] flex items-end justify-center bg-black/45 p-3 sm:items-center">
               <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Déplacement</h3>
-                <button type="button" onClick={() => setShowDeplacementModal(false)} className="text-3xl text-slate-500">×</button>
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir â€¢ DÃ©placement</h3>
+                <button type="button" onClick={() => setShowDeplacementModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {filterOptions.displacements.map((option) => {
@@ -1080,18 +1080,18 @@ const GaragesPage = () => {
               </div>
               <div className="flex flex-wrap gap-2">
                 {renderFilterButton("Marques", selectedBrand ? 1 : 0, () => setShowBrandsModal(true))}
-                {renderFilterButton("Spécialités", selectedSpecialties.length, () => setShowSpecialtiesModal(true))}
+                {renderFilterButton("SpÃ©cialitÃ©s", selectedSpecialties.length, () => setShowSpecialtiesModal(true))}
                 {renderFilterButton("Services", selectedServices.length, () => setShowServicesModal(true))}
                 {renderFilterButton("Ouvert", selectedOpenModes.length, () => setShowOpenModal(true))}
                 {renderFilterButton(
-                  "Déplacement",
+                  "DÃ©placement",
                   selectedDeplacements.length,
                   () => setShowDeplacementModal(true),
                   selectedBrand === "" && selectedSpecialties.length === 0 && selectedServices.length === 0
                 )}
               </div>
               {(selectedBrand || selectedSpecialties.length > 0 || selectedServices.length > 0) && (
-                <p className="text-xs text-[#617089]">Déplacement sélectionné: {selectedDeplacements.length > 0 ? selectedDeplacements.join(", ") : "Aucun jour"}</p>
+                <p className="text-xs text-[#617089]">DÃ©placement sélectionné: {selectedDeplacements.length > 0 ? selectedDeplacements.join(", ") : "Aucun jour"}</p>
               )}
               </div>
 
@@ -1173,7 +1173,7 @@ const GaragesPage = () => {
                     onClick={() => setSelectedMapSpecialty("")}
                     className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${selectedMapSpecialty ? "border-slate-200 bg-white text-slate-600" : "border-amber-300 bg-amber-50 text-amber-700"}`}
                   >
-                    Toutes spécialités
+                    Toutes spÃ©cialitÃ©s
                   </button>
                   {filterOptions.specialties.slice(0, 10).map((specialty) => {
                     const active = selectedMapSpecialty === specialty;
@@ -1190,8 +1190,8 @@ const GaragesPage = () => {
                   })}
                 </div>
                 <p className="text-xs text-[#64748b]">
-                  {selectedMapSpecialty ? `Spécialité sélectionnée: ${selectedMapSpecialty}` : "Sélectionnez une spécialité pour filtrer les garages sur la carte"}
-                  {` • ${garagesForMap.length} garage(s) affiché(s)`}
+                  {selectedMapSpecialty ? `SpÃ©cialitÃ© sélectionnée: ${selectedMapSpecialty}` : "SÃ©lectionnez une spÃ©cialitÃ© pour filtrer les garages sur la carte"}
+                  {` â€¢ ${garagesForMap.length} garage(s) affiché(s)`}
                 </p>
               </div>
 
@@ -1207,7 +1207,7 @@ const GaragesPage = () => {
               </div>
 
               {!selectedGarageId ? (
-                <div className="rounded-[24px] border border-white/80 bg-white/95 p-6 text-sm text-[#617089] shadow-[0_14px_35px_rgba(15,23,42,0.08)]">Choisissez une spécialité puis cliquez sur un garage sur la carte pour afficher sa présentation.</div>
+                <div className="rounded-[24px] border border-white/80 bg-white/95 p-6 text-sm text-[#617089] shadow-[0_14px_35px_rgba(15,23,42,0.08)]">Choisissez une spÃ©cialitÃ© puis cliquez sur un garage sur la carte pour afficher sa prÃ©sentation.</div>
               ) : isLoadingDetails ? (
                 <div className="rounded-[24px] border border-white/80 bg-white/95 p-6 text-sm text-[#617089] shadow-[0_14px_35px_rgba(15,23,42,0.08)]">Chargement des details...</div>
               ) : (
@@ -1215,7 +1215,7 @@ const GaragesPage = () => {
                   <article className="rounded-[24px] border border-amber-100 bg-white p-6 shadow-[0_14px_35px_rgba(15,23,42,0.08)] 2xl:col-span-2">
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                       <div className="space-y-2">
-                        <p className="text-sm font-bold uppercase tracking-[0.12em] text-amber-600">Présentation</p>
+                        <p className="text-sm font-bold uppercase tracking-[0.12em] text-amber-600">PrÃ©sentation</p>
                         <h2 className="text-3xl font-black text-[#0f172a]">{selectedGarage?.name}</h2>
                         <p className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-4 py-1.5 text-sm font-bold text-amber-700">
                           {selectedMapSpecialty || selectedSpecialties[0] || "Garage automobile"}
@@ -1233,7 +1233,7 @@ const GaragesPage = () => {
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800"
                         >
                           <Navigation className="h-4 w-4" />
-                          Itinéraires
+                          ItinÃ©raires
                         </button>
                         <button
                           type="button"
@@ -1261,14 +1261,14 @@ const GaragesPage = () => {
                           Horaires de Travail
                         </h3>
                         {selectedGarageWorkSchedule.length === 0 ? (
-                          <p className="text-sm text-slate-500">Horaires non renseignés.</p>
+                          <p className="text-sm text-slate-500">Horaires non renseignÃ©s.</p>
                         ) : (
                           <ul className="space-y-1">
                             {selectedGarageWorkSchedule.map((item) => (
                               <li key={`${item.day}-${item.timeLabel}`} className="flex items-center justify-between text-sm">
                                 <span className="font-semibold text-slate-700">{item.day}</span>
                                 <span className={`${item.enabled ? "text-slate-900" : "text-slate-400"}`}>
-                                  {item.enabled ? item.timeLabel : "Fermé"}
+                                  {item.enabled ? item.timeLabel : "FermÃ©"}
                                 </span>
                               </li>
                             ))}
@@ -1279,10 +1279,10 @@ const GaragesPage = () => {
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <h3 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-[#0f172a]">
                           <Clock3 className="h-5 w-5 text-amber-500" />
-                          Horaires de Déplacement
+                          Horaires de DÃ©placement
                         </h3>
                         {selectedGarageTravelSchedule.length === 0 ? (
-                          <p className="text-sm text-slate-500">Pas de déplacement déclaré.</p>
+                          <p className="text-sm text-slate-500">Pas de dÃ©placement dÃ©clarÃ©.</p>
                         ) : (
                           <ul className="space-y-1">
                             {selectedGarageTravelSchedule.map((item) => (
@@ -1304,7 +1304,7 @@ const GaragesPage = () => {
                     <div className="flex-1">
                       <h2 className="text-2xl font-bold text-[#1a2b4b]">{selectedGarage?.name}</h2>
                       <p className="mt-1 text-sm text-[#617089]">{selectedGarage?.adresse || "Adresse non precisee"}</p>
-                      <p className="mt-1 text-sm text-[#617089]">Contact: {selectedGarage?.telephone || "N/A"} • {selectedGarage?.email || "N/A"}</p>
+                      <p className="mt-1 text-sm text-[#617089]">Contact: {selectedGarage?.telephone || "N/A"} â€¢ {selectedGarage?.email || "N/A"}</p>
                     </div>
                     <button
                       onClick={() => {
@@ -1317,7 +1317,7 @@ const GaragesPage = () => {
                       }}
                       className="flex-shrink-0 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition"
                     >
-                      🚩 Signaler
+                      ðŸš© Signaler
                     </button>
                   </div>
 
@@ -1350,13 +1350,13 @@ const GaragesPage = () => {
                   <div>
                     <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Services disponibles</h3>
                     {selectedGarageDisplayServices.items.length === 0 ? (
-                      <p className="text-sm text-[#617089]">Ce garage n'a pas encore renseigné de services.</p>
+                      <p className="text-sm text-[#617089]">Ce garage n'a pas encore renseignÃ© de services.</p>
                     ) : (
                       <>
                         <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
                           {selectedGarageDisplayServices.source === 'published'
-                            ? 'Services publiés dans le catalogue du garage.'
-                            : 'Services récupérés depuis la présentation du garage.'}
+                            ? 'Services publiÃ©s dans le catalogue du garage.'
+                            : 'Services rÃ©cupÃ©rÃ©s depuis la prÃ©sentation du garage.'}
                         </div>
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                           {selectedGarageDisplayServices.items.map((service) => (
@@ -1365,8 +1365,8 @@ const GaragesPage = () => {
                               <p className="mt-1 text-sm text-[#617089]">{service.description || 'Sans description'}</p>
                               <p className="mt-2 text-sm text-[#334155]">
                                 {service.base_price !== null && service.base_price !== undefined ? `${service.base_price} TND` : 'Prix non précisé'}
-                                {' • '}
-                                {service.duration_minutes !== null && service.duration_minutes !== undefined ? `${service.duration_minutes} min` : 'Durée non précisée'}
+                                {' â€¢ '}
+                                {service.duration_minutes !== null && service.duration_minutes !== undefined ? `${service.duration_minutes} min` : 'DurÃ©e non précisée'}
                               </p>
                             </div>
                           ))}
@@ -1468,7 +1468,7 @@ const GaragesPage = () => {
         garage={selectedGarage}
         vehicules={vehicules}
         onAppointmentCreated={() => {
-          setSuccessMessage("✓ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
+          setSuccessMessage("âœ“ Rendez-vous créé avec succès! Le garage rÃ©pondra dans les 24 heures.");
           setShowAppointmentModal(false);
         }}
       />
@@ -1480,7 +1480,7 @@ const GaragesPage = () => {
         entityId={reportData.entityId}
         entityName={reportData.entityName}
         onSuccess={() => {
-          setSuccessMessage("✓ Merci! Votre signalement a été reçu par nos modérateurs.");
+          setSuccessMessage("âœ“ Merci! Votre signalement a Ã©tÃ© reÃ§u par nos modÃ©rateurs.");
           setTimeout(() => setSuccessMessage(""), 3000);
         }}
       />
@@ -1489,3 +1489,5 @@ const GaragesPage = () => {
 };
 
 export default GaragesPage;
+
+

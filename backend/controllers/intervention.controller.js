@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
@@ -159,3 +159,5 @@ module.exports = {
   updateIntervention,
   deleteIntervention
 };
+
+

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const { body, param, query } = require('express-validator');
 const { verifyToken } = require('../middlewares/authMiddleware');
 const { checkRole, isAutomobiliste } = require('../middlewares/roleMiddleware');
@@ -171,3 +171,5 @@ router.delete('/:id/reviews/:reviewId', verifyToken, reviewIdValidation, [...gar
 router.get('/match/:vehicleId', matchGaragesValidation, validateRequest, verifyToken, garageMatchingController.matchGarages);
 
 module.exports = router;
+
+

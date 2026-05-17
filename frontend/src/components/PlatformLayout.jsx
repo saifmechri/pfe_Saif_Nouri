@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+﻿import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import ChatModal from "./ChatModal";
@@ -58,15 +58,23 @@ const PlatformLayout = ({ children }) => {
 
     // Admin should have the union of automobiliste/garage/vendeur links
     if (user?.role === "admin") {
+      items.push({ label: "Véhicules & entretien", to: "/automobiliste" });
       items.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
       items.push({ label: "Garages", to: "/automobiliste/garages" });
+      items.push({ label: "Rendez-vous", to: "/automobiliste/appointments" });
+      items.push({ label: "Messagerie", to: "/automobiliste/messages" });
+      items.push({ label: "Historique entretien", to: "/automobiliste" });
       items.push({ label: "Gestion garage", to: "/garage" });
       return items;
     }
 
-    if (user?.role === "automobiliste" || user?.role === "vendeur") {
+    if (user?.role === "automobiliste") {
+      items.push({ label: "Véhicules & entretien", to: "/automobiliste" });
       items.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
       items.push({ label: "Garages", to: "/automobiliste/garages" });
+      items.push({ label: "Rendez-vous", to: "/automobiliste/appointments" });
+      items.push({ label: "Messagerie", to: "/automobiliste/messages" });
+      items.push({ label: "Historique entretien", to: "/automobiliste" });
     }
 
     if (user?.role === "garage") {
@@ -77,7 +85,7 @@ const PlatformLayout = ({ children }) => {
   })();
 
   if (user?.role === "vendeur") {
-    // Messagerie accessible via navbar/chat modal — removed from sidebar
+    // Messagerie accessible via navbar/chat modal â€” removed from sidebar
   }
 
   return (
@@ -106,7 +114,7 @@ const PlatformLayout = ({ children }) => {
           </div>
           {user?.role === "admin" && (
             <p className="mt-3 text-sm leading-6 text-white/75">
-              Supervision des contenus, modération et audit centralisés.
+              Supervision des contenus, modÃ©ration et audit centralisÃ©s.
             </p>
           )}
         </div>
@@ -153,3 +161,5 @@ const PlatformLayout = ({ children }) => {
 };
 
 export default PlatformLayout;
+
+

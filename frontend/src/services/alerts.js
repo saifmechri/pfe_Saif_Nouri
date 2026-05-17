@@ -1,16 +1,16 @@
-import API from './api';
+﻿import API from './api';
 
-// GET - Récupérer la prochaine révision pour un véhicule
+// GET - RÃ©cupÃ©rer la prochaine révision pour un véhicule
 export const getNextRevision = (vehicleId) => {
   return API.get(`/maintenance/${vehicleId}/next-revision`).then((res) => res.data?.data ?? res.data);
 };
 
-// GET - Récupérer les garages recommandés avec matching
+// GET - RÃ©cupÃ©rer les garages recommandÃ©s avec matching
 export const getMatchingGarages = (vehicleId, maxDistance = 50) => {
   return API.get(`/garages/match/${vehicleId}?maxDistance=${maxDistance}`).then((res) => res.data?.data ?? res.data ?? []);
 };
 
-// Calcule le niveau d'urgence basé sur les données de révision
+// Calcule le niveau d'urgence basÃ© sur les donnÃ©es de révision
 export const calculateUrgencyLevel = (revisionData) => {
   if (!revisionData) return null;
 
@@ -25,16 +25,16 @@ export const calculateUrgencyLevel = (revisionData) => {
     return { level: 'urgent', label: 'URGENT', color: 'red', priority: 2 };
   }
 
-  // Niveau 2: BIENTÔT
+  // Niveau 2: BIENTÃ”T
   if (maxProgress >= 70) {
-    return { level: 'bientot', label: 'BIENTÔT', color: 'orange', priority: 1 };
+    return { level: 'bientot', label: 'BIENTÃ”T', color: 'orange', priority: 1 };
   }
 
   // Niveau 3: AUCUN
   return { level: 'aucun', label: 'AUCUN', color: 'green', priority: 0 };
 };
 
-// Formate la date au format français
+// Formate la date au format franÃ§ais
 export const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
   const date = new Date(dateStr);
@@ -44,3 +44,5 @@ export const formatDate = (dateStr) => {
     day: 'numeric'
   });
 };
+
+

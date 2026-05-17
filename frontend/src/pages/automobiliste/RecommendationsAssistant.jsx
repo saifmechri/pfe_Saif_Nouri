@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Loader2, MapPin, ShieldCheck, Sparkles, Wrench } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -21,10 +21,10 @@ import { getDynamicRecommendations } from "../../services/recommendation";
  * - Analyzes mileage vs service intervals
  * - Checks time since last maintenance
  * - Ranks garages by distance, ratings, specialization
- * - Risk assessment: URGENT / RECOMMANDÉ / FUTUR
+ * - Risk assessment: URGENT / RECOMMANDÃ‰ / FUTUR
  */
 
-const FALLBACK_TEXT = "Donnée non renseignée";
+const FALLBACK_TEXT = "DonnÃ©e non renseignÃ©e";
 
 const toNumber = (value) => {
   const parsed = Number(value);
@@ -59,7 +59,7 @@ const formatLastMaintenance = (value, interventionCount) => {
   if (Number.isFinite(interventionCount) && interventionCount > 0) {
     const parsed = toNumber(value);
     if (parsed !== null) {
-      return `${Math.round(parsed)} km depuis la dernière maintenance`;
+      return `${Math.round(parsed)} km depuis la derniÃ¨re maintenance`;
     }
     return "Historique de maintenance disponible";
   }
@@ -75,19 +75,19 @@ const getToneClasses = (tone) => {
 
 const DEFAULT_DECISION = {
   decision: "Révision",
-  recommendation_summary: "Recommandation générée par le moteur intelligent Auto Bot.",
+  recommendation_summary: "Recommandation gÃ©nÃ©rÃ©e par le moteur intelligent Auto Bot.",
   recommendation_role: "Moteur intelligent Auto Bot",
   risk: "MEDIUM",
-  risk_message: "Le système applique un mode de continuité pour afficher une décision valide.",
+  risk_message: "Le systÃ¨me applique un mode de continuitÃ© pour afficher une dÃ©cision valide.",
   risk_tone: "amber",
   final_score: 50,
   vehicle_score: 50,
   garage_score: 50,
-  reasons: ["Décision de fallback active en attendant un enrichissement des données."],
+  reasons: ["DÃ©cision de fallback active en attendant un enrichissement des donnÃ©es."],
   analysis: {
-    trigger: "Déclencheur: décision de continuité.",
-    history: "Historique insuffisant: fallback de sécurité.",
-    riskReason: "Risque MEDIUM appliqué par défaut."
+    trigger: "DÃ©clencheur: dÃ©cision de continuitÃ©.",
+    history: "Historique insuffisant: fallback de sÃ©curitÃ©.",
+    riskReason: "Risque MEDIUM appliquÃ© par dÃ©faut."
   },
   vehicle: {
     id: null,
@@ -98,7 +98,7 @@ const DEFAULT_DECISION = {
     current_state: "À vérifier"
   },
   recommended_garage: {
-    name: "Garage à confirmer",
+    name: "Garage Ã  confirmer",
     distance_km: null,
     rating: null,
     isOpen: false,
@@ -166,7 +166,7 @@ const RecommendationsAssistant = () => {
       } catch (fetchError) {
         const apiErrors = fetchError.response?.data?.errors;
         const details = Array.isArray(apiErrors) ? apiErrors.join(" | ") : "";
-        setError(details || fetchError.response?.data?.message || "Impossible de charger la décision.");
+        setError(details || fetchError.response?.data?.message || "Impossible de charger la dÃ©cision.");
         setDecision(DEFAULT_DECISION);
       } finally {
         if (isMounted) {
@@ -218,14 +218,14 @@ const RecommendationsAssistant = () => {
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-sky-700">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Assistant de décision
+                  Assistant de dÃ©cision
                 </div>
                 <div className="space-y-3">
                   <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
                     Recommandation intelligente pour l'entretien véhicule
                   </h1>
                   <p className="max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                    Le moteur décisionnel d'Auto Bot analyse le véhicule, l'historique de maintenance et les garages pour fournir une décision canonique prête à être consommée en production.
+                    Le moteur dÃ©cisionnel d'Auto Bot analyse le véhicule, l'historique de maintenance et les garages pour fournir une dÃ©cision canonique prÃªte Ã  être consommÃ©e en production.
                   </p>
                 </div>
               </div>
@@ -233,7 +233,7 @@ const RecommendationsAssistant = () => {
               <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,_rgba(15,23,42,0.96),_rgba(37,99,235,0.88))] p-5 text-white shadow-[0_18px_40px_rgba(15,23,42,0.18)]">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/70">Décision principale</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/70">DÃ©cision principale</p>
                     <h2 className="mt-2 text-2xl font-black">{decision.decision}</h2>
                     <p className="mt-1 text-sm text-white/80">
                       {decision.recommendation_summary}
@@ -257,7 +257,7 @@ const RecommendationsAssistant = () => {
           {loading ? (
             <div className="flex items-center justify-center gap-3 rounded-[28px] border border-white/80 bg-white/90 p-10 text-slate-600 shadow-sm">
               <Loader2 className="h-5 w-5 animate-spin" />
-              Récupération de la décision depuis le moteur backend...
+              RÃ©cupÃ©ration de la dÃ©cision depuis le moteur backend...
             </div>
           ) : (
             <div className="space-y-6">
@@ -267,7 +267,7 @@ const RecommendationsAssistant = () => {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-sky-700">
                         <Sparkles className="h-3.5 w-3.5" />
-                        Résumé
+                        RÃ©sumÃ©
                       </span>
                       <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
                         <ShieldCheck className="h-3.5 w-3.5" />
@@ -278,12 +278,12 @@ const RecommendationsAssistant = () => {
                     <div>
                       <h2 className="mt-2 text-3xl font-black text-slate-900">{decision.vehicle?.modele || decision.vehicle?.type || "Votre véhicule"}</h2>
                       <p className="mt-2 text-sm text-slate-600">
-                        ID: {decision.vehicle?.id ?? FALLBACK_TEXT} · Matricule: {decision.vehicle?.matricule || FALLBACK_TEXT} · KM: {formatKm(decision.vehicle?.kilometrage_voiture)} · Carburant: {decision.vehicle?.fuel || FALLBACK_TEXT} · État: {decision.vehicle?.current_state || FALLBACK_TEXT}
+                        ID: {decision.vehicle?.id ?? FALLBACK_TEXT} Â· Matricule: {decision.vehicle?.matricule || FALLBACK_TEXT} Â· KM: {formatKm(decision.vehicle?.kilometrage_voiture)} Â· Carburant: {decision.vehicle?.fuel || FALLBACK_TEXT} Â· Ã‰tat: {decision.vehicle?.current_state || FALLBACK_TEXT}
                       </p>
                     </div>
 
                     <div className="rounded-[26px] bg-[linear-gradient(180deg,#0f172a,#1d4ed8)] p-5 text-white shadow-[0_14px_35px_rgba(15,23,42,0.12)]">
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">Décision finale</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/70">DÃ©cision finale</p>
                       <div className="mt-2 flex flex-wrap items-end gap-3">
                         <h3 className="text-3xl font-black">{decision.decision}</h3>
                         <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white/90">{decision.final_score}/100</span>
@@ -361,7 +361,7 @@ const RecommendationsAssistant = () => {
                               <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Meilleur match</p>
                               <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-amber-800">
                                 <Sparkles className="h-3.5 w-3.5" />
-                                RECOMMANDÉ
+                                RECOMMANDÃ‰
                               </span>
                             </div>
                             <h3 className="mt-2 text-xl font-black text-slate-900">{finalRecommendedGarage.name}</h3>
@@ -379,14 +379,14 @@ const RecommendationsAssistant = () => {
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2">
                             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Rating</p>
-                            <p className="mt-1 font-semibold text-slate-900">⭐ {formatRating(finalRecommendedGarage.rating)}</p>
+                            <p className="mt-1 font-semibold text-slate-900">â­ {formatRating(finalRecommendedGarage.rating)}</p>
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Disponibilité</p>
+                            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">DisponibilitÃ©</p>
                             <p className="mt-1 font-semibold text-slate-900">{finalRecommendedGarage.isOpen ? "Disponible maintenant" : "Sur rendez-vous"}</p>
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2">
-                            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Prix estimé</p>
+                            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Prix estimÃ©</p>
                             <p className="mt-1 font-semibold text-slate-900">{formatMoney(finalRecommendedGarage.estimated_price)}</p>
                           </div>
                         </div>
@@ -421,7 +421,7 @@ const RecommendationsAssistant = () => {
                                   <div className="flex-1">
                                     <p className="text-sm font-bold text-slate-900">{garage.name}</p>
                                     <p className="mt-1 text-xs text-slate-500">
-                                      {formatDistance(garage.distance_km)} · ⭐ {formatRating(garage.rating)} · {garage.isOpen ? "Disponible" : "Sur rendez-vous"}
+                                      {formatDistance(garage.distance_km)} Â· â­ {formatRating(garage.rating)} Â· {garage.isOpen ? "Disponible" : "Sur rendez-vous"}
                                     </p>
                                   </div>
                                   <div className="text-right">
@@ -455,7 +455,7 @@ const RecommendationsAssistant = () => {
                     </>
                   ) : (
                     <div className="rounded-[26px] border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
-                      Aucun garage exploitable n'a été trouvé pour cette décision.
+                      Aucun garage exploitable n'a Ã©tÃ© trouvé pour cette dÃ©cision.
                     </div>
                   )}
                 </div>
@@ -469,3 +469,5 @@ const RecommendationsAssistant = () => {
 };
 
 export default RecommendationsAssistant;
+
+

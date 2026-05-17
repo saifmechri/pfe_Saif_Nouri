@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, X, Send, Search, Loader } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
 import {
@@ -420,7 +420,7 @@ const ChatModal = ({ isOpen, onClose }) => {
                               <p className="mt-1 text-xs text-slate-600">{contact.subtitle}</p>
                             )}
                           </div>
-                          <div className="text-xl">💬</div>
+                          <div className="text-xl">ðŸ’¬</div>
                         </div>
                       </button>
                     );
@@ -552,3 +552,5 @@ const ChatModal = ({ isOpen, onClose }) => {
 };
 
 export default ChatModal;
+
+

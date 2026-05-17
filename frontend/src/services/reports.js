@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 
 const resolvedApiBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
 
@@ -17,8 +17,8 @@ API.interceptors.request.use((config) => {
 
 /**
  * Soumet un nouveau signalement (report)
- * @param {string} reported_entity_type - Type d'entité signalée ('garage', 'review', 'user', etc.)
- * @param {number} reported_entity_id - ID de l'entité signalée
+ * @param {string} reported_entity_type - Type d'entité signalÃ©e ('garage', 'review', 'user', etc.)
+ * @param {number} reported_entity_id - ID de l'entité signalÃ©e
  * @param {string} reason - Raison du signalement (ex: "spam", "insulte", "fraude")
  * @param {string} details - Détails additionnels du signalement
  * @returns {Promise<object>} Réponse du serveur avec le report créé
@@ -41,3 +41,5 @@ export const submitReport = async (reported_entity_type, reported_entity_id, rea
 export default {
   submitReport
 };
+
+

@@ -1,4 +1,4 @@
-const appointmentModel = require('../models/appointment.model');
+﻿const appointmentModel = require('../models/appointment.model');
 
 const create = async (payload) => {
   return appointmentModel.createAppointment(payload);
@@ -32,3 +32,5 @@ module.exports = {
   update,
   remove
 };
+
+

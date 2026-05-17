@@ -1,5 +1,5 @@
-/**
- * 🚗 MAINTENANCE RISK SCORING SERVICE
+﻿/**
+ * ðŸš— MAINTENANCE RISK SCORING SERVICE
  * Implements intelligent multi-factor scoring for vehicle maintenance decisions
  * Replaces simple mileage-based rules with weighted scoring model
  */
@@ -30,7 +30,7 @@ const CRITICAL_PARTS = ['courroie distribution', 'plaquettes frein', 'amortisseu
 const { evaluateMaintenanceDecision } = require('./riskRules');
 
 /**
- * ✅ STEP 1: Normalize maintenance history structure
+ * âœ… STEP 1: Normalize maintenance history structure
  * Ensures consistent format with required fields
  */
 function normalizeMaintenanceHistory(interventions) {
@@ -60,7 +60,7 @@ function normalizeMaintenanceHistory(interventions) {
 }
 
 /**
- * ✅ STEP 2: Analyze maintenance intervals
+ * âœ… STEP 2: Analyze maintenance intervals
  * Calculates consistency and adherence to recommended intervals
  */
 function analyzeMaintenanceIntervals(normalizedHistory) {
@@ -156,7 +156,7 @@ function analyzeMaintenanceIntervals(normalizedHistory) {
 }
 
 /**
- * ✅ STEP 3: Calculate mileage-based score component
+ * âœ… STEP 3: Calculate mileage-based score component
  * Considers current mileage vs recommended intervals
  */
 function calculateMileageScore(currentKm, normalizedHistory, maintenanceAnalysis) {
@@ -184,7 +184,7 @@ function calculateMileageScore(currentKm, normalizedHistory, maintenanceAnalysis
     // Based on average usage, estimate percentage of typical interval consumed
     if (estimatedDaysSinceLastIntervention > 180) {
       score = Math.min(50, (estimatedDaysSinceLastIntervention / 365) * 100);
-      factors.push(`${Math.round(estimatedDaysSinceLastIntervention)} jours depuis dernière révision`);
+      factors.push(`${Math.round(estimatedDaysSinceLastIntervention)} jours depuis derniÃ¨re révision`);
     }
   }
 
@@ -192,14 +192,14 @@ function calculateMileageScore(currentKm, normalizedHistory, maintenanceAnalysis
   const kmPercentOfTypicalInterval = (kmSinceLastIntervention / 15000) * 100;
   if (kmPercentOfTypicalInterval > 80) {
     score = Math.max(score, Math.min(50, (kmPercentOfTypicalInterval / 100) * 100));
-    factors.push(`${Math.round(kmSinceLastIntervention)} km parcourus depuis dernière maintenance`);
+    factors.push(`${Math.round(kmSinceLastIntervention)} km parcourus depuis derniÃ¨re maintenance`);
   }
 
   return { score, factors };
 }
 
 /**
- * ✅ STEP 4: Calculate recency-based score component
+ * âœ… STEP 4: Calculate recency-based score component
  * Penalizes aged maintenance records
  */
 function calculateRecencyScore(normalizedHistory) {
@@ -215,10 +215,10 @@ function calculateRecencyScore(normalizedHistory) {
 
   if (daysSinceLastIntervention > 730) {
     score = Math.min(40, (daysSinceLastIntervention / 365) * 20);
-    factors.push(`Dernière maintenance il y a ${Math.round(daysSinceLastIntervention)} jours`);
+    factors.push(`DerniÃ¨re maintenance il y a ${Math.round(daysSinceLastIntervention)} jours`);
   } else if (daysSinceLastIntervention > 365) {
     score = Math.min(30, (daysSinceLastIntervention / 730) * 20);
-    factors.push(`Maintenance annuelle dépassée: ${Math.round(daysSinceLastIntervention)} jours`);
+    factors.push(`Maintenance annuelle dÃ©passÃ©e: ${Math.round(daysSinceLastIntervention)} jours`);
   } else {
     score = Math.max(0, 10 - (daysSinceLastIntervention / 365) * 10);
   }
@@ -227,7 +227,7 @@ function calculateRecencyScore(normalizedHistory) {
 }
 
 /**
- * ✅ STEP 5: Calculate maintenance type importance score
+ * âœ… STEP 5: Calculate maintenance type importance score
  * Critical services are weighted higher
  */
 function calculateMaintenanceTypeScore(normalizedHistory, maintenanceAnalysis) {
@@ -246,12 +246,12 @@ function calculateMaintenanceTypeScore(normalizedHistory, maintenanceAnalysis) {
       
       if (!lastOfType) {
         score += 25; // Critical type never done
-        factors.push(`${type.toUpperCase()}: jamais effectué (critique)`);
+        factors.push(`${type.toUpperCase()}: jamais effectuÃ© (critique)`);
       } else {
         const daysSinceLastOfType = (Date.now() - lastOfType.date.getTime()) / (1000 * 60 * 60 * 24);
         if (daysSinceLastOfType > typeConfig.maxIntervalDays) {
           score += 20;
-          factors.push(`${type}: dépassé depuis ${Math.round(daysSinceLastOfType - typeConfig.maxIntervalDays)} jours`);
+          factors.push(`${type}: dÃ©passÃ© depuis ${Math.round(daysSinceLastOfType - typeConfig.maxIntervalDays)} jours`);
         }
       }
     }
@@ -263,7 +263,7 @@ function calculateMaintenanceTypeScore(normalizedHistory, maintenanceAnalysis) {
       for (const criticalPart of CRITICAL_PARTS) {
         if (part.toLowerCase().includes(criticalPart)) {
           score = Math.min(score, -5); // Negative points (good) for critical maintenance
-          factors.push(`Pièce critique remplacée: ${part}`);
+          factors.push(`Pièce critique remplacÃ©e: ${part}`);
         }
       }
     }
@@ -273,7 +273,7 @@ function calculateMaintenanceTypeScore(normalizedHistory, maintenanceAnalysis) {
 }
 
 /**
- * ✅ STEP 6: Calculate comprehensive maintenance risk score (0-100)
+ * âœ… STEP 6: Calculate comprehensive maintenance risk score (0-100)
  * Weighted combination of all factors
  * Thresholds:
  *   0-40: LOW risk
@@ -325,13 +325,13 @@ function calculateMaintenanceRiskScore(currentKm, vehicle, normalizedHistory) {
 }
 
 /**
- * ✅ STEP 7: Generate human-readable explanation
+ * âœ… STEP 7: Generate human-readable explanation
  */
 function generateExplanation(score, riskLevel, factors) {
   const summaries = {
-    LOW: 'Votre véhicule est en bon état d\'entretien. Continuez à suivre le programme de maintenance recommandé.',
-    MEDIUM: 'Votre véhicule nécessite une révision prochainement. Planifiez une intervention dans les prochaines semaines.',
-    HIGH: 'Votre véhicule présente des besoins de maintenance urgents. Prenez rendez-vous rapidement chez un garage.'
+    LOW: 'Votre véhicule est en bon Ã©tat d\'entretien. Continuez Ã  suivre le programme de maintenance recommandÃ©.',
+    MEDIUM: 'Votre véhicule nÃ©cessite une révision prochainement. Planifiez une intervention dans les prochaines semaines.',
+    HIGH: 'Votre véhicule prÃ©sente des besoins de maintenance urgents. Prenez rendez-vous rapidement chez un garage.'
   };
 
   return {
@@ -340,13 +340,13 @@ function generateExplanation(score, riskLevel, factors) {
     riskLevel: riskLevel,
     mainFactors: factors.slice(0, 3), // Top 3 factors
     recommendation: riskLevel === 'HIGH' ? 
-      'Visite urgente recommandée' : 
-      (riskLevel === 'MEDIUM' ? 'À prévoir dans les prochaines semaines' : 'Suivi régulier')
+      'Visite urgente recommandÃ©e' : 
+      (riskLevel === 'MEDIUM' ? 'À prÃ©voir dans les prochaines semaines' : 'Suivi rÃ©gulier')
   };
 }
 
 /**
- * ✅ PUBLIC API: Main function to compute maintenance risk
+ * âœ… PUBLIC API: Main function to compute maintenance risk
  */
 function computeMaintenanceRisk(currentKm, vehicle, rawInterventions) {
   try {
@@ -433,3 +433,5 @@ module.exports = {
   MAINTENANCE_TYPES,
   CRITICAL_PARTS
 };
+
+

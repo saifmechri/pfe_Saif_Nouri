@@ -1,9 +1,10 @@
-const {
+﻿const {
   findConversationById,
   findConversationByParticipants,
   createConversation,
   listConversationsForAutomobiliste,
   listConversationsForGarageUser,
+  listConversationsForGarageVendeur,
   listConversationsForVendeur,
   listConversationsForAdmin,
   createMessage,
@@ -11,6 +12,7 @@ const {
   listMessagesByConversation,
   findUserByIdWithRole
 } = require('../models/chat.model');
+const { findUserByEmail } = require('../models/user.model');
 const notificationService = require('./notificationService');
 const { findGarageIdentityById, findGarageIdentityByUserId } = require('../models/garage.model');
 
@@ -60,10 +62,14 @@ const mapConversationForUser = (row, viewerUserId) => {
 
   if (Number(viewerUserId) === automobiliste.id) {
     counterpart = conversationType === 'automobiliste_garage' ? garage : vendeur;
+  } else if (conversationType === 'garage_vendeur' && garage && Number(viewerUserId) === Number(garage.user_id)) {
+    counterpart = vendeur;
+  } else if (conversationType === 'garage_vendeur' && vendeur && Number(viewerUserId) === Number(row.vendeur_user_id)) {
+    counterpart = garage;
   } else if (conversationType === 'automobiliste_garage') {
     counterpart = automobiliste;
   } else {
-    counterpart = automobiliste;
+    counterpart = conversationType === 'garage_vendeur' ? garage : automobiliste;
   }
 
   return {
@@ -121,15 +127,34 @@ const ensureConversationAccess = (conversationRow, user) => {
   throw createChatError('FORBIDDEN_CONVERSATION', 'Acces refuse a cette conversation');
 };
 
+const resolveRequesterUserId = async (requester) => {
+  const requesterId = Number.parseInt(requester?.id, 10);
+  if (Number.isInteger(requesterId) && requesterId > 0) {
+    return requesterId;
+  }
+
+  // Legacy admin tokens can miss id; recover it from admin email.
+  if (requester?.role === 'admin' && requester?.email) {
+    const rawEmail = String(requester.email).trim();
+    const adminUser = await findUserByEmail(rawEmail) || await findUserByEmail(rawEmail.toLowerCase());
+    const adminUserId = Number.parseInt(adminUser?.id, 10);
+    if (Number.isInteger(adminUserId) && adminUserId > 0) {
+      return adminUserId;
+    }
+  }
+
+  throw createChatError('FORBIDDEN_ROLE', 'Utilisateur non identifie pour creer une conversation');
+};
+
 const resolvePairForStart = async ({ requester, conversationType, garageId, vendeurId, automobilisteId }) => {
-  if (!['automobiliste_garage', 'automobiliste_vendeur'].includes(conversationType)) {
+  if (!['automobiliste_garage', 'automobiliste_vendeur', 'garage_vendeur'].includes(conversationType)) {
     throw createChatError('INVALID_CONVERSATION_TYPE', 'conversationType invalide');
   }
 
-  const requesterId = Number(requester.id);
+  const requesterId = await resolveRequesterUserId(requester);
 
   if (conversationType === 'automobiliste_garage') {
-    if (requester.role === 'automobiliste') {
+    if (requester.role === 'automobiliste' || requester.role === 'admin') {
       const normalizedGarageId = Number.parseInt(garageId, 10);
       if (!Number.isInteger(normalizedGarageId) || normalizedGarageId <= 0) {
         throw createChatError('INVALID_GARAGE_ID', 'garageId est obligatoire');
@@ -175,7 +200,36 @@ const resolvePairForStart = async ({ requester, conversationType, garageId, vend
     throw createChatError('FORBIDDEN_ROLE', 'Seuls automobiliste et garage peuvent creer ce chat');
   }
 
-  if (requester.role === 'automobiliste') {
+  if (conversationType === 'garage_vendeur') {
+    if (requester.role !== 'garage') {
+      throw createChatError('FORBIDDEN_ROLE', 'Seuls les garages peuvent creer ce chat');
+    }
+
+    const normalizedVendeurId = Number.parseInt(vendeurId, 10);
+
+    if (!Number.isInteger(normalizedVendeurId) || normalizedVendeurId <= 0) {
+      throw createChatError('INVALID_VENDEUR_ID', 'vendeurId est obligatoire');
+    }
+
+    const meAsGarage = await findGarageIdentityByUserId(requesterId);
+    if (!meAsGarage) {
+      throw createChatError('GARAGE_PROFILE_NOT_FOUND', 'Profil garage introuvable');
+    }
+
+    const vendeurUser = await findUserByIdWithRole(normalizedVendeurId);
+    if (!vendeurUser || vendeurUser.role !== 'vendeur') {
+      throw createChatError('VENDEUR_NOT_FOUND', 'Vendeur introuvable');
+    }
+
+    return {
+      conversationType,
+      automobilisteUserId: requesterId,
+      garageId: Number(meAsGarage.id),
+      vendeurUserId: normalizedVendeurId
+    };
+  }
+
+  if (requester.role === 'automobiliste' || requester.role === 'admin') {
     const normalizedVendeurId = Number.parseInt(vendeurId, 10);
     if (!Number.isInteger(normalizedVendeurId) || normalizedVendeurId <= 0) {
       throw createChatError('INVALID_VENDEUR_ID', 'vendeurId est obligatoire');
@@ -194,26 +248,41 @@ const resolvePairForStart = async ({ requester, conversationType, garageId, vend
     };
   }
 
-  if (requester.role === 'vendeur') {
+  if (requester.role === 'vendeur' || requester.role === 'admin') {
     const normalizedAutomobilisteId = Number.parseInt(automobilisteId, 10);
-    if (!Number.isInteger(normalizedAutomobilisteId) || normalizedAutomobilisteId <= 0) {
-      throw createChatError('INVALID_AUTOMOBILISTE_ID', 'automobilisteId est obligatoire');
+    if (Number.isInteger(normalizedAutomobilisteId) && normalizedAutomobilisteId > 0) {
+      const automobilisteUser = await findUserByIdWithRole(normalizedAutomobilisteId);
+      if (!automobilisteUser || automobilisteUser.role !== 'automobiliste') {
+        throw createChatError('AUTOMOBILISTE_NOT_FOUND', 'Automobiliste introuvable');
+      }
+
+      return {
+        conversationType,
+        automobilisteUserId: normalizedAutomobilisteId,
+        garageId: null,
+        vendeurUserId: requesterId
+      };
     }
 
-    const automobilisteUser = await findUserByIdWithRole(normalizedAutomobilisteId);
-    if (!automobilisteUser || automobilisteUser.role !== 'automobiliste') {
-      throw createChatError('AUTOMOBILISTE_NOT_FOUND', 'Automobiliste introuvable');
+    const normalizedVendeurId = Number.parseInt(vendeurId, 10);
+    if (Number.isInteger(normalizedVendeurId) && normalizedVendeurId > 0) {
+      const vendeurUser = await findUserByIdWithRole(normalizedVendeurId);
+      if (!vendeurUser || vendeurUser.role !== 'vendeur') {
+        throw createChatError('VENDEUR_NOT_FOUND', 'Vendeur introuvable');
+      }
+
+      return {
+        conversationType,
+        automobilisteUserId: requesterId,
+        garageId: null,
+        vendeurUserId: normalizedVendeurId
+      };
     }
 
-    return {
-      conversationType,
-      automobilisteUserId: normalizedAutomobilisteId,
-      garageId: null,
-      vendeurUserId: requesterId
-    };
+    throw createChatError('INVALID_AUTOMOBILISTE_ID', 'automobilisteId ou vendeurId est obligatoire');
   }
 
-  throw createChatError('FORBIDDEN_ROLE', 'Seuls automobiliste et vendeur peuvent creer ce chat');
+  throw createChatError('FORBIDDEN_ROLE', 'Seuls automobiliste, vendeur et admin peuvent creer ce chat');
 };
 
 const getConversationById = async (conversationId, user) => {
@@ -263,14 +332,42 @@ const listConversations = async ({ user, limit, offset }) => {
   const safeOffset = Math.max(0, Number.parseInt(offset, 10) || 0);
 
   let rows = [];
-  if (user.role === 'automobiliste') {
+  if (user.role === 'admin') {
+    rows = await listConversationsForAdmin(safeLimit, safeOffset);
+  } else if (user.role === 'automobiliste') {
     rows = await listConversationsForAutomobiliste(Number(user.id), safeLimit, safeOffset);
   } else if (user.role === 'garage') {
-    rows = await listConversationsForGarageUser(Number(user.id), safeLimit, safeOffset);
+    const [garageRows, garageVendorRows] = await Promise.all([
+      listConversationsForGarageUser(Number(user.id), safeLimit, safeOffset),
+      listConversationsForGarageVendeur(Number(user.id), safeLimit, safeOffset)
+    ]);
+
+    const merged = new Map();
+    [...garageRows, ...garageVendorRows].forEach((row) => {
+      merged.set(Number(row.id), row);
+    });
+
+    rows = Array.from(merged.values()).sort((left, right) => {
+      const leftTime = new Date(left.last_message_at || left.created_at || 0).getTime();
+      const rightTime = new Date(right.last_message_at || right.created_at || 0).getTime();
+      return rightTime - leftTime;
+    });
   } else if (user.role === 'vendeur') {
-    rows = await listConversationsForVendeur(Number(user.id), safeLimit, safeOffset);
-  } else if (user.role === 'admin') {
-    rows = await listConversationsForAdmin(safeLimit, safeOffset);
+    const [vendeurRows, automobilisteRows] = await Promise.all([
+      listConversationsForVendeur(Number(user.id), safeLimit, safeOffset),
+      listConversationsForAutomobiliste(Number(user.id), safeLimit, safeOffset)
+    ]);
+
+    const merged = new Map();
+    [...vendeurRows, ...automobilisteRows].forEach((row) => {
+      merged.set(Number(row.id), row);
+    });
+
+    rows = Array.from(merged.values()).sort((left, right) => {
+      const leftTime = new Date(left.last_message_at || left.created_at || 0).getTime();
+      const rightTime = new Date(right.last_message_at || right.created_at || 0).getTime();
+      return rightTime - leftTime;
+    });
   } else {
     throw createChatError('FORBIDDEN_ROLE', 'Role non autorise pour le chat');
   }
@@ -312,7 +409,7 @@ const sendMessageToConversation = async ({ user, conversationId, message, client
 
   await touchConversation(conversation.id);
 
-  // Génération automatique d'une notification pour le destinataire du message
+  // GÃ©nÃ©ration automatique d'une notification pour le destinataire du message
   try {
     const senderId = Number(user.id);
     let recipientUserId = null;
@@ -328,6 +425,11 @@ const sendMessageToConversation = async ({ user, conversationId, message, client
       const vendeurUserId = conversation.vendeur ? Number(conversation.vendeur.id) : null;
       if (senderId === automobilisteId) recipientUserId = vendeurUserId;
       else recipientUserId = automobilisteId;
+    } else if (conversation.conversationType === 'garage_vendeur') {
+      const garageUserId = conversation.garage?.user_id ? Number(conversation.garage.user_id) : null;
+      const vendeurUserId = conversation.vendeur ? Number(conversation.vendeur.id) : null;
+      if (senderId === garageUserId) recipientUserId = vendeurUserId;
+      else recipientUserId = garageUserId;
     }
 
     if (recipientUserId && recipientUserId !== senderId) {
@@ -376,3 +478,5 @@ module.exports = {
   listConversationMessages,
   sendMessageToConversation
 };
+
+

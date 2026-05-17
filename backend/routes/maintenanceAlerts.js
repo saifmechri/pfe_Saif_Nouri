@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middlewares/authMiddleware');
 const maintenanceAlertController = require('../controllers/maintenanceAlert.controller');
@@ -19,3 +19,5 @@ router.patch('/:id', verifyToken, maintenanceAlertController.updateAlert);
 router.delete('/:id', verifyToken, maintenanceAlertController.deleteAlert);
 
 module.exports = router;
+
+

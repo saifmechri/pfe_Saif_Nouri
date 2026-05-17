@@ -21,7 +21,7 @@ const fetchUserForToken = async (userId) => {
         throw error;
       }
 
-      // Petit retry pour les coupures rÃ©seau transitoires (Supabase/PG over TLS).
+      // Petit retry pour les coupures réseau transitoires (Supabase/PG over TLS).
       await wait(150);
     }
   }
@@ -30,8 +30,8 @@ const fetchUserForToken = async (userId) => {
 };
 
 /**
- * VÃ©rifie le JWT, charge l'utilisateur courant et attache req.user.
- * Bloque la requÃªte avec 401 si le token est absent, expirÃ© ou invalide.
+ * Vérifie le JWT, charge l'utilisateur courant et attache req.user.
+ * Bloque la requÃªte avec 401 si le token est absent, expiré ou invalide.
  */
 const verifyToken = async (req, res, next) => {
   try {

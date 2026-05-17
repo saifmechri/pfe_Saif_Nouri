@@ -114,13 +114,13 @@ const InterventionDetail = () => {
 
   const handleAddPiece = async () => {
     if (!pieceForm.pieceId) {
-      setPieceActionError('SÃ©lectionnez une pièce.');
+      setPieceActionError('Sélectionnez une pièce.');
       return;
     }
 
     const quantite = Number.parseInt(pieceForm.quantite, 10);
     if (!Number.isInteger(quantite) || quantite <= 0) {
-      setPieceActionError('La quantitÃ© doit être supÃ©rieure ou Ã©gale Ã  1.');
+      setPieceActionError('La quantité doit être supérieure ou égale Ã  1.');
       return;
     }
 
@@ -141,7 +141,7 @@ const InterventionDetail = () => {
       setPieceForm({ pieceId: '', quantite: '1', prix_unitaire: '' });
       await refreshIntervention();
     } catch (err) {
-      setPieceActionError(err?.response?.data?.message || err.message || 'Erreur lors de lâ€™ajout de la pièce');
+      setPieceActionError(err?.response?.data?.message || err.message || 'Erreur lors de l’ajout de la pièce');
     } finally {
       setPieceActionLoading(false);
     }
@@ -253,7 +253,7 @@ const InterventionDetail = () => {
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Garage</p>
                 <p className="mt-2 text-lg font-semibold text-[#102848]">{item.garage_nom || 'â€”'}</p>
-                <p className="mt-1 text-sm text-[#5d7397]">{item.garage_adresse || 'Adresse non renseignÃ©e'}</p>
+                <p className="mt-1 text-sm text-[#5d7397]">{item.garage_adresse || 'Adresse non renseignée'}</p>
               </div>
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
@@ -262,7 +262,7 @@ const InterventionDetail = () => {
               </div>
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">CoÃ»t total</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Coût total</p>
                 <p className="mt-2 text-lg font-semibold text-[#102848]">{item.cout_total ? `${item.cout_total} TND` : 'â€”'}</p>
               </div>
 
@@ -295,7 +295,7 @@ const InterventionDetail = () => {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-[#5d7397]">Aucune pièce associÃ©e Ã  cette intervention.</p>
+                    <p className="text-sm text-[#5d7397]">Aucune pièce associée Ã  cette intervention.</p>
                   )}
                 </div>
 
@@ -310,7 +310,7 @@ const InterventionDetail = () => {
                         className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
                         disabled={piecesLoading}
                       >
-                        <option value="">{piecesLoading ? 'Chargement des pièces...' : 'SÃ©lectionnez une pièce'}</option>
+                        <option value="">{piecesLoading ? 'Chargement des pièces...' : 'Sélectionnez une pièce'}</option>
                         {availablePieces.map((piece) => (
                           <option key={piece.id} value={piece.id}>
                             {piece.nom || piece.reference || `Pièce #${piece.id}`} {piece.reference ? `(${piece.reference})` : ''}
@@ -320,7 +320,7 @@ const InterventionDetail = () => {
                     </label>
 
                     <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-[#1a355e]">QuantitÃ©</span>
+                      <span className="mb-1 block text-sm font-medium text-[#1a355e]">Quantité</span>
                       <input
                         name="quantite"
                         value={pieceForm.quantite}
@@ -354,7 +354,7 @@ const InterventionDetail = () => {
                         {pieceActionLoading ? 'Ajout...' : 'Ajouter la pièce'}
                       </button>
                       <span className="text-xs text-[#5d7397]">
-                        Les pièces affichées sont filtrÃ©es sur le stock disponible.
+                        Les pièces affichées sont filtrées sur le stock disponible.
                       </span>
                     </div>
                   </div>
@@ -423,7 +423,7 @@ const InterventionDetail = () => {
                 </label>
 
                 <label className="block">
-                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">CoÃ»t total</span>
+                  <span className="mb-1 block text-sm font-medium text-[#1a355e]">Coût total</span>
                   <input
                     name="cout_total"
                     value={form.cout_total}

@@ -100,16 +100,16 @@ const modelsByMarque = {
 
 const categories = [
   "Moteur",
-  "Ã‰chappement",
+  "Échappement",
   "Intérieur",
   "Refroidissement et Climatisation",
   "Freinage",
-  "Train Avant-ArriÃ¨re",
+  "Train Avant-Arrière",
   "Roue",
   "Carrosserie latérale gauche",
   "Pièces latérale droite",
   "Toit voiture",
-  "Carrosserie ArriÃ¨re",
+  "Carrosserie Arrière",
   "Pièces Face Avant",
   "Accessoires",
   "Huiles et Fluides",
@@ -137,16 +137,16 @@ const marqueStyleByName = {
 
 const categoryVisual = {
   Moteur: { icon: "âš™", color: "from-zinc-100 to-white" },
-  "Ã‰chappement": { icon: "ðŸ› ", color: "from-slate-100 to-white" },
+  "Échappement": { icon: "ðŸ› ", color: "from-slate-100 to-white" },
   "Intérieur": { icon: "ðŸª‘", color: "from-stone-100 to-white" },
   "Refroidissement et Climatisation": { icon: "â„", color: "from-cyan-100 to-white" },
   Freinage: { icon: "ðŸ›‘", color: "from-rose-100 to-white" },
-  "Train Avant-ArriÃ¨re": { icon: "ðŸ§©", color: "from-violet-100 to-white" },
+  "Train Avant-Arrière": { icon: "ðŸ§©", color: "from-violet-100 to-white" },
   Roue: { icon: "â­•", color: "from-slate-100 to-white" },
   "Carrosserie latérale gauche": { icon: "ðŸš˜", color: "from-indigo-100 to-white" },
   "Pièces latérale droite": { icon: "ðŸš—", color: "from-blue-100 to-white" },
   "Toit voiture": { icon: "â¬’", color: "from-zinc-100 to-white" },
-  "Carrosserie ArriÃ¨re": { icon: "ðŸ”§", color: "from-gray-100 to-white" },
+  "Carrosserie Arrière": { icon: "ðŸ”§", color: "from-gray-100 to-white" },
   "Pièces Face Avant": { icon: "ðŸš™", color: "from-emerald-100 to-white" },
   Accessoires: { icon: "ðŸ§°", color: "from-amber-100 to-white" },
   "Huiles et Fluides": { icon: "ðŸ§´", color: "from-yellow-100 to-white" },
@@ -622,7 +622,7 @@ const CataloguePieces = () => {
   const handleSaveLocation = () => {
     if (newPiece.latitude && newPiece.longitude) {
       setShowMapModal(false);
-      // Localisation sauvegardÃ©e dans newPiece state
+      // Localisation sauvegardée dans newPiece state
     } else {
       alert("Veuillez sélectionner un lieu sur la carte");
     }
@@ -1318,7 +1318,7 @@ const CataloguePieces = () => {
   const syncPiecesList = () => {
     // Réinitialiser Ã  la page 1 et forcer un refresh complet
     setPage(1);
-    // DÃ©clencher un refresh en changeant appliedFilters
+    // Déclencher un refresh en changeant appliedFilters
     setAppliedFilters((prev) => ({
       ...prev,
       _refreshToken: Date.now() // Force React Ã  voir un changement
@@ -1421,7 +1421,7 @@ const CataloguePieces = () => {
       
       syncPiecesList();
       
-      // Fermer la modale aprÃ¨s 1.5 secondes
+      // Fermer la modale après 1.5 secondes
       setTimeout(() => {
         setShowCreateModal(false);
       }, 1500);
@@ -1584,7 +1584,7 @@ const CataloguePieces = () => {
           <div className="mb-5 text-center">
             <h1 className="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Magasin du Vendeur</h1>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
-              Gérez les pièces, les photos et les compatibilités dans un espace cohérent avec lâ€™identité visuelle de la plateforme.
+              Gérez les pièces, les photos et les compatibilités dans un espace cohérent avec l’identité visuelle de la plateforme.
             </p>
             {isStoreView && (
               <div className="mt-3">
@@ -1737,7 +1737,7 @@ const CataloguePieces = () => {
                             <p className="mt-1 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-bold text-slate-600">Ref: {group.reference || "Sans reference"}</p>
 
                             <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2">
-                              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Offre la moins chÃ¨re</p>
+                              <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Offre la moins chère</p>
                               <p className="text-3xl font-black text-amber-700">{Number(cheapest?.prix_unitaire || 0).toFixed(2)} DT</p>
                               <p className="text-sm text-slate-600">Vendeur: {getPieceVendorDisplayName(cheapest)}</p>
                             </div>
@@ -1769,7 +1769,7 @@ const CataloguePieces = () => {
                                 onClick={() => openComparisonPage(cheapest)}
                                 className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
                               >
-                                Ouvrir page complÃ¨te
+                                Ouvrir page complète
                               </button>
                             </div>
                           </div>
@@ -1969,7 +1969,7 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir â€¢ Marques</h3>
+                <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Marques</h3>
                 <button type="button" onClick={() => setShowMarquesModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
@@ -2019,11 +2019,11 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-slate-900">Choisir â€¢ Modèles</h3>
+                <h3 className="text-4xl font-black text-slate-900">Choisir • Modèles</h3>
                 <button type="button" onClick={() => setShowModelesModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               {availableModeles.length === 0 ? (
-                <p className="text-slate-500">SÃ©lectionnez d'abord une marque.</p>
+                <p className="text-slate-500">Sélectionnez d'abord une marque.</p>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {availableModeles.map((modele) => {
@@ -2049,7 +2049,7 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-slate-900">Choisir â€¢ Catégories</h3>
+                <h3 className="text-4xl font-black text-slate-900">Choisir • Catégories</h3>
                 <button type="button" onClick={() => setShowCategoriesModal(false)} className="text-3xl text-slate-500">Ã—</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
@@ -2077,7 +2077,7 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-slate-900">Choisir â€¢ Occasion/Neuf</h3>
+                <h3 className="text-4xl font-black text-slate-900">Choisir • Occasion/Neuf</h3>
                 <button type="button" onClick={() => setShowConditionModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -2093,7 +2093,7 @@ const CataloguePieces = () => {
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-3 sm:items-center">
             <div className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
-                <h3 className="text-4xl font-black text-slate-900">Choisir â€¢ Zone géographique</h3>
+                <h3 className="text-4xl font-black text-slate-900">Choisir • Zone géographique</h3>
                 <button type="button" onClick={() => setShowZoneModal(false)} className="text-3xl text-slate-500">x</button>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -2236,7 +2236,7 @@ const CataloguePieces = () => {
                       name="description"
                       value={newPiece.description}
                       onChange={handleCreateInput}
-                      placeholder="Ajouter une description, des notes ou des prÃ©cisions sur la pièce"
+                      placeholder="Ajouter une description, des notes ou des précisions sur la pièce"
                       rows={5}
                       className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 text-base text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-300"
                     />
@@ -2349,7 +2349,7 @@ const CataloguePieces = () => {
                     <div className="space-y-4 text-slate-900">
                       <div className="flex items-start gap-4">
                         <span className="mt-1 text-2xl">â“˜</span>
-                        <p className="text-2xl font-black tracking-wide">{selectedPiece.reference || "Référence non renseignÃ©e"}</p>
+                        <p className="text-2xl font-black tracking-wide">{selectedPiece.reference || "Référence non renseignée"}</p>
                       </div>
 
                       <div className="flex items-start gap-4">
@@ -2364,7 +2364,7 @@ const CataloguePieces = () => {
                         <span className="mt-1 text-2xl">âš™</span>
                         <div className="space-y-1">
                           <p className="text-xl font-bold">{selectedPiece.categorie || "Pièce automobile"}</p>
-                          <p className="text-base text-slate-500">{selectedPiece.marque ? `${selectedPiece.marque}${selectedPiece.modele ? ` ${selectedPiece.modele}` : ""}` : "Marque non renseignÃ©e"}</p>
+                          <p className="text-base text-slate-500">{selectedPiece.marque ? `${selectedPiece.marque}${selectedPiece.modele ? ` ${selectedPiece.modele}` : ""}` : "Marque non renseignée"}</p>
                         </div>
                       </div>
 
@@ -2448,7 +2448,7 @@ const CataloguePieces = () => {
                           </div>
                         ))
                       ) : (
-                        <p className="text-slate-500">Aucun véhicule compatible renseignÃ©.</p>
+                        <p className="text-slate-500">Aucun véhicule compatible renseigné.</p>
                       )}
                     </div>
                   </div>
@@ -2465,7 +2465,7 @@ const CataloguePieces = () => {
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-2xl font-black text-slate-900">Vue comparative dynamique</h3>
-                <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps rÃ©el via l'API backend.</p>
+                <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps réel via l'API backend.</p>
               </div>
               <button 
                 type="button" 
@@ -2492,7 +2492,7 @@ const CataloguePieces = () => {
                     <p className="mt-1 text-3xl font-black text-emerald-700">{Number(comparisonSummary.prix_min || comparisonData.best_offer?.prix_unitaire || 0).toFixed(2)} DT</p>
                   </div>
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Ã‰conomie max</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Économie max</p>
                     <p className="mt-1 text-3xl font-black text-amber-700">{Number(comparisonSummary.economie_max || 0).toFixed(2)} DT</p>
                   </div>
                 </div>
@@ -2526,7 +2526,7 @@ const CataloguePieces = () => {
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-slate-600">Aucune donnÃ©e de comparaison disponible.</div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-slate-600">Aucune donnée de comparaison disponible.</div>
             )}
           </div>
         </div>

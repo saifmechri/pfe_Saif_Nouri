@@ -28,7 +28,7 @@ function parsePositiveInt(value, fallback) {
   return n;
 }
 
-// Normalise les clÃ©s de tri supportÃ©es.
+// Normalise les clés de tri supportées.
 function normalizeSortBy(value) {
   const sortBy = String(value || 'urgence').toLowerCase();
   if (['urgence', 'score', 'distance', 'type'].includes(sortBy)) {
@@ -52,22 +52,22 @@ function compareValues(a, b, order = 'desc') {
   return order === 'asc' ? base : -base;
 }
 
-// Transforme un niveau d'urgence en rang numÃ©rique.
+// Transforme un niveau d'urgence en rang numérique.
 function getUrgencyRank(label) {
-  const ranks = { URGENT: 3, 'RECOMMANDÃ‰': 2, FUTUR: 1 };
+  const ranks = { URGENT: 3, 'RECOMMANDÉ': 2, FUTUR: 1 };
   return ranks[label] || 0;
 }
 
-// Uniformise la valeur d'urgence reÃ§ue depuis la query string.
+// Uniformise la valeur d'urgence reçue depuis la query string.
 function normalizeUrgency(value) {
   if (value === undefined || value === null || value === '') return null;
   const raw = String(value).toUpperCase();
-  if (raw === 'RECOMMANDE') return 'RECOMMANDÃ‰';
-  if (['URGENT', 'RECOMMANDÃ‰', 'FUTUR'].includes(raw)) return raw;
+  if (raw === 'RECOMMANDE') return 'RECOMMANDÉ';
+  if (['URGENT', 'RECOMMANDÉ', 'FUTUR'].includes(raw)) return raw;
   return null;
 }
 
-// Retourne la derniÃ¨re intervention pour un type et un véhicule.
+// Retourne la dernière intervention pour un type et un véhicule.
 async function getLastInterventionByType(vehicleId, type) {
   const result = await pool.query(
     `SELECT id, date_intervention, kilometrage, created_at
@@ -440,7 +440,7 @@ function buildVehicleCurrentState(kmActuel, kmRecommande, urgency) {
   return 'État correct';
 }
 
-// Construit une liste classÃ©e de recommandations dynamiques pour l'utilisateur connectÃ©.
+// Construit une liste classée de recommandations dynamiques pour l'utilisateur connecté.
 /**
  * AUTO BOT INTELLIGENT RECOMMENDATION ENGINE
  * 
@@ -466,7 +466,7 @@ async function getRecommendations(req, res) {
 
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ success: false, message: 'Non authentifiÃ©' });
+      return res.status(401).json({ success: false, message: 'Non authentifié' });
     }
 
     const errors = [];
@@ -488,7 +488,7 @@ async function getRecommendations(req, res) {
     }
 
     if (rawUrgency !== undefined && normalizeUrgency(rawUrgency) === null) {
-      errors.push('urgency doit etre URGENT, RECOMMANDÃ‰ (ou RECOMMANDE), ou FUTUR');
+      errors.push('urgency doit etre URGENT, RECOMMANDÉ (ou RECOMMANDE), ou FUTUR');
     }
 
     if (rawSortBy !== undefined && !['urgence', 'score', 'distance', 'type'].includes(String(rawSortBy).toLowerCase())) {

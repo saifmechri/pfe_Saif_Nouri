@@ -38,7 +38,7 @@ const validateAppointmentDate = (appointmentDate, minAdvanceHours = APPOINTMENT_
   // Check not in past (accounting for timezone)
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (apptDate < today) {
-    return { valid: false, error: 'La date du rendez-vous ne peut pas être dans le passÃ©' };
+    return { valid: false, error: 'La date du rendez-vous ne peut pas être dans le passé' };
   }
 
   // Check minimum advance booking
@@ -95,11 +95,11 @@ const validateDescription = (description) => {
 
   const desc = String(description).trim();
   if (desc.length < 5) {
-    return { valid: false, error: 'La description doit contenir au moins 5 caractÃ¨res' };
+    return { valid: false, error: 'La description doit contenir au moins 5 caractères' };
   }
 
   if (desc.length > 500) {
-    return { valid: false, error: 'La description ne doit pas dÃ©passer 500 caractÃ¨res' };
+    return { valid: false, error: 'La description ne doit pas dépasser 500 caractères' };
   }
 
   return { valid: true, error: null };
@@ -118,7 +118,7 @@ const validateStatus = (status) => {
   if (!APPOINTMENT_CONSTANTS.VALID_STATUSES.includes(String(status).toLowerCase())) {
     return { 
       valid: false, 
-      error: `Statut invalide. Valeurs acceptÃ©es: ${APPOINTMENT_CONSTANTS.VALID_STATUSES.join(', ')}` 
+      error: `Statut invalide. Valeurs acceptées: ${APPOINTMENT_CONSTANTS.VALID_STATUSES.join(', ')}` 
     };
   }
 

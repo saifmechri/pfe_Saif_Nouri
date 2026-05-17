@@ -409,7 +409,7 @@ const sendMessageToConversation = async ({ user, conversationId, message, client
 
   await touchConversation(conversation.id);
 
-  // GÃ©nÃ©ration automatique d'une notification pour le destinataire du message
+  // Génération automatique d'une notification pour le destinataire du message
   try {
     const senderId = Number(user.id);
     let recipientUserId = null;

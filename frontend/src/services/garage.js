@@ -36,7 +36,7 @@ export const deleteGarage = (garageId) => {
   return API.delete(`/garages/${garageId}`);
 };
 
-// Cette section gÃ¨re les services proposés par un garage.
+// Cette section gère les services proposés par un garage.
 export const getServicesByGarage = (garageId, params = {}) => {
   return API.get(`/garages/${garageId}/services`, { params });
 };

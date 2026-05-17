@@ -64,11 +64,11 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
   };
 
   const reasonOptions = [
-    { value: "spam", label: "Spam ou contenu rÃ©pÃ©titif" },
+    { value: "spam", label: "Spam ou contenu répétitif" },
     { value: "insulte", label: "Insulte ou contenu offensant" },
     { value: "fraude", label: "Fraude ou arnaque" },
     { value: "faux", label: "Information fausse" },
-    { value: "inapproprie", label: "Contenu inappropriÃ©" },
+    { value: "inapproprie", label: "Contenu inapproprié" },
     { value: "autre", label: "Autre raison" }
   ];
 
@@ -90,17 +90,17 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
             <div className="mb-4 text-5xl">âœ“</div>
             <h3 className="mb-2 text-xl font-bold text-green-600">Merci!</h3>
             <p className="text-gray-600">
-              Votre signalement a Ã©tÃ© envoyÃ© Ã  nos modÃ©rateurs.
+              Votre signalement a été envoyé Ã  nos modérateurs.
             </p>
           </div>
         ) : (
           <>
             {/* Header */}
             <h2 className="mb-2 text-2xl font-bold text-[#1a2b4b]">
-              Signaler un problÃ¨me
+              Signaler un problème
             </h2>
             <p className="mb-4 text-sm text-gray-600">
-              Aidez-nous Ã  maintenir une communautÃ© saine
+              Aidez-nous Ã  maintenir une communauté saine
               {entityName && <span>: <strong>{entityName}</strong></span>}
             </p>
 
@@ -124,7 +124,7 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
                   disabled={loading}
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
                 >
-                  <option value="">-- SÃ©lectionnez une raison --</option>
+                  <option value="">-- Sélectionnez une raison --</option>
                   {reasonOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.label}
@@ -136,13 +136,13 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
               {/* Details */}
               <div>
                 <label className="mb-2 block text-sm font-semibold text-gray-700">
-                  Détails supplÃ©mentaires (optionnel)
+                  Détails supplémentaires (optionnel)
                 </label>
                 <textarea
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
                   disabled={loading}
-                  placeholder="DÃ©crivez le problÃ¨me en détail..."
+                  placeholder="Décrivez le problème en détail..."
                   rows={4}
                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
                 />

@@ -111,7 +111,7 @@ const GarageAppointments = () => {
       setNotification({
         type: "appointment",
         title: status === "confirmed" ? "âœ“ Rendez-vous confirmé" : "âœ• Rendez-vous annulé",
-        body: `La demande de ${apt?.automobiliste_name || "l'automobiliste"} a Ã©tÃ© ${status === "confirmed" ? "confirmée" : "annulée"}.`
+        body: `La demande de ${apt?.automobiliste_name || "l'automobiliste"} a été ${status === "confirmed" ? "confirmée" : "annulée"}.`
       });
       setSelectedAppointment(apt);
 
@@ -127,14 +127,14 @@ const GarageAppointments = () => {
       if (decision === "propose" && proposalData) {
         setNotification({
           type: "appointment",
-          title: "ðŸ“… Proposition de date envoyÃ©e",
-          body: `Une alternative pour ${proposalData.proposalDate} Ã  ${proposalData.proposalTime} a Ã©tÃ© proposée Ã  l'automobiliste.`
+          title: "ðŸ“… Proposition de date envoyée",
+          body: `Une alternative pour ${proposalData.proposalDate} Ã  ${proposalData.proposalTime} a été proposée Ã  l'automobiliste.`
         });
       } else if (decision === "accept") {
         setNotification({
           type: "appointment",
           title: "âœ“ Rendez-vous confirmé",
-          body: `Confirmé pour ${apt?.appointment_date} Ã  ${apt?.appointment_time || 'sans heure spÃ©cifiÃ©e'}`
+          body: `Confirmé pour ${apt?.appointment_date} Ã  ${apt?.appointment_time || 'sans heure spécifiée'}`
         });
       } else if (decision === "reject") {
         setNotification({
@@ -284,7 +284,7 @@ const GarageAppointments = () => {
               {/* Calendar View */}
               <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
                 <AppointmentCalendar
-                  title="Demandes reÃ§ues"
+                  title="Demandes reçues"
                   items={appointments}
                   selectedDate={selectedDate}
                   onSelectDate={setSelectedDate}
@@ -299,7 +299,7 @@ const GarageAppointments = () => {
                   <div className="flex items-center justify-between gap-3 mb-4">
                     <div>
                       <h2 className="text-xl font-black text-slate-900">Demandes du jour</h2>
-                      <p className="text-sm text-slate-600">FiltrÃ©es sur la date sélectionnée.</p>
+                      <p className="text-sm text-slate-600">Filtrées sur la date sélectionnée.</p>
                     </div>
                     <div className="rounded-full bg-slate-100 px-3 py-1 text-sm font-bold text-slate-700">
                       {filteredAppointments.length}

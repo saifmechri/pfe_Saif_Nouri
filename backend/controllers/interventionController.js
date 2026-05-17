@@ -28,7 +28,7 @@ const parsePositiveInt = (value, fallback = null) => {
   return parsed;
 };
 
-// VÃ©rifie qu'un véhicule appartient bien Ã  l'utilisateur connectÃ©.
+// Vérifie qu'un véhicule appartient bien Ã  l'utilisateur connecté.
 const checkVehicleOwnership = async (vehicleId, userId, client = pool) => {
   try {
     const result = await client.query(
@@ -47,7 +47,7 @@ const checkVehicleOwnership = async (vehicleId, userId, client = pool) => {
   }
 };
 
-// Charge les donnÃ©es principales d'une intervention.
+// Charge les données principales d'une intervention.
 const getInterventionBaseById = async (interventionId, client = pool) => {
   try {
     const result = await client.query(
@@ -98,7 +98,7 @@ const getInterventionBaseById = async (interventionId, client = pool) => {
   }
 };
 
-// Charge les pièces liÃ©es Ã  une intervention.
+// Charge les pièces liées Ã  une intervention.
 const getPiecesByInterventionId = async (interventionId, client = pool) => {
   try {
     const result = await client.query(
@@ -143,7 +143,7 @@ const getPiecesByInterventionId = async (interventionId, client = pool) => {
   }
 };
 
-// AgrÃ¨ge intervention + pièces dans un seul objet de réponse.
+// Agrège intervention + pièces dans un seul objet de réponse.
 const getInterventionWithPiecesById = async (interventionId, client = pool) => {
   const intervention = await getInterventionBaseById(interventionId, client);
   if (!intervention) return null;
@@ -155,7 +155,7 @@ const getInterventionWithPiecesById = async (interventionId, client = pool) => {
   };
 };
 
-// Recalcule le coÃ»t total d'une intervention Ã  partir des pièces liÃ©es.
+// Recalcule le coût total d'une intervention Ã  partir des pièces liées.
 const recalculateInterventionTotal = async (interventionId, client = pool) => {
   const sumResult = await client.query(
     `SELECT COALESCE(SUM(quantite * prix_unitaire_applique), 0) AS total
@@ -176,7 +176,7 @@ const recalculateInterventionTotal = async (interventionId, client = pool) => {
   return total;
 };
 
-// CrÃ©e une intervention pour un véhicule appartenant Ã  l'utilisateur.
+// Crée une intervention pour un véhicule appartenant Ã  l'utilisateur.
 exports.createIntervention = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -217,7 +217,7 @@ exports.createIntervention = async (req, res) => {
     const currentMileage = await getVehicleMileage(vehicleId, client);
     if (parsedKilometrage !== null && currentMileage !== null && parsedKilometrage < currentMileage) {
       return res.status(400).json({
-        message: 'Le kilométrage de la nouvelle intervention doit être supÃ©rieur ou Ã©gal au kilométrage actuel du véhicule'
+        message: 'Le kilométrage de la nouvelle intervention doit être supérieur ou égal au kilométrage actuel du véhicule'
       });
     }
 
@@ -315,7 +315,7 @@ exports.createIntervention = async (req, res) => {
   }
 };
 
-// Liste toutes les interventions d'un véhicule de l'utilisateur connectÃ©.
+// Liste toutes les interventions d'un véhicule de l'utilisateur connecté.
 exports.getInterventionsByVehicle = async (req, res) => {
   const vehicleId = Number.parseInt(req.params.vehicleId, 10);
 
@@ -389,7 +389,7 @@ exports.getInterventionsByVehicle = async (req, res) => {
   }
 };
 
-// Retourne le détail d'une intervention (avec pièces) si autorisÃ©e.
+// Retourne le détail d'une intervention (avec pièces) si autorisée.
 exports.getInterventionById = async (req, res) => {
   const interventionId = Number.parseInt(req.params.id, 10);
 
@@ -454,7 +454,7 @@ exports.updateIntervention = async (req, res) => {
     const currentMileage = await getVehicleMileage(current.vehicle_id);
     if (parsedKilometrage !== null && currentMileage !== null && parsedKilometrage < currentMileage) {
       return res.status(400).json({
-        message: 'Le kilométrage de lâ€™intervention ne peut pas être infÃ©rieur au kilométrage actuel du véhicule'
+        message: 'Le kilométrage de l’intervention ne peut pas être inférieur au kilométrage actuel du véhicule'
       });
     }
 
@@ -493,7 +493,7 @@ exports.updateIntervention = async (req, res) => {
   }
 };
 
-// Supprime une intervention aprÃ¨s vÃ©rification de propriÃ©tÃ©.
+// Supprime une intervention après vérification de propriété.
 exports.deleteIntervention = async (req, res) => {
   const interventionId = Number.parseInt(req.params.id, 10);
 
@@ -525,7 +525,7 @@ exports.deleteIntervention = async (req, res) => {
   }
 };
 
-// Ajoute (ou incrÃ©mente) une pièce liÃ©e Ã  une intervention.
+// Ajoute (ou incrémente) une pièce liée Ã  une intervention.
 exports.addPieceToIntervention = async (req, res) => {
   const interventionId = Number.parseInt(req.params.id, 10);
   const pieceId = Number.parseInt(req.body?.pieceId, 10);
@@ -609,7 +609,7 @@ exports.addPieceToIntervention = async (req, res) => {
   }
 };
 
-// Retire une pièce d'une intervention puis recalcule le coÃ»t total.
+// Retire une pièce d'une intervention puis recalcule le coût total.
 exports.removePieceFromIntervention = async (req, res) => {
   const interventionId = Number.parseInt(req.params.id, 10);
   const pieceId = Number.parseInt(req.params.pieceId, 10);

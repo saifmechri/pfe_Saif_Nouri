@@ -10,17 +10,17 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <div className="text-center p-10">Chargement...</div>;
   }
 
-  // Non connectÃ© â†’ redirection vers login
+  // Non connecté â†’ redirection vers login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Si des rÃ´les sont exigÃ©s et que l'utilisateur n'a pas le bon rÃ´le
+  // Si des rôles sont exigés et que l'utilisateur n'a pas le bon rôle
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Tout est OK â†’ afficher la page demandÃ©e
+  // Tout est OK â†’ afficher la page demandée
   return children;
 };
 

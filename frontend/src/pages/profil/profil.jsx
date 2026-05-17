@@ -8,7 +8,7 @@ const Profil = () => {
   const { user, updateUser, logout } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // États pour les diffÃ©rents formulaires
+  // États pour les différents formulaires
   const [profileForm, setProfileForm] = useState({
     name: '',
     email: '',
@@ -28,7 +28,7 @@ const Profil = () => {
   });
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // Initialiser le formulaire avec les donnÃ©es de l'utilisateur
+  // Initialiser le formulaire avec les données de l'utilisateur
   useEffect(() => {
     if (user) {
       setProfileForm({
@@ -57,7 +57,7 @@ const Profil = () => {
 
     try {
       const res = await updateProfile(profileForm);
-      // Mettre Ã  jour le contexte avec les nouvelles donnÃ©es utilisateur
+      // Mettre Ã  jour le contexte avec les nouvelles données utilisateur
       updateUser(res.data.user); // suppose que l'API retourne l'utilisateur mis Ã  jour
       setMessage({ type: 'success', text: 'Profil mis Ã  jour avec succès' });
       // Réinitialiser le champ mot de passe
@@ -93,7 +93,7 @@ const Profil = () => {
       return;
     }
 
-    if (!window.confirm('ÃŠtes-vous sûr de vouloir supprimer votre compte ? Cette action est irrÃ©versible.')) {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.')) {
       return;
     }
 
@@ -102,7 +102,7 @@ const Profil = () => {
 
     try {
       await deleteAccount(deletePassword);
-      // DÃ©connecter l'utilisateur
+      // Déconnecter l'utilisateur
       logout();
       navigate('/');
     } catch (err) {
@@ -119,7 +119,7 @@ const Profil = () => {
           <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-extrabold text-[#1a2b4b]">Mon profil</h1>
-              <p className="mt-1 text-sm text-[#617089]">Gérez vos informations, mot de passe et sÃ©curitÃ© du compte.</p>
+              <p className="mt-1 text-sm text-[#617089]">Gérez vos informations, mot de passe et sécurité du compte.</p>
             </div>
             <button
               onClick={() => navigate('/dashboard')}
@@ -193,7 +193,7 @@ const Profil = () => {
           </form>
         </div>
 
-        {/* Formulaire de changement de mot de passe (sÃ©parÃ©) */}
+        {/* Formulaire de changement de mot de passe (séparé) */}
         <div className="vb-card p-6">
           <h2 className="text-xl font-semibold mb-4">Changer le mot de passe</h2>
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
@@ -234,7 +234,7 @@ const Profil = () => {
         <div className="vb-card mt-6 border border-red-200 p-6">
           <h2 className="text-xl font-semibold mb-4 text-red-600">Zone dangereuse</h2>
           <p className="text-gray-600 mb-4">
-            La suppression de votre compte est irrÃ©versible. Toutes vos donnÃ©es seront effacÃ©es.
+            La suppression de votre compte est irréversible. Toutes vos données seront effacées.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <input

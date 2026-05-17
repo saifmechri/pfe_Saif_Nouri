@@ -24,7 +24,7 @@ const AutomobilisteDashboardAppointments = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("ÃŠtes-vous sûr ?")) return;
+    if (!window.confirm("Êtes-vous sûr ?")) return;
     try {
       await deleteAppointment(id);
       await fetchAppointments();
@@ -83,7 +83,7 @@ const AutomobilisteDashboardAppointments = () => {
             </p>
           </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-            <p className="text-xs font-bold text-emerald-700">CONFIRMÃ‰S</p>
+            <p className="text-xs font-bold text-emerald-700">CONFIRMÉS</p>
             <p className="mt-1 text-3xl font-black text-emerald-900">
               {appointments.filter((a) => a.status === "confirmed").length}
             </p>
@@ -258,7 +258,7 @@ const AutomobilisteDashboardAppointments = () => {
             onClick={() => window.open("/automobiliste/appointments", "_blank")}
             className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
-            GÃ©rer mes rendez-vous
+            Gérer mes rendez-vous
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>

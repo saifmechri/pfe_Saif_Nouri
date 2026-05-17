@@ -21,7 +21,7 @@ import API from "./api";
  *   - page: int (default: 1)
  *   - limit: 1-50 (default: 10)
  *   - minInterventionScore: 0-100 (filter by urgency)
- *   - urgency: 'URGENT' | 'RECOMMANDÃ‰' | 'FUTUR' (optional)
+ *   - urgency: 'URGENT' | 'RECOMMANDÉ' | 'FUTUR' (optional)
  * 
  * @returns {Promise} Response with recommendations array:
  *   Each recommendation includes:

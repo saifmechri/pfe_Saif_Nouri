@@ -74,12 +74,12 @@ const VehicleHistory = () => {
                       </span>
                     ))
                   ) : (
-                    <span className="text-sm text-gray-500">Aucune pièce associÃ©e</span>
+                    <span className="text-sm text-gray-500">Aucune pièce associée</span>
                   )}
                 </div>
               </div>
               <div className="mt-3 flex gap-2 justify-end">
-                <Link to={`/vehicules/${vehicleId}/interventions/${it.id}`} className="text-sm text-blue-600">GÃ©rer les pièces</Link>
+                <Link to={`/vehicules/${vehicleId}/interventions/${it.id}`} className="text-sm text-blue-600">Gérer les pièces</Link>
               </div>
             </div>
           ))}

@@ -121,7 +121,7 @@ const AppointmentDetail = () => {
         proposed_note: proposalNote
       });
       
-      setMessage("âœ“ Proposition envoyÃ©e Ã  l'automobiliste");
+      setMessage("âœ“ Proposition envoyée Ã  l'automobiliste");
       setMessageType("success");
       setShowProposal(false);
       
@@ -163,7 +163,7 @@ const AppointmentDetail = () => {
 
       setMessages(updatedMessages);
       setNewMessage("");
-      setMessage("âœ“ Message envoyÃ©");
+      setMessage("âœ“ Message envoyé");
       setMessageType("success");
     } catch (err) {
       console.error("Error sending message:", err);

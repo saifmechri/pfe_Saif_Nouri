@@ -23,7 +23,7 @@ const AdminLogin = () => {
     } catch (err) {
       setError(
         err?.response?.data?.message ||
-        "Erreur d'authentification. VÃ©rifiez vos identifiants."
+        "Erreur d'authentification. Vérifiez vos identifiants."
       );
     } finally {
       setLoading(false);
@@ -111,7 +111,7 @@ const AdminLogin = () => {
           {/* Info Box */}
           <div className="mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-700/50">
             <p className="text-xs text-blue-300">
-              <strong>Identifiants dÃ©mo:</strong> utilisez les credentials fournis pour accÃ©der au tableau de bord administrateur.
+              <strong>Identifiants démo:</strong> utilisez les credentials fournis pour accéder au tableau de bord administrateur.
             </p>
           </div>
         </div>

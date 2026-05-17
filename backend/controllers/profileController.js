@@ -7,14 +7,14 @@ const isValidBcryptHash = (value) => {
 };
 
 /**
- * Met Ã  jour le profil de l'utilisateur connectÃ©.
- * Champs supportÃ©s: name, email, phone, password, store_name, store_address, store_description, store_hours, store_specialties, store_services.
+ * Met Ã  jour le profil de l'utilisateur connecté.
+ * Champs supportés: name, email, phone, password, store_name, store_address, store_description, store_hours, store_specialties, store_services.
  */
 // ============================================
 // UPDATE PROFILE - Modifier le profil
 // ============================================
 const updateProfile = async (req, res) => {
-  const userId = req.user.id; // ID de l'utilisateur connectÃ© (vient du middleware verifyToken)
+  const userId = req.user.id; // ID de l'utilisateur connecté (vient du middleware verifyToken)
   const { name, email, phone, password, store_name, store_address, store_description, store_hours, store_specialties, store_services } = req.body || {};
 
   try {
@@ -28,7 +28,7 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    // RÃ©cupÃ©rer les informations actuelles de l'utilisateur
+    // Récupérer les informations actuelles de l'utilisateur
     const currentUser = await pool.query(
       "SELECT * FROM users WHERE id = $1",
       [userId]
@@ -45,7 +45,7 @@ const updateProfile = async (req, res) => {
 
     const user = currentUser.rows[0];
 
-    // PrÃ©parer les valeurs Ã  mettre Ã  jour
+    // Préparer les valeurs Ã  mettre Ã  jour
     let updateName = name || user.name;
     let updateEmail = email || user.email;
     let updatePhone = phone || user.phone;
@@ -57,7 +57,7 @@ const updateProfile = async (req, res) => {
     let updateStoreServices = store_services !== undefined ? store_services : user.store_services;
     let updatePassword = null; // Null => ne pas modifier le mot de passe existant
 
-    // Si un nouvel email est fourni, vérifier qu'il n'existe pas dÃ©jÃ 
+    // Si un nouvel email est fourni, vérifier qu'il n'existe pas déjÃ 
     if (email && email !== user.email) {
       const emailCheck = await pool.query(
         "SELECT * FROM users WHERE email = $1 AND id != $2",
@@ -65,7 +65,7 @@ const updateProfile = async (req, res) => {
       );
       
       if (emailCheck.rows.length > 0) {
-        return res.status(400).json({ message: "Cet email est dÃ©jÃ  utilisÃ©" });
+        return res.status(400).json({ message: "Cet email est déjÃ  utilisé" });
       }
     }
 
@@ -101,7 +101,7 @@ const updateProfile = async (req, res) => {
         return sendApiResponse(res, {
           statusCode: 400,
           success: false,
-          message: "Le mot de passe doit contenir au moins 6 caractÃ¨res",
+          message: "Le mot de passe doit contenir au moins 6 caractères",
           error: { code: 'INVALID_PASSWORD' }
         });
       }
@@ -109,7 +109,7 @@ const updateProfile = async (req, res) => {
       updatePassword = await bcrypt.hash(password, saltRounds);
     }
 
-    // Mettre Ã  jour dans la base de donnÃ©es
+    // Mettre Ã  jour dans la base de données
     await pool.query(
       `UPDATE users 
        SET name = $1,
@@ -128,7 +128,7 @@ const updateProfile = async (req, res) => {
       [updateName, updateEmail, updatePhone, updateStoreName, updateStoreAddress, updateStoreDescription, updateStoreHours, updateStoreSpecialties, updateStoreServices, updatePassword, userId]
     );
 
-    // RÃ©cupÃ©rer aussi le rÃ´le pour la réponse
+    // Récupérer aussi le rôle pour la réponse
     const userWithRole = await pool.query(
       `SELECT u.id, u.name, u.email, u.phone, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, r.name as role, u.created_at, u.updated_at
        FROM users u
@@ -150,13 +150,13 @@ const updateProfile = async (req, res) => {
 };
 
 /**
- * Supprime le compte de l'utilisateur connectÃ© aprÃ¨s confirmation du mot de passe.
+ * Supprime le compte de l'utilisateur connecté après confirmation du mot de passe.
  */
 // ============================================
 // DELETE PROFILE - Supprimer le compte
 // ============================================
 const deleteProfile = async (req, res) => {
-  const userId = req.user.id; // ID de l'utilisateur connectÃ©
+  const userId = req.user.id; // ID de l'utilisateur connecté
   const { confirmPassword } = req.body || {}; // Mot de passe de confirmation
 
   try {
@@ -170,7 +170,7 @@ const deleteProfile = async (req, res) => {
       });
     }
 
-    // RÃ©cupÃ©rer l'utilisateur
+    // Récupérer l'utilisateur
     const user = await pool.query(
       "SELECT * FROM users WHERE id = $1",
       [userId]
@@ -189,7 +189,7 @@ const deleteProfile = async (req, res) => {
     if (!user.rows[0].password || !isValidBcryptHash(user.rows[0].password)) {
       await pool.query("DELETE FROM users WHERE id = $1", [userId]);
       return sendApiResponse(res, {
-        message: "Votre compte a Ã©tÃ© supprimé avec succès"
+        message: "Votre compte a été supprimé avec succès"
       });
     }
 
@@ -207,11 +207,11 @@ const deleteProfile = async (req, res) => {
       });
     }
 
-    // Supprimer l'utilisateur de la base de donnÃ©es
+    // Supprimer l'utilisateur de la base de données
     await pool.query("DELETE FROM users WHERE id = $1", [userId]);
 
     return sendApiResponse(res, {
-      message: "Votre compte a Ã©tÃ© supprimé avec succès"
+      message: "Votre compte a été supprimé avec succès"
     });
 
   } catch (err) {
@@ -221,7 +221,7 @@ const deleteProfile = async (req, res) => {
 };
 
 /**
- * Change uniquement le mot de passe de l'utilisateur connectÃ©.
+ * Change uniquement le mot de passe de l'utilisateur connecté.
  */
 // ============================================
 // CHANGE PASSWORD - Changer le mot de passe uniquement
@@ -246,12 +246,12 @@ const changePassword = async (req, res) => {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
-        message: "Le nouveau mot de passe doit contenir au moins 6 caractÃ¨res",
+        message: "Le nouveau mot de passe doit contenir au moins 6 caractères",
         error: { code: 'INVALID_PASSWORD' }
       });
     }
 
-    // RÃ©cupÃ©rer l'utilisateur
+    // Récupérer l'utilisateur
     const user = await pool.query(
       "SELECT * FROM users WHERE id = $1",
       [userId]
@@ -277,7 +277,7 @@ const changePassword = async (req, res) => {
 
       return res.json({
         success: true,
-        message: "Mot de passe dÃ©fini avec succès",
+        message: "Mot de passe défini avec succès",
         data: null,
         error: null
       });

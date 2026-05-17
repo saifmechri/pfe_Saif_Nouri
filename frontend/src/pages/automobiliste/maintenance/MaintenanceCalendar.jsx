@@ -29,7 +29,7 @@ const statusPills = {
 
 const statusLabels = {
   URGENT: 'Urgent',
-  BIENTOT: 'BientÃ´t',
+  BIENTOT: 'Bientôt',
   NORMAL: 'Normal',
 };
 
@@ -84,7 +84,7 @@ const MaintenanceCalendar = ({ items = [], selectedDate, onSelectDate, title = '
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-100/80">Vue mensuelle</p>
           <h3 className="mt-1 text-2xl font-black tracking-tight">{title}</h3>
-          <p className="mt-1 text-sm text-blue-100/90">Suivez les entretiens planifiÃ©s et les dates importantes du véhicule.</p>
+          <p className="mt-1 text-sm text-blue-100/90">Suivez les entretiens planifiés et les dates importantes du véhicule.</p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 p-1 backdrop-blur">
           <button type="button" onClick={goToPreviousMonth} className="rounded-full px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15">
@@ -154,7 +154,7 @@ const MaintenanceCalendar = ({ items = [], selectedDate, onSelectDate, title = '
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Prochains entretiens</p>
-              <h4 className="text-lg font-black text-slate-900">Les 6 prochaines Ã©chÃ©ances</h4>
+              <h4 className="text-lg font-black text-slate-900">Les 6 prochaines échéances</h4>
             </div>
             <div className="rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-700">{upcomingItems.length}</div>
           </div>
@@ -162,7 +162,7 @@ const MaintenanceCalendar = ({ items = [], selectedDate, onSelectDate, title = '
           <div className="mt-4 space-y-3">
             {upcomingItems.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-5 text-sm text-slate-500">
-                Aucune Ã©chÃ©ance planifiÃ©e pour le moment.
+                Aucune échéance planifiée pour le moment.
               </div>
             ) : (
               upcomingItems.map((item) => (
@@ -207,8 +207,8 @@ const MaintenanceCalendar = ({ items = [], selectedDate, onSelectDate, title = '
           </div>
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">PlanifiÃ©</span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">BientÃ´t</span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-emerald-700">Planifié</span>
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">Bientôt</span>
             <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700">Urgent</span>
           </div>
         </div>

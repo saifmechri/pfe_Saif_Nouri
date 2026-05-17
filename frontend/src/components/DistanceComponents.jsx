@@ -4,7 +4,7 @@ import { formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/
 
 /**
  * Composant de badge de distance professionnel
- * @param {number} distance - Distance en kilomÃ¨tres
+ * @param {number} distance - Distance en kilomètres
  * @param {boolean} showLabel - Afficher le label descriptif
  */
 export const DistanceBadge = ({ distance, showLabel = true }) => {
@@ -25,8 +25,8 @@ export const DistanceBadge = ({ distance, showLabel = true }) => {
 };
 
 /**
- * Composant de carte de distance dÃ©taillÃ©e
- * @param {number} distance - Distance en kilomÃ¨tres
+ * Composant de carte de distance détaillée
+ * @param {number} distance - Distance en kilomètres
  */
 export const DistanceCard = ({ distance }) => {
   if (distance === null || distance === undefined) {

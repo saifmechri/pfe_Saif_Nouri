@@ -140,7 +140,7 @@ const GarageRequestsPanel = ({
                           </span>
                           {isUpcoming && isPending && (
                             <span className="inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700">
-                              À rÃ©pondre
+                              À répondre
                             </span>
                           )}
                         </div>

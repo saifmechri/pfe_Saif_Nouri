@@ -1,16 +1,16 @@
 ﻿import API from './api';
 
-// GET - RÃ©cupÃ©rer la prochaine révision pour un véhicule
+// GET - Récupérer la prochaine révision pour un véhicule
 export const getNextRevision = (vehicleId) => {
   return API.get(`/maintenance/${vehicleId}/next-revision`).then((res) => res.data?.data ?? res.data);
 };
 
-// GET - RÃ©cupÃ©rer les garages recommandÃ©s avec matching
+// GET - Récupérer les garages recommandés avec matching
 export const getMatchingGarages = (vehicleId, maxDistance = 50) => {
   return API.get(`/garages/match/${vehicleId}?maxDistance=${maxDistance}`).then((res) => res.data?.data ?? res.data ?? []);
 };
 
-// Calcule le niveau d'urgence basÃ© sur les donnÃ©es de révision
+// Calcule le niveau d'urgence basé sur les données de révision
 export const calculateUrgencyLevel = (revisionData) => {
   if (!revisionData) return null;
 
@@ -34,7 +34,7 @@ export const calculateUrgencyLevel = (revisionData) => {
   return { level: 'aucun', label: 'AUCUN', color: 'green', priority: 0 };
 };
 
-// Formate la date au format franÃ§ais
+// Formate la date au format français
 export const formatDate = (dateStr) => {
   if (!dateStr) return 'N/A';
   const date = new Date(dateStr);

@@ -2,17 +2,17 @@
 const { hasRole: userHasRole } = require("../models/user.model");
 
 /**
- * Middleware de vÃ©rification de rÃ´le utilisateur
- * VÃ©rifie si l'utilisateur authentifiÃ© possÃ¨de un des rÃ´les autorisÃ©s
+ * Middleware de vérification de rôle utilisateur
+ * Vérifie si l'utilisateur authentifié possède un des rôles autorisés
  * 
- * @param {...string} allowedRoles - Liste des rÃ´les autorisÃ©s
+ * @param {...string} allowedRoles - Liste des rôles autorisés
  * @returns {Function} Middleware Express
  * 
  * @example
- * // Autoriser plusieurs rÃ´les
+ * // Autoriser plusieurs rôles
  * router.get('/route', verifyToken, checkRole('admin', 'garage'), handler);
  * 
- * // Autoriser un seul rÃ´le
+ * // Autoriser un seul rôle
  * router.post('/admin-only', verifyToken, checkRole('admin'), handler);
  */
 const checkRole = (...allowedRoles) => {
@@ -37,48 +37,48 @@ const checkRole = (...allowedRoles) => {
 };
 
 /**
- * Middleware prÃ©-configurÃ© : Seuls les administrateurs
+ * Middleware pré-configuré : Seuls les administrateurs
  * @type {Function}
  */
 const isAdmin = checkRole('admin');
 
 /**
- * Middleware prÃ©-configurÃ© : Professionnels (garages, vendeurs) et admins
+ * Middleware pré-configuré : Professionnels (garages, vendeurs) et admins
  * @type {Function}
  */
 const isProfessional = checkRole('garage', 'vendeur', 'admin');
 
 /**
- * Middleware prÃ©-configurÃ© : Seulement les automobilistes
+ * Middleware pré-configuré : Seulement les automobilistes
  * @type {Function}
  */
 const isAutomobiliste = checkRole('automobiliste', 'admin');
 
 /**
- * Middleware prÃ©-configurÃ© : Seulement les garages
+ * Middleware pré-configuré : Seulement les garages
  * @type {Function}
  */
 const isGarage = checkRole('garage', 'admin');
 
 /**
- * Middleware prÃ©-configurÃ© : Seulement les vendeurs
+ * Middleware pré-configuré : Seulement les vendeurs
  * @type {Function}
  */
 const isVendeur = checkRole('vendeur');
 const isVendeurOrAdmin = checkRole('vendeur', 'admin');
 
 /**
- * Fonction helper pour vérifier si un utilisateur a un rÃ´le spÃ©cifique
- * Utile pour des vÃ©rifications conditionnelles dans les contrÃ´leurs
+ * Fonction helper pour vérifier si un utilisateur a un rôle spécifique
+ * Utile pour des vérifications conditionnelles dans les contrôleurs
  * 
  * @param {number} userId - ID de l'utilisateur
- * @param {string} roleName - Nom du rÃ´le Ã  vérifier
- * @returns {Promise<boolean>} true si l'utilisateur a le rÃ´le
+ * @param {string} roleName - Nom du rôle Ã  vérifier
+ * @returns {Promise<boolean>} true si l'utilisateur a le rôle
  * 
  * @example
  * const isUserAdmin = await hasRole(req.user.id, 'admin');
  * if (isUserAdmin) {
- *   // Logique spÃ©cifique admin
+ *   // Logique spécifique admin
  * }
  */
 const hasRole = async (userId, roleName) => {

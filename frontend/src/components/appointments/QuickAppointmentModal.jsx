@@ -103,7 +103,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
       });
 
       setMessageType("success");
-      setMessage("âœ“ Rendez-vous réservé avec succès! Le garage rÃ©pondra dans les 24 heures.");
+      setMessage("âœ“ Rendez-vous réservé avec succès! Le garage répondra dans les 24 heures.");
       
       // Reset form and close after delay
       setTimeout(() => {
@@ -121,7 +121,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
     } catch (err) {
       setMessageType("error");
       setMessage(err.response?.data?.data?.errors 
-        ? Object.values(err.response.data.data.errors).join(" â€¢ ")
+        ? Object.values(err.response.data.data.errors).join(" • ")
         : err.response?.data?.message 
         ? err.response.data.message
         : err.message 
@@ -143,7 +143,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-600">Réservation rapide</p>
             <h2 className="mt-2 text-2xl font-black text-slate-900">Prendre rendez-vous Â· {garage.name}</h2>
-            <p className="mt-1 text-sm text-slate-600">ComplÃ©tez le formulaire pour demander un rendez-vous</p>
+            <p className="mt-1 text-sm text-slate-600">Complétez le formulaire pour demander un rendez-vous</p>
           </div>
           <button
             type="button"
@@ -165,7 +165,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
               onChange={handleChange}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
             >
-              <option value="">SÃ©lectionnez un véhicule (optionnel)</option>
+              <option value="">Sélectionnez un véhicule (optionnel)</option>
               {vehicules.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.modele_voiture || v.modele || `Véhicule ${v.id}`} {v.matricule_voiture ? `Â· ${v.matricule_voiture}` : ""}
@@ -240,10 +240,10 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
               required
               rows={3}
               maxLength={500}
-              placeholder="DÃ©crivez le problÃ¨me ou le service souhaitÃ©..."
+              placeholder="Décrivez le problème ou le service souhaité..."
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 resize-none"
             />
-            <p className="mt-1 text-xs text-slate-500">{form.description.length}/500 caractÃ¨res</p>
+            <p className="mt-1 text-xs text-slate-500">{form.description.length}/500 caractères</p>
           </div>
 
           {/* Remark */}
@@ -255,7 +255,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
               onChange={handleChange}
               type="text"
               maxLength={250}
-              placeholder="PrÃ©cisez des détails supplÃ©mentaires..."
+              placeholder="Précisez des détails supplémentaires..."
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 placeholder:text-slate-400 transition hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
             />
           </div>

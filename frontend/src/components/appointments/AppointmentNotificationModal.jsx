@@ -53,7 +53,7 @@ const AppointmentNotificationModal = ({ isOpen, onClose, notification, appointme
         handleAutoClose();
       }, 500);
     } catch (err) {
-      console.error("Erreur lors de la dÃ©cision:", err);
+      console.error("Erreur lors de la décision:", err);
       alert("Erreur lors du traitement de votre réponse");
     } finally {
       setLoading(false);

@@ -93,7 +93,7 @@ const AutomobilisteDashboard = () => {
   };
 
   const handleDeleteAppointment = async (id) => {
-    if (!window.confirm("ÃŠtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
     try {
       await deleteAppointment(id);
       await fetchAppointments();
@@ -398,7 +398,7 @@ const AutomobilisteDashboard = () => {
   };
 
   const handleDeleteIntervention = async (vehicleId, interventionId) => {
-    if (!window.confirm("ÃŠtes-vous sûr de vouloir supprimer cette intervention ?")) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette intervention ?")) return;
     
     setInterventionDeletingId(interventionId);
     try {
@@ -416,7 +416,7 @@ const AutomobilisteDashboard = () => {
   };
 
   const handleDelete = async (vehiculeId) => {
-    if (window.confirm("ÃŠtes-vous sûr de vouloir supprimer ce véhicule ?")) {
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce véhicule ?")) {
       setError("");
       setLoading(true);
       try {
@@ -849,7 +849,7 @@ const AutomobilisteDashboard = () => {
                           onChange={handleInterventionFieldChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded"
                           rows="3"
-                          placeholder="Ã‰crire manuellement, ex: Filtre Ã  huile x1, Huile moteur 5W30 x4L"
+                          placeholder="Écrire manuellement, ex: Filtre Ã  huile x1, Huile moteur 5W30 x4L"
                         />
                       </label>
                     </div>
@@ -930,7 +930,7 @@ const AutomobilisteDashboard = () => {
                                 <p><span className="font-semibold">Date :</span> {intervention.date_intervention || "-"}</p>
                                 <p><span className="font-semibold">Type :</span> {intervention.type || "-"}</p>
                                 <p><span className="font-semibold">Kilométrage :</span> {intervention.kilometrage ?? "-"}</p>
-                                <p><span className="font-semibold">CoÃ»t total :</span> {intervention.cout_total ?? "0"} TND</p>
+                                <p><span className="font-semibold">Coût total :</span> {intervention.cout_total ?? "0"} TND</p>
                               </div>
 
                               {(intervention.garage_nom || intervention.garage_adresse) && (

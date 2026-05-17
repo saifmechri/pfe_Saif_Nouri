@@ -209,7 +209,7 @@ export const useAppointments = (statusFilter = 'all') => {
 
   const handleDelete = useCallback(
     async (id) => {
-      if (!window.confirm('ÃŠtes-vous sûr de vouloir supprimer ce rendez-vous ?')) return;
+      if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce rendez-vous ?')) return;
       try {
         await deleteAppointment(id);
         setAppointments((prev) => prev.filter((a) => a.id !== id));

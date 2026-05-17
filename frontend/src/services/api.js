@@ -19,7 +19,7 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor pour gÃ©rer automatiquement les sessions expirÃ©es.
+// Interceptor pour gérer automatiquement les sessions expirées.
 API.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -29,7 +29,7 @@ API.interceptors.response.use(
 
     const isAuthError =
       status === 401 &&
-      (code === "TOKEN_EXPIRED" || code === "TOKEN_INVALID" || message === "Token expirÃ©" || message === "Token invalide");
+      (code === "TOKEN_EXPIRED" || code === "TOKEN_INVALID" || message === "Token expiré" || message === "Token invalide");
 
     if (isAuthError) {
       localStorage.removeItem("token");

@@ -9,7 +9,7 @@ const {
   deleteVehicule
 } = require("../controllers/vehiculeController");
 
-// Toutes les routes sont protÃ©gÃ©es par JWT
+// Toutes les routes sont protégées par JWT
 // POST /api/vehicules - Ajouter un véhicule
 router.post("/", verifyToken, uploadVehiculePhoto.single("photo"), createVehicule);
 

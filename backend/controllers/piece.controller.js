@@ -90,7 +90,7 @@ const getAllPieces = asyncHandler(async (req, res) => {
   });
 
   return sendApiResponse(res, {
-    message: 'Liste des pieces recuperÃ©e avec succes',
+    message: 'Liste des pieces recuperée avec succes',
     data: pieces
   });
 });
@@ -104,7 +104,7 @@ const getPieceById = asyncHandler(async (req, res) => {
   const piece = await pieceService.getPieceById(pieceId);
 
   return sendApiResponse(res, {
-    message: 'Piece recuperÃ©e avec succes',
+    message: 'Piece recuperée avec succes',
     data: piece
   });
 });

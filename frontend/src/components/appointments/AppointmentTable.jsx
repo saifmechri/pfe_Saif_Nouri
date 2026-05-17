@@ -39,7 +39,7 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
       case "confirmed": return "Confirmé";
       case "cancelled": return "Annulé";
       case "pending": return "En attente";
-      default: return status || "Non dÃ©fini";
+      default: return status || "Non défini";
     }
   };
 
@@ -49,7 +49,7 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
       <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
         <div>
           <p className="text-sm font-semibold text-slate-900">{items.length} rendez-vous</p>
-          <p className="text-xs text-slate-600">TriÃ©s par : {sortBy === "date-asc" ? "Date (plus proche)" : sortBy === "date-desc" ? "Date (plus loin)" : "Statut"}</p>
+          <p className="text-xs text-slate-600">Triés par : {sortBy === "date-asc" ? "Date (plus proche)" : sortBy === "date-desc" ? "Date (plus loin)" : "Statut"}</p>
         </div>
         <select
           value={sortBy}
@@ -84,7 +84,7 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
               const appointmentDateTime = dayjs(`${item.appointment_date}T${item.appointment_time || "12:00"}`);
               const isUpcoming = appointmentDateTime.isValid() && appointmentDateTime.isAfter(dayjs());
               const parsedNotes = parseAppointmentNotes(item.notes);
-              const servicesLabel = parsedNotes.services.length > 0 ? parsedNotes.services.join(", ") : "Aucun service renseignÃ©";
+              const servicesLabel = parsedNotes.services.length > 0 ? parsedNotes.services.join(", ") : "Aucun service renseigné";
               const createdAtLabel = dayjs(item.created_at).isValid()
                 ? dayjs(item.created_at).format("D MMMM YYYY [Ã ] HH:mm")
                 : "â€”";
@@ -123,7 +123,7 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
                             {getStatusLabel(item.status)}
                           </span>
                           {isUpcoming && item.status?.toLowerCase() === "pending" && (
-                            <span className="inline-block rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-700">À rÃ©pondre</span>
+                            <span className="inline-block rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-700">À répondre</span>
                           )}
                         </div>
                       </div>

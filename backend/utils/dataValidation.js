@@ -26,12 +26,12 @@ function validateMileage(mileage) {
 
   // Cannot be negative
   if (km < 0) {
-    return { isValid: false, error: 'Kilométrage ne peut pas être nÃ©gatif' };
+    return { isValid: false, error: 'Kilométrage ne peut pas être négatif' };
   }
 
   // Cannot exceed realistic maximum
   if (km > MAX_REALISTIC_MILEAGE) {
-    return { isValid: false, error: `Kilométrage ne peut pas dÃ©passer ${MAX_REALISTIC_MILEAGE} km` };
+    return { isValid: false, error: `Kilométrage ne peut pas dépasser ${MAX_REALISTIC_MILEAGE} km` };
   }
 
   return { isValid: true };
@@ -89,7 +89,7 @@ function validateMileageProgression(lastMileage, newMileage) {
   if (jump > MILEAGE_JUMP_THRESHOLD) {
     return { 
       isValid: true, 
-      warning: `Saut important dÃ©tectÃ©: +${jump} km depuis la derniÃ¨re intervention` 
+      warning: `Saut important détecté: +${jump} km depuis la dernière intervention` 
     };
   }
 

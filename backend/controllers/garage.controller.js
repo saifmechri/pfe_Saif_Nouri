@@ -794,7 +794,7 @@ const uploadGaragePhotos = asyncHandler(async (req, res) => {
 });
 
 const getFilterOptions = asyncHandler(async (req, res) => {
-  // RÃ©cupÃ©rer les specialitÃ©s distinctes depuis store_specialties des utilisateurs garage
+  // Récupérer les specialités distinctes depuis store_specialties des utilisateurs garage
   const specialtiesResult = await pool.query(`
     SELECT DISTINCT TRIM(specialty) AS specialty
     FROM (
@@ -806,7 +806,7 @@ const getFilterOptions = asyncHandler(async (req, res) => {
     ORDER BY specialty ASC
   `);
 
-  // RÃ©cupÃ©rer les services distinctes depuis garage_services
+  // Récupérer les services distinctes depuis garage_services
   const servicesResult = await pool.query(`
     SELECT DISTINCT LOWER(TRIM(gs.name)) AS service_name
     FROM garage_services gs
@@ -814,7 +814,7 @@ const getFilterOptions = asyncHandler(async (req, res) => {
     ORDER BY service_name ASC
   `);
 
-  // RÃ©cupÃ©rer les marques distinctes depuis vehicle_brands dans garages
+  // Récupérer les marques distinctes depuis vehicle_brands dans garages
   const brandsResult = await pool.query(`
     SELECT DISTINCT TRIM(brand) AS brand
     FROM (

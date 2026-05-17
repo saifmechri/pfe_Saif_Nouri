@@ -115,13 +115,13 @@ const GarageDashboardAppointments = ({ garageId }) => {
             <p className="mt-1 text-3xl font-black text-amber-900">{stats.pending}</p>
           </div>
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-            <p className="text-xs font-bold text-emerald-700">CONFIRMÃ‰</p>
+            <p className="text-xs font-bold text-emerald-700">CONFIRMÉ</p>
             <p className="mt-1 text-3xl font-black text-emerald-900">
               {stats.confirmed}
             </p>
           </div>
           <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center">
-            <p className="text-xs font-bold text-rose-700">ANNULÃ‰</p>
+            <p className="text-xs font-bold text-rose-700">ANNULÉ</p>
             <p className="mt-1 text-3xl font-black text-rose-900">{stats.cancelled}</p>
           </div>
         </div>

@@ -18,7 +18,7 @@ const BASE_RULES = [
     intervalKm: 15000,
     intervalDays: 365,
     priority: 'high',
-    description: 'ContrÃ´le global du moteur, des fluides et des organes de sÃ©curitÃ©.'
+    description: 'Contrôle global du moteur, des fluides et des organes de sécurité.'
   },
   {
     id: 'vidange',
@@ -36,7 +36,7 @@ const BASE_RULES = [
     intervalKm: 15000,
     intervalDays: 365,
     priority: 'medium',
-    description: 'Remplacement des filtres de circulation et dâ€™habitacle.'
+    description: 'Remplacement des filtres de circulation et d’habitacle.'
   },
   {
     id: 'pneus',
@@ -45,7 +45,7 @@ const BASE_RULES = [
     intervalKm: 20000,
     intervalDays: 540,
     priority: 'medium',
-    description: 'Usure, pression et Ã©quilibrage.'
+    description: 'Usure, pression et équilibrage.'
   },
   {
     id: 'freinage',
@@ -63,16 +63,16 @@ const BASE_RULES = [
     intervalKm: 30000,
     intervalDays: 730,
     priority: 'medium',
-    description: 'CapacitÃ© de charge et Ã©tat du circuit électrique.'
+    description: 'Capacité de charge et état du circuit électrique.'
   },
   {
     id: 'controle-technique',
-    label: 'ContrÃ´le technique',
+    label: 'Contrôle technique',
     maintenanceType: 'inspection',
     intervalKm: null,
     intervalDays: 365,
     priority: 'critical',
-    description: 'VÃ©rification rÃ©glementaire et sÃ©curitÃ© globale.'
+    description: 'Vérification réglementaire et sécurité globale.'
   }
 ];
 
@@ -191,7 +191,7 @@ const buildRuleMessage = (rule, evaluation) => {
     const parts = [];
     if (evaluation.criticalReasonLabel) parts.push(evaluation.criticalReasonLabel);
     const suffix = parts.length > 0 ? ` (${parts.join(' et ')})` : '';
-    return `${rule.label} urgente${suffix}. Une prise en charge immÃ©diate est recommandÃ©e.`;
+    return `${rule.label} urgente${suffix}. Une prise en charge immédiate est recommandée.`;
   }
 
   if (evaluation.level === 'BIENTOT') {
@@ -199,11 +199,11 @@ const buildRuleMessage = (rule, evaluation) => {
     const dayPart = evaluation.remainingDays !== null ? `${evaluation.remainingDays} jour(s) restants` : null;
     const segments = [kmPart, dayPart].filter(Boolean).join(' et ');
     return segments
-      ? `${rule.label} bientÃ´t nÃ©cessaire. ${segments}.`
-      : `${rule.label} bientÃ´t nÃ©cessaire. Planifiez la prochaine visite.`;
+      ? `${rule.label} bientôt nécessaire. ${segments}.`
+      : `${rule.label} bientôt nécessaire. Planifiez la prochaine visite.`;
   }
 
-  return `${rule.label} sous contrÃ´le. Aucun dÃ©passement critique dÃ©tectÃ©.`;
+  return `${rule.label} sous contrôle. Aucun dépassement critique détecté.`;
 };
 
 const evaluateRule = (rule, { currentKm, lastServiceKm, referenceDate, today, hasHistory }) => {
@@ -230,11 +230,11 @@ const evaluateRule = (rule, { currentKm, lastServiceKm, referenceDate, today, ha
   const isSoonByDate = nextRevisionDate !== null && rawRemainingDays !== null && rawRemainingDays > 0 && rawRemainingDays <= Math.max(30, Math.round(Number(rule.intervalDays) * 0.2));
 
   const criticalReasonLabel = isKmCritical && isDateCritical
-    ? `dÃ©passÃ© de ${Math.abs(rawRemainingKm || 0).toLocaleString('fr-FR')} km et Ã©chÃ©ance dÃ©passÃ©e de ${Math.abs(rawRemainingDays || 0)} jour(s)`
+    ? `dépassé de ${Math.abs(rawRemainingKm || 0).toLocaleString('fr-FR')} km et échéance dépassée de ${Math.abs(rawRemainingDays || 0)} jour(s)`
     : isKmCritical
-      ? `dÃ©passÃ© de ${Math.abs(rawRemainingKm || 0).toLocaleString('fr-FR')} km`
+      ? `dépassé de ${Math.abs(rawRemainingKm || 0).toLocaleString('fr-FR')} km`
       : isDateCritical
-        ? `Ã©chÃ©ance dÃ©passÃ©e de ${Math.abs(rawRemainingDays || 0)} jour(s)`
+        ? `échéance dépassée de ${Math.abs(rawRemainingDays || 0)} jour(s)`
         : null;
 
   let level = 'NORMAL';
@@ -510,7 +510,7 @@ const computeMaintenanceSnapshot = ({ vehicle, interventions = [], storedSchedul
     lastInterventionId: latestIntervention?.id || null,
     lastInterventionDate: latestIntervention?.date ? latestIntervention.date.toISOString().split('T')[0] : null,
     lastInterventionKm: latestIntervention?.mileage ?? currentKm,
-    lastInterventionType: latestIntervention?.rawType || 'Maintenance prÃ©ventive',
+    lastInterventionType: latestIntervention?.rawType || 'Maintenance préventive',
     kmRecommended: nextRevision?.intervalKm || latestIntervention?.kmRecommended || null,
     daysRecommended: nextRevision?.intervalDays || latestIntervention?.daysRecommended || null,
     recommendationSource: latestIntervention ? 'maintenance-intelligence' : 'new-vehicle-default',

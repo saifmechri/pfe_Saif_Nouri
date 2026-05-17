@@ -9,7 +9,7 @@ const RoleBasedRedirect = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirection selon le rÃ´le de l'utilisateur
+  // Redirection selon le rôle de l'utilisateur
   switch (user.role) {
     case "automobiliste":
       return <Navigate to="/automobiliste" replace />;

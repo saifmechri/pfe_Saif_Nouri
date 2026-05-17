@@ -34,7 +34,7 @@ const matchGarages = asyncHandler(async (req, res) => {
   const matchedGarages = await garageMatchingService.matchGarages(vehicleId, maxDistance);
 
   return sendApiResponse(res, {
-    message: `${matchedGarages.length} garages trouves et classÃ©s`,
+    message: `${matchedGarages.length} garages trouves et classés`,
     data: matchedGarages
   });
 });

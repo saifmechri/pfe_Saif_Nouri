@@ -2,8 +2,8 @@
 import { fetchNotifications, markNotificationAsRead, deleteNotification } from "../services/notifications";
 
 /**
- * Hook personnalisÃ© pour gÃ©rer les notifications
- * RÃ©cupÃ¨re les notifications Ã  intervalle rÃ©gulier
+ * Hook personnalisé pour gérer les notifications
+ * Récupère les notifications Ã  intervalle régulier
  */
 export const useNotifications = (pollingInterval = 10000) => {
   const [notifications, setNotifications] = useState([]);

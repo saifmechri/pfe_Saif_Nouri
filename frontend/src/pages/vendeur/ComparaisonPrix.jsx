@@ -181,7 +181,7 @@ const ComparaisonPrix = () => {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-black tracking-tight text-slate-900">Comparaison prix multi-vendeurs</h1>
-              <p className="mt-1 text-slate-600">Vue dÃ©diÃ©e dynamique pour analyser le meilleur prix disponible.</p>
+              <p className="mt-1 text-slate-600">Vue dédiée dynamique pour analyser le meilleur prix disponible.</p>
             </div>
             <button
               type="button"
@@ -238,7 +238,7 @@ const ComparaisonPrix = () => {
                 onClick={() => runComparison({ name: effectiveName, includeOutOfStock })}
                 className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-semibold text-red-700"
               >
-                RÃ©essayer
+                Réessayer
               </button>
             </div>
           )}
@@ -255,14 +255,14 @@ const ComparaisonPrix = () => {
                   <p className="mt-1 text-4xl font-black text-emerald-700">{Number(bestPrice).toFixed(2)} DT</p>
                 </div>
                 <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wide text-amber-700">ðŸŸ§ Ã‰conomie max</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-700">ðŸŸ§ Économie max</p>
                   <p className="mt-1 text-4xl font-black text-amber-700">{Number(economyAmount).toFixed(2)} DT</p>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-emerald-800 shadow-sm">
                 <p className="text-sm font-semibold">
-                  Vous pouvez Ã©conomiser jusqu'Ã  {Number(economyAmount).toFixed(2)} DT ({Number(economyPercent).toFixed(1)}%).
+                  Vous pouvez économiser jusqu'Ã  {Number(economyAmount).toFixed(2)} DT ({Number(economyPercent).toFixed(1)}%).
                 </p>
               </div>
 
@@ -343,7 +343,7 @@ const ComparaisonPrix = () => {
                       <p><span className="font-semibold text-slate-900">Prix:</span> {Number(selectedOffer?.prix_unitaire || 0).toFixed(2)} DT</p>
                       <p><span className="font-semibold text-slate-900">Stock:</span> {selectedOffer?.stock ?? "-"}</p>
                       <p><span className="font-semibold text-slate-900">Zone:</span> {selectedOffer?.zone_geographique || "-"}</p>
-                      <p><span className="font-semibold text-slate-900">Ã‰tat:</span> {selectedOffer?.condition || "-"}</p>
+                      <p><span className="font-semibold text-slate-900">État:</span> {selectedOffer?.condition || "-"}</p>
                       <p><span className="font-semibold text-slate-900">Catégorie:</span> {selectedOffer?.categorie || "-"}</p>
                     </div>
                     <div className="mt-4">

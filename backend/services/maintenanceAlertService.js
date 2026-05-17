@@ -31,14 +31,14 @@ const checkAndNotifyDueAlerts = async (vehicleId, currentKm, userId, vehicleName
     const dueAlerts = await maintenanceAlertModel.checkDueAlerts(vehicleId, currentKm);
     
     for (const alert of dueAlerts) {
-      const title = `Entretien dÃ» pour ${vehicleName}`;
+      const title = `Entretien dû pour ${vehicleName}`;
       const alertLabels = {
         'oil_change': 'Vidange',
         'tire_rotation': 'Rotation des pneus',
-        'brake_check': 'VÃ©rification des freins',
+        'brake_check': 'Vérification des freins',
         'filter_change': 'Changement des filtres',
         'inspection': 'Inspection',
-        'custom': 'Entretien personnalisÃ©'
+        'custom': 'Entretien personnalisé'
       };
       
       const body = `${alertLabels[alert.alert_type] || alert.alert_type} - Prenez rendez-vous avec un garage`;

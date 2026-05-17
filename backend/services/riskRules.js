@@ -109,23 +109,23 @@ function buildExplanation(risk, context, matchedRules) {
   const mileageLabel = context.lastIntervention === null
     ? 'aucun historique de maintenance'
     : context.mileageSinceLastMaintenance <= 0
-      ? 'maintenance effectuÃ©e au kilométrage actuel'
-      : `${Math.round(context.mileageSinceLastMaintenance)} km depuis la derniÃ¨re maintenance`;
+      ? 'maintenance effectuée au kilométrage actuel'
+      : `${Math.round(context.mileageSinceLastMaintenance)} km depuis la dernière maintenance`;
 
   if (risk === 'HIGH') {
     details.push(`Risque HIGH: ${mileageLabel}`);
     details.push(`Historique faible: ${context.interventionCount} intervention(s)`);
     if (!context.criticalMaintenanceFound) {
-      details.push('Aucune maintenance critique dÃ©tectÃ©e');
+      details.push('Aucune maintenance critique détectée');
     }
   } else if (risk === 'LOW') {
     details.push(`Risque LOW: ${mileageLabel}`);
-    details.push('Historique rÃ©gulier dÃ©tectÃ©');
-    details.push('Maintenance critique prÃ©sente');
+    details.push('Historique régulier détecté');
+    details.push('Maintenance critique présente');
   } else {
     details.push(`Risque MEDIUM: ${mileageLabel}`);
     if (context.historyIsIrregular) {
-      details.push('Historique irrÃ©gulier ou incomplet');
+      details.push('Historique irrégulier ou incomplet');
     }
   }
 
@@ -134,10 +134,10 @@ function buildExplanation(risk, context, matchedRules) {
     details,
     mainFactors: matchedRules,
     recommendation: risk === 'HIGH'
-      ? 'Visite urgente recommandÃ©e'
+      ? 'Visite urgente recommandée'
       : risk === 'MEDIUM'
         ? 'À surveiller'
-        : 'Suivi rÃ©gulier'
+        : 'Suivi régulier'
   };
 }
 

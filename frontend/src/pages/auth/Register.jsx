@@ -41,21 +41,21 @@ const Register = () => {
     // Validation du téléphone : 8 chiffres, commence par 2, 5 ou 9
     const telephoneRegex = /^[259][0-9]{7}$/;
     if (!telephoneRegex.test(form.telephone)) {
-      setError("Le numÃ©ro de téléphone doit contenir 8 chiffres et commencer par 2, 5 ou 9.");
+      setError("Le numéro de téléphone doit contenir 8 chiffres et commencer par 2, 5 ou 9.");
       return;
     }
 
-    // Validation du mot de passe : au moins 8 caractÃ¨res, une majuscule, un chiffre, un symbole
+    // Validation du mot de passe : au moins 8 caractères, une majuscule, un chiffre, un symbole
     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
     if (!passwordRegex.test(form.password)) {
-      setError("Le mot de passe doit contenir au moins 8 caractÃ¨res, une majuscule, un chiffre et un symbole.");
+      setError("Le mot de passe doit contenir au moins 8 caractères, une majuscule, un chiffre et un symbole.");
       return;
     }
 
-    // Validation du rÃ´le : doit être une valeur valide
+    // Validation du rôle : doit être une valeur valide
     const validRoles = ["automobiliste", "garage", "vendeur"];
     if (!form.role || !validRoles.includes(form.role)) {
-      setError("Veuillez sélectionner un rÃ´le valide.");
+      setError("Veuillez sélectionner un rôle valide.");
       return;
     }
 
@@ -113,7 +113,7 @@ const Register = () => {
 
           <div>
             <label htmlFor="prenom" className="mb-1 block text-sm font-semibold text-[#1a2b4b]">
-              PrÃ©nom
+              Prénom
             </label>
             <input
               type="text"
@@ -164,7 +164,7 @@ const Register = () => {
               type="password"
               id="password"
               name="password"
-              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+              placeholder="••••••••"
               className="vb-input w-full px-3 py-3"
               onChange={handleChange}
               required
@@ -173,7 +173,7 @@ const Register = () => {
 
           <div>
             <label htmlFor="role" className="mb-1 block text-sm font-semibold text-[#1a2b4b]">
-              RÃ´le
+              Rôle
             </label>
             <select
               id="role"
@@ -183,7 +183,7 @@ const Register = () => {
               value={form.role}
               required
             >
-              <option value="" disabled>SÃ©lectionnez votre rÃ´le</option>
+              <option value="" disabled>Sélectionnez votre rôle</option>
               <option value="automobiliste">Automobiliste</option>
               <option value="garage">Garage</option>
               <option value="vendeur">Vendeur</option>
@@ -200,7 +200,7 @@ const Register = () => {
         </form>
 
         <p className="mt-5 text-sm text-[#617089]">
-          DÃ©jÃ  inscrit ?{" "}
+          DéjÃ  inscrit ?{" "}
           <Link to="/login" className="font-semibold text-[#1d4ed8] hover:underline">
             Se connecter
           </Link>

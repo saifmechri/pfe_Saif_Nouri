@@ -140,7 +140,7 @@ const AutomobilisteAppointments = () => {
       setNotification({
         type: "appointment",
         title: status === "confirmed" ? "âœ“ Rendez-vous confirmé" : "âœ• Rendez-vous annulé",
-        body: `Votre rendez-vous a Ã©tÃ© ${statusLabel}.`
+        body: `Votre rendez-vous a été ${statusLabel}.`
       });
       setSelectedAppointment(apt);
 
@@ -151,7 +151,7 @@ const AutomobilisteAppointments = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("ÃŠtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
     try {
       await deleteAppointment(id);
       fetchAppointments();
@@ -231,11 +231,11 @@ const AutomobilisteAppointments = () => {
       setNotification({
         type: "appointment",
         title: "âœ“ Rendez-vous réservé",
-        body: `Votre demande a Ã©tÃ© envoyÃ©e Ã  ${selectedGarage?.name || selectedGarage?.nom || "votre garage"}.`
+        body: `Votre demande a été envoyée Ã  ${selectedGarage?.name || selectedGarage?.nom || "votre garage"}.`
       });
 
       setMessageType("success");
-      setMessage("âœ“ Rendez-vous créé avec succès! Le garage rÃ©pondra dans les 24 heures.");
+      setMessage("âœ“ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
       setForm({
         garageId: "",
         vehicleId: "",
@@ -251,7 +251,7 @@ const AutomobilisteAppointments = () => {
       setMessageType("error");
       setMessage(
         err.response?.data?.data?.errors 
-          ? Object.values(err.response.data.data.errors).join(" â€¢ ")
+          ? Object.values(err.response.data.data.errors).join(" • ")
           : err.response?.data?.message 
           ? err.response.data.message
           : err.message 
@@ -303,7 +303,7 @@ const AutomobilisteAppointments = () => {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-700">Réservation</p>
                 <h2 className="mt-2 text-2xl font-black text-slate-900">Prendre un rendez-vous</h2>
-                <p className="mt-2 text-sm text-slate-600">Choisissez un garage, un véhicule et les services souhaitÃ©s.</p>
+                <p className="mt-2 text-sm text-slate-600">Choisissez un garage, un véhicule et les services souhaités.</p>
               </div>
               <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">Automobiliste</div>
             </div>
@@ -318,7 +318,7 @@ const AutomobilisteAppointments = () => {
                   required
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 >
-                  <option value="">SÃ©lectionnez un garage</option>
+                  <option value="">Sélectionnez un garage</option>
                   {garages.map((garage) => (
                     <option key={garage.id} value={garage.id}>
                       {garage.name || garage.nom || `Garage ${garage.id}`}
@@ -335,7 +335,7 @@ const AutomobilisteAppointments = () => {
                   onChange={handleFormChange}
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 >
-                  <option value="">SÃ©lectionnez un véhicule</option>
+                  <option value="">Sélectionnez un véhicule</option>
                   {vehicules.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
                       {vehicle.modele_voiture || vehicle.modele || `Véhicule ${vehicle.id}`}{" "}
@@ -426,7 +426,7 @@ const AutomobilisteAppointments = () => {
                   </div>
                 ) : (
                   <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-                    SÃ©lectionnez un garage pour charger ses services.
+                    Sélectionnez un garage pour charger ses services.
                   </p>
                 )}
               </div>
@@ -450,7 +450,7 @@ const AutomobilisteAppointments = () => {
                   name="remark"
                   value={form.remark}
                   onChange={handleFormChange}
-                  placeholder="PrÃ©cisez des détails pour le garage"
+                  placeholder="Précisez des détails pour le garage"
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 placeholder:text-slate-400 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 />
               </div>

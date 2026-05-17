@@ -114,7 +114,7 @@ const PlatformLayout = ({ children }) => {
           </div>
           {user?.role === "admin" && (
             <p className="mt-3 text-sm leading-6 text-white/75">
-              Supervision des contenus, modÃ©ration et audit centralisÃ©s.
+              Supervision des contenus, modération et audit centralisés.
             </p>
           )}
         </div>

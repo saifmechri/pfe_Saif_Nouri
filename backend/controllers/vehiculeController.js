@@ -3,7 +3,7 @@
 
 const { pool } = require("../db");
 
-const ALLOWED_VEHICLE_TYPES = ["Essence", "Diesel", "SUV", "Ã‰lectrique"];
+const ALLOWED_VEHICLE_TYPES = ["Essence", "Diesel", "SUV", "Électrique"];
 
 const validateVehiculePayload = (payload) => {
   const { modele_voiture, matricule_voiture, kilometrage_voiture, type_vehicule } = payload;

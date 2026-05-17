@@ -45,7 +45,7 @@ export default function AuditLogs() {
       'reject_user': 'âŒ Rejeter Utilisateur',
       'approve_garage': 'âœ… Approuver Garage',
       'reject_garage': 'âŒ Rejeter Garage',
-      'deactivate_garage': 'â¸ï¸ DÃ©sactiver Garage',
+      'deactivate_garage': 'â¸ï¸ Désactiver Garage',
       'delete_garage': 'ðŸ—‘ï¸ Supprimer Garage',
       'approve_piece': 'âœ… Approuver Pièce',
       'reject_piece': 'âŒ Rejeter Pièce',
@@ -64,7 +64,7 @@ export default function AuditLogs() {
     return mapping[entity] || entity;
   };
 
-  // RÃ©cupÃ©rer les logs
+  // Récupérer les logs
   useEffect(() => {
     fetchLogs();
   }, [page, limit, filters]);
@@ -151,7 +151,7 @@ export default function AuditLogs() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-slate-900 mb-2">ðŸ“‹ Journal d'Audit</h1>
-          <p className="text-slate-600">Suivi complÃ¨t des actions administratives critiques</p>
+          <p className="text-slate-600">Suivi complèt des actions administratives critiques</p>
         </div>
 
         {/* Filtres */}
@@ -270,7 +270,7 @@ export default function AuditLogs() {
           ) : logs.length === 0 ? (
             <div className="p-8 text-center">
               <Search className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-600">Aucun log trouvé selon les critÃ¨res de recherche</p>
+              <p className="text-slate-600">Aucun log trouvé selon les critères de recherche</p>
             </div>
           ) : (
             <div className="overflow-x-auto">

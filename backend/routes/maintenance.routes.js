@@ -8,7 +8,7 @@ const maintenanceController = require('../controllers/maintenance.controller');
 const vehicleIdParam = param('vehicleId').isInt({ gt: 0 }).withMessage('vehicleId invalide');
 const vehicleIdQuery = query('vehicleId').isInt({ gt: 0 }).withMessage('vehicleId invalide');
 
-// GET - Maintenance dashboard agrÃ©gÃ© pour un véhicule
+// GET - Maintenance dashboard agrégé pour un véhicule
 router.get('/', vehicleIdQuery, validateRequest, verifyToken, maintenanceController.getMaintenanceDashboard);
 
 // GET - Calculate next revision for a vehicle

@@ -184,7 +184,7 @@ function calculateMileageScore(currentKm, normalizedHistory, maintenanceAnalysis
     // Based on average usage, estimate percentage of typical interval consumed
     if (estimatedDaysSinceLastIntervention > 180) {
       score = Math.min(50, (estimatedDaysSinceLastIntervention / 365) * 100);
-      factors.push(`${Math.round(estimatedDaysSinceLastIntervention)} jours depuis derniÃ¨re révision`);
+      factors.push(`${Math.round(estimatedDaysSinceLastIntervention)} jours depuis dernière révision`);
     }
   }
 
@@ -192,7 +192,7 @@ function calculateMileageScore(currentKm, normalizedHistory, maintenanceAnalysis
   const kmPercentOfTypicalInterval = (kmSinceLastIntervention / 15000) * 100;
   if (kmPercentOfTypicalInterval > 80) {
     score = Math.max(score, Math.min(50, (kmPercentOfTypicalInterval / 100) * 100));
-    factors.push(`${Math.round(kmSinceLastIntervention)} km parcourus depuis derniÃ¨re maintenance`);
+    factors.push(`${Math.round(kmSinceLastIntervention)} km parcourus depuis dernière maintenance`);
   }
 
   return { score, factors };
@@ -215,10 +215,10 @@ function calculateRecencyScore(normalizedHistory) {
 
   if (daysSinceLastIntervention > 730) {
     score = Math.min(40, (daysSinceLastIntervention / 365) * 20);
-    factors.push(`DerniÃ¨re maintenance il y a ${Math.round(daysSinceLastIntervention)} jours`);
+    factors.push(`Dernière maintenance il y a ${Math.round(daysSinceLastIntervention)} jours`);
   } else if (daysSinceLastIntervention > 365) {
     score = Math.min(30, (daysSinceLastIntervention / 730) * 20);
-    factors.push(`Maintenance annuelle dÃ©passÃ©e: ${Math.round(daysSinceLastIntervention)} jours`);
+    factors.push(`Maintenance annuelle dépassée: ${Math.round(daysSinceLastIntervention)} jours`);
   } else {
     score = Math.max(0, 10 - (daysSinceLastIntervention / 365) * 10);
   }
@@ -246,12 +246,12 @@ function calculateMaintenanceTypeScore(normalizedHistory, maintenanceAnalysis) {
       
       if (!lastOfType) {
         score += 25; // Critical type never done
-        factors.push(`${type.toUpperCase()}: jamais effectuÃ© (critique)`);
+        factors.push(`${type.toUpperCase()}: jamais effectué (critique)`);
       } else {
         const daysSinceLastOfType = (Date.now() - lastOfType.date.getTime()) / (1000 * 60 * 60 * 24);
         if (daysSinceLastOfType > typeConfig.maxIntervalDays) {
           score += 20;
-          factors.push(`${type}: dÃ©passÃ© depuis ${Math.round(daysSinceLastOfType - typeConfig.maxIntervalDays)} jours`);
+          factors.push(`${type}: dépassé depuis ${Math.round(daysSinceLastOfType - typeConfig.maxIntervalDays)} jours`);
         }
       }
     }
@@ -263,7 +263,7 @@ function calculateMaintenanceTypeScore(normalizedHistory, maintenanceAnalysis) {
       for (const criticalPart of CRITICAL_PARTS) {
         if (part.toLowerCase().includes(criticalPart)) {
           score = Math.min(score, -5); // Negative points (good) for critical maintenance
-          factors.push(`Pièce critique remplacÃ©e: ${part}`);
+          factors.push(`Pièce critique remplacée: ${part}`);
         }
       }
     }
@@ -329,9 +329,9 @@ function calculateMaintenanceRiskScore(currentKm, vehicle, normalizedHistory) {
  */
 function generateExplanation(score, riskLevel, factors) {
   const summaries = {
-    LOW: 'Votre véhicule est en bon Ã©tat d\'entretien. Continuez Ã  suivre le programme de maintenance recommandÃ©.',
-    MEDIUM: 'Votre véhicule nÃ©cessite une révision prochainement. Planifiez une intervention dans les prochaines semaines.',
-    HIGH: 'Votre véhicule prÃ©sente des besoins de maintenance urgents. Prenez rendez-vous rapidement chez un garage.'
+    LOW: 'Votre véhicule est en bon état d\'entretien. Continuez Ã  suivre le programme de maintenance recommandé.',
+    MEDIUM: 'Votre véhicule nécessite une révision prochainement. Planifiez une intervention dans les prochaines semaines.',
+    HIGH: 'Votre véhicule présente des besoins de maintenance urgents. Prenez rendez-vous rapidement chez un garage.'
   };
 
   return {
@@ -340,8 +340,8 @@ function generateExplanation(score, riskLevel, factors) {
     riskLevel: riskLevel,
     mainFactors: factors.slice(0, 3), // Top 3 factors
     recommendation: riskLevel === 'HIGH' ? 
-      'Visite urgente recommandÃ©e' : 
-      (riskLevel === 'MEDIUM' ? 'À prÃ©voir dans les prochaines semaines' : 'Suivi rÃ©gulier')
+      'Visite urgente recommandée' : 
+      (riskLevel === 'MEDIUM' ? 'À prévoir dans les prochaines semaines' : 'Suivi régulier')
   };
 }
 

@@ -13,7 +13,7 @@ const VendeurDashboard = () => {
   const [piecesLoading, setPiecesLoading] = useState(false);
   const [piecesError, setPiecesError] = useState("");
   
-  // États pour la prÃ©sentation du vendeur
+  // États pour la présentation du vendeur
   const [presentationForm, setPresentationForm] = useState({
     store_name: "",
     store_address: "",
@@ -87,9 +87,9 @@ const VendeurDashboard = () => {
       };
 
       await updateProfile(payload);
-      setPresentationMessage("PrÃ©sentation enregistrée avec succès.");
+      setPresentationMessage("Présentation enregistrée avec succès.");
       
-      // Recharger le profil pour mettre Ã  jour la prÃ©sentation
+      // Recharger le profil pour mettre Ã  jour la présentation
       const response = await getCompleteProfile();
       const profile = getPayload(response)?.user || getPayload(response) || {};
       setPresentationForm({
@@ -101,7 +101,7 @@ const VendeurDashboard = () => {
         store_services: profile.store_services || ""
       });
     } catch (err) {
-      setPresentationError(err.response?.data?.message || "Erreur lors de l'enregistrement de la prÃ©sentation");
+      setPresentationError(err.response?.data?.message || "Erreur lors de l'enregistrement de la présentation");
     } finally {
       setPresentationSaving(false);
     }
@@ -117,7 +117,7 @@ const VendeurDashboard = () => {
         
         setOwnerId(parsedOwnerId);
         
-        // Initialiser les champs de prÃ©sentation
+        // Initialiser les champs de présentation
         setPresentationForm({
           store_name: profile.store_name || "",
           store_address: profile.store_address || "",
@@ -159,12 +159,12 @@ const VendeurDashboard = () => {
       <div className="min-h-screen bg-transparent">
         <div className="mx-auto max-w-7xl px-4 py-8">
           <h1 className="mb-2 text-3xl font-extrabold text-[#1a2b4b]">Dashboard Vendeur</h1>
-          <p className="mb-6 text-sm text-[#617089]">Pilotez vos pièces, votre catalogue et vos Ã©changes vendeurs.</p>
+          <p className="mb-6 text-sm text-[#617089]">Pilotez vos pièces, votre catalogue et vos échanges vendeurs.</p>
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-4">
           <div className="rounded-2xl border border-[#e8eef8] bg-gradient-to-br from-blue-50 to-blue-100 p-6 shadow-sm hover:shadow-md transition">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2">Pièces publiÃ©es</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2">Pièces publiées</p>
             <p className="text-3xl font-bold text-[#1d4ed8]">{sellerPieces.length}</p>
           </div>
           <div className="rounded-2xl border border-[#e8eef8] bg-gradient-to-br from-green-50 to-green-100 p-6 shadow-sm hover:shadow-md transition">
@@ -187,7 +187,7 @@ const VendeurDashboard = () => {
             onClick={() => setActiveTab("presentation")}
             className={`rounded-lg px-4 py-2 font-semibold ${activeTab === "presentation" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-white"}`}
           >
-            PrÃ©sentation
+            Présentation
           </button>
           <button
             onClick={() => setActiveTab("pieces")}
@@ -215,7 +215,7 @@ const VendeurDashboard = () => {
         <div className="vb-card p-6">
           {activeTab === "presentation" && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Ã‰diter la prÃ©sentation</h2>
+              <h2 className="text-xl font-semibold mb-4">Éditer la présentation</h2>
               <form onSubmit={handlePresentationSave} className="space-y-4">
                 {presentationError && <div className="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{presentationError}</div>}
                 {presentationMessage && <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{presentationMessage}</div>}
@@ -269,13 +269,13 @@ const VendeurDashboard = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-900 mb-1">SpÃ©cialitÃ©s</label>
+                  <label className="block text-sm font-semibold text-slate-900 mb-1">Spécialités</label>
                   <textarea
                     name="store_specialties"
                     value={presentationForm.store_specialties}
                     onChange={handlePresentationChange}
                     className="w-full rounded-lg border border-[#d5deec] px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none"
-                    placeholder="Vos spÃ©cialitÃ©s (sÃ©parÃ©es par des lignes)"
+                    placeholder="Vos spécialités (séparées par des lignes)"
                     rows="3"
                   />
                 </div>
@@ -287,7 +287,7 @@ const VendeurDashboard = () => {
                     value={presentationForm.store_services}
                     onChange={handlePresentationChange}
                     className="w-full rounded-lg border border-[#d5deec] px-3 py-2 text-slate-900 focus:border-blue-500 focus:outline-none"
-                    placeholder="Vos services (sÃ©parÃ©s par des lignes)"
+                    placeholder="Vos services (séparés par des lignes)"
                     rows="3"
                   />
                 </div>
@@ -315,7 +315,7 @@ const VendeurDashboard = () => {
               ) : piecesError ? (
                 <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{piecesError}</div>
               ) : sellerPieces.length === 0 ? (
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-center text-blue-700">Aucune pièce publiÃ©e pour le moment.</div>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-center text-blue-700">Aucune pièce publiée pour le moment.</div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
@@ -337,7 +337,7 @@ const VendeurDashboard = () => {
                           <tr key={piece.id} className="border-b border-[#e8eef8] hover:bg-[#f9fbff] transition">
                             <td className="px-4 py-3">
                               <div className="font-semibold text-slate-900">{piece.nom || piece.reference || "Pièce"}</div>
-                              <div className="text-xs text-slate-500">{piece.reference || "Référence non renseignÃ©e"}</div>
+                              <div className="text-xs text-slate-500">{piece.reference || "Référence non renseignée"}</div>
                             </td>
                             <td className="px-4 py-3 font-semibold text-[#1d4ed8]">{Number(piece.prix_unitaire || 0).toFixed(2)} DT</td>
                             <td className="px-4 py-3 font-semibold">{Number(piece.stock || 0)}</td>
@@ -358,7 +358,7 @@ const VendeurDashboard = () => {
                                   onClick={() => navigate(`/vendeur/catalogue?pieceId=${piece.id}&edit=true`)}
                                   className="inline-flex items-center gap-1 rounded-lg border border-[#c8d8f5] bg-[#eaf2ff] px-3 py-1 text-xs font-semibold text-[#144a9f] hover:bg-[#dfebff] transition"
                                 >
-                                  <Pencil size={14} /> Ã‰diter
+                                  <Pencil size={14} /> Éditer
                                 </button>
                                 <button
                                   type="button"
@@ -392,7 +392,7 @@ const VendeurDashboard = () => {
           {activeTab === "messages" && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Messages</h2>
-              <p className="text-gray-500">BoÃ®te de rÃ©ception...</p>
+              <p className="text-gray-500">BoÃ®te de réception...</p>
             </div>
           )}
         </div>
@@ -408,13 +408,13 @@ const VendeurDashboard = () => {
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-[#1a1a1a]">Supprimer la pièce</h3>
-                    <p className="text-sm text-[#666]">Cette action est irrÃ©versible</p>
+                    <p className="text-sm text-[#666]">Cette action est irréversible</p>
                   </div>
                 </div>
               </div>
               <div className="p-6">
                 <p className="text-sm text-[#555] leading-relaxed mb-4">
-                  ÃŠtes-vous sûr de vouloir supprimer <strong>{selectedPieceToDelete.nom || selectedPieceToDelete.reference}</strong> ? Cette action ne peut pas être annulée.
+                  Êtes-vous sûr de vouloir supprimer <strong>{selectedPieceToDelete.nom || selectedPieceToDelete.reference}</strong> ? Cette action ne peut pas être annulée.
                 </p>
               </div>
               <div className="flex gap-3 border-t border-[#f5d5d5] bg-[#fafafa] p-4">

@@ -65,7 +65,7 @@ function getRatingScore(rating) {
 }
 
 /**
- * âœ… FONCTION 6: Score disponibilitÃ© du garage
+ * âœ… FONCTION 6: Score disponibilité du garage
  */
 function getAvailabilityScore(garage) {
   if (garage.isOpen) return 10;
@@ -95,7 +95,7 @@ function calculateInterventionScoreDetailed(vehicle, lastIntervention, intervent
   let vehicleTypeMultiplier = 1.0;
   if (vehicle.type === 'Diesel') vehicleTypeMultiplier = 1.2;
   if (vehicle.type === 'SUV') vehicleTypeMultiplier = 1.15;
-  if (vehicle.type === 'Ã‰lectrique') vehicleTypeMultiplier = 0.8;
+  if (vehicle.type === 'Électrique') vehicleTypeMultiplier = 0.8;
   const typeContribution = vehicleTypeMultiplier * 10;
 
   const totalRaw = kmContribution + dateContribution + typeContribution;
@@ -114,7 +114,7 @@ function calculateInterventionScoreDetailed(vehicle, lastIntervention, intervent
 
 /**
  * âœ… FONCTION 8: Calculer score TOTAL d'un garage
- * Poids: Distance 40% + Rating 35% + DisponibilitÃ© 25%
+ * Poids: Distance 40% + Rating 35% + Disponibilité 25%
  */
 function calculateGarageScore(userLat, userLon, garage) {
   const detail = calculateGarageScoreDetailed(userLat, userLon, garage);
@@ -152,10 +152,10 @@ function calculateGarageScoreDetailed(userLat, userLon, garage) {
 }
 
 /**
- * âœ… DÃ‰TERMINER URGENCE basÃ© sur le kilométrage
- * RÃ¨gles:
+ * âœ… DÉTERMINER URGENCE basé sur le kilométrage
+ * Règles:
  * - km_actuel >= km_recommande => URGENT
- * - km_restant <= 1000 => RECOMMANDÃ‰
+ * - km_restant <= 1000 => RECOMMANDÉ
  * - sinon => FUTUR
  */
 function getUrgency(kmActuel, kmRecommande) {
@@ -169,7 +169,7 @@ function getUrgency(kmActuel, kmRecommande) {
   const remaining = Math.max(0, recommended - current);
 
   if (current >= recommended) return 'URGENT';
-  if (remaining <= 1000) return 'RECOMMANDÃ‰';
+  if (remaining <= 1000) return 'RECOMMANDÉ';
   return 'FUTUR';
 }
 

@@ -201,7 +201,7 @@ const Navbar = () => {
           </button>
         ) : (
           <div className="mt-auto rounded-2xl border border-white/15 bg-white/10 p-4 text-sm text-white/80">
-            Connectez-vous pour accÃ©der au profil et aux espaces dÃ©diÃ©s.
+            Connectez-vous pour accéder au profil et aux espaces dédiés.
           </div>
         )}
       </aside>
@@ -262,7 +262,7 @@ const Navbar = () => {
               to="/dashboard"
               className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
             >
-              AccÃ©der Ã  lâ€™espace
+              Accéder Ã  l’espace
             </Link>
           </section>
         )}

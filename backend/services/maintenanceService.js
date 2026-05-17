@@ -27,11 +27,11 @@ const BASE_RULES = [
     intervalKm: 10000,
     intervalDays: 365,
     priority: 'high',
-    description: 'Huile moteur et filtre Ã  huile.'
+    description: 'Huile moteur et filtre à huile.'
   },
   {
     id: 'filtre-air',
-    label: 'Filtre Ã  air / habitacle',
+    label: 'Filtre à air / habitacle',
     maintenanceType: 'filtre',
     intervalKm: 15000,
     intervalDays: 365,
@@ -78,7 +78,7 @@ const BASE_RULES = [
 
 const STATE_META = {
   NORMAL: { level: 'NORMAL', label: 'NORMAL', color: 'emerald', alertType: 'info', state: 'NORMAL' },
-  BIENTOT: { level: 'BIENTOT', label: 'BIENTÃ”T', color: 'amber', alertType: 'warning', state: 'BIENTÃ”T' },
+  BIENTOT: { level: 'BIENTOT', label: 'BIENTÔT', color: 'amber', alertType: 'warning', state: 'BIENTÔT' },
   URGENT: { level: 'URGENT', label: 'URGENT', color: 'red', alertType: 'danger', state: 'URGENT' }
 };
 

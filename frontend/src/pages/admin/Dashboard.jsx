@@ -404,15 +404,15 @@ const AdminDashboard = () => {
                 <h2 className="text-xl font-black text-[#13243f]">Priorités du jour</h2>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div className="rounded-2xl bg-[#f3f7fd] p-4">
-                    <p className="text-sm text-[#607089]">Garages Ã  gérer</p>
+                    <p className="text-sm text-[#607089]">Garages à gérer</p>
                     <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : garages.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#fef6e8] p-4">
-                    <p className="text-sm text-[#7a6330]">Signalements Ã  traiter</p>
+                    <p className="text-sm text-[#7a6330]">Signalements à traiter</p>
                     <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pendingReports.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#f5f3ff] p-4">
-                    <p className="text-sm text-[#6b5b95]">Pièces Ã  gérer</p>
+                    <p className="text-sm text-[#6b5b95]">Pièces à gérer</p>
                     <p className="mt-2 text-2xl font-black text-[#13243f]">{loading ? "..." : pieces.length}</p>
                   </div>
                   <div className="rounded-2xl bg-[#f0fdf4] p-4">
@@ -428,7 +428,7 @@ const AdminDashboard = () => {
                   <p>• Gérer les garages depuis l'onglet garages.</p>
                   <p>• Gérer les pièces depuis l'onglet pièces.</p>
                   <p>• Traiter les signalements via le tab signalements.</p>
-                  <p>• RafraÃ®chir les données après chaque décision.</p>
+                  <p>• Rafraîchir les données après chaque décision.</p>
                 </div>
               </div>
             </div>
@@ -741,7 +741,7 @@ const AdminDashboard = () => {
               <div className="mt-6 grid gap-4">
                 {!loading && pendingReports.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-[#d9e4f1] bg-[#fbfdff] px-5 py-8 text-sm text-[#6b7a90]">
-                    Aucun signalement Ã  traiter.
+                    Aucun signalement à traiter.
                   </div>
                 )}
 

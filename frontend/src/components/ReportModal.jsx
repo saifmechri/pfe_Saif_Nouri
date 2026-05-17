@@ -81,16 +81,16 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
           disabled={loading}
           className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed"
         >
-          âœ•
+          ❌
         </button>
 
         {/* Success State */}
         {success ? (
           <div className="text-center">
-            <div className="mb-4 text-5xl">âœ“</div>
+            <div className="mb-4 text-5xl">✅</div>
             <h3 className="mb-2 text-xl font-bold text-green-600">Merci!</h3>
             <p className="text-gray-600">
-              Votre signalement a été envoyé Ã  nos modérateurs.
+              Votre signalement a été envoyé à nos modérateurs.
             </p>
           </div>
         ) : (
@@ -100,7 +100,7 @@ const ReportModal = ({ isOpen, onClose, entityType, entityId, entityName, onSucc
               Signaler un problème
             </h2>
             <p className="mb-4 text-sm text-gray-600">
-              Aidez-nous Ã  maintenir une communauté saine
+              Aidez-nous à maintenir une communauté saine
               {entityName && <span>: <strong>{entityName}</strong></span>}
             </p>
 

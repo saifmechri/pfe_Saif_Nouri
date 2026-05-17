@@ -27,7 +27,7 @@ const replacements = {
   'récupère': 'récupère',
   'récupérer': 'récupérer',
   'modifié': 'modifié',
-  'modifée': 'modifiée',
+  'modifiée': 'modifiée',
   'ajouté': 'ajouté',
   'ajoutée': 'ajoutée',
   'succès': 'succès',

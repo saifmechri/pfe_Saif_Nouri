@@ -1,5 +1,5 @@
 ﻿/**
- * ðŸš— MAINTENANCE RISK SCORING SERVICE
+ * 🚗 MAINTENANCE RISK SCORING SERVICE
  * Implements intelligent multi-factor scoring for vehicle maintenance decisions
  * Replaces simple mileage-based rules with weighted scoring model
  */
@@ -30,7 +30,7 @@ const CRITICAL_PARTS = ['courroie distribution', 'plaquettes frein', 'amortisseu
 const { evaluateMaintenanceDecision } = require('./riskRules');
 
 /**
- * âœ… STEP 1: Normalize maintenance history structure
+ * ✅ STEP 1: Normalize maintenance history structure
  * Ensures consistent format with required fields
  */
 function normalizeMaintenanceHistory(interventions) {
@@ -60,7 +60,7 @@ function normalizeMaintenanceHistory(interventions) {
 }
 
 /**
- * âœ… STEP 2: Analyze maintenance intervals
+ * ✅ STEP 2: Analyze maintenance intervals
  * Calculates consistency and adherence to recommended intervals
  */
 function analyzeMaintenanceIntervals(normalizedHistory) {
@@ -156,7 +156,7 @@ function analyzeMaintenanceIntervals(normalizedHistory) {
 }
 
 /**
- * âœ… STEP 3: Calculate mileage-based score component
+ * ✅ STEP 3: Calculate mileage-based score component
  * Considers current mileage vs recommended intervals
  */
 function calculateMileageScore(currentKm, normalizedHistory, maintenanceAnalysis) {
@@ -199,7 +199,7 @@ function calculateMileageScore(currentKm, normalizedHistory, maintenanceAnalysis
 }
 
 /**
- * âœ… STEP 4: Calculate recency-based score component
+ * ✅ STEP 4: Calculate recency-based score component
  * Penalizes aged maintenance records
  */
 function calculateRecencyScore(normalizedHistory) {
@@ -227,7 +227,7 @@ function calculateRecencyScore(normalizedHistory) {
 }
 
 /**
- * âœ… STEP 5: Calculate maintenance type importance score
+ * ✅ STEP 5: Calculate maintenance type importance score
  * Critical services are weighted higher
  */
 function calculateMaintenanceTypeScore(normalizedHistory, maintenanceAnalysis) {
@@ -273,7 +273,7 @@ function calculateMaintenanceTypeScore(normalizedHistory, maintenanceAnalysis) {
 }
 
 /**
- * âœ… STEP 6: Calculate comprehensive maintenance risk score (0-100)
+ * ✅ STEP 6: Calculate comprehensive maintenance risk score (0-100)
  * Weighted combination of all factors
  * Thresholds:
  *   0-40: LOW risk
@@ -325,11 +325,11 @@ function calculateMaintenanceRiskScore(currentKm, vehicle, normalizedHistory) {
 }
 
 /**
- * âœ… STEP 7: Generate human-readable explanation
+ * ✅ STEP 7: Generate human-readable explanation
  */
 function generateExplanation(score, riskLevel, factors) {
   const summaries = {
-    LOW: 'Votre véhicule est en bon état d\'entretien. Continuez Ã  suivre le programme de maintenance recommandé.',
+    LOW: 'Votre véhicule est en bon état d\'entretien. Continuez à suivre le programme de maintenance recommandé.',
     MEDIUM: 'Votre véhicule nécessite une révision prochainement. Planifiez une intervention dans les prochaines semaines.',
     HIGH: 'Votre véhicule présente des besoins de maintenance urgents. Prenez rendez-vous rapidement chez un garage.'
   };
@@ -346,7 +346,7 @@ function generateExplanation(score, riskLevel, factors) {
 }
 
 /**
- * âœ… PUBLIC API: Main function to compute maintenance risk
+ * ✅ PUBLIC API: Main function to compute maintenance risk
  */
 function computeMaintenanceRisk(currentKm, vehicle, rawInterventions) {
   try {

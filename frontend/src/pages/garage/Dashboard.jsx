@@ -1,6 +1,6 @@
 ﻿import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Bell, ChevronDown, ChevronRight, Clock3, Heart, Home, ImagePlus, Lock, MapPin, Menu, MinusCircle, PlusCircle, Search, Settings, Truck, Wrench } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
@@ -76,7 +76,7 @@ const garageSpecialtyCatalog = [
   },
   {
     name: "Diagnostic auto",
-    services: ["Passage Ã  la valise", "Lecture/Effacement défauts", "Programmation calculateurs", "Test de composants"]
+    services: ["Passage à la valise", "Lecture/Effacement défauts", "Programmation calculateurs", "Test de composants"]
   },
   {
     name: "Services rapides",
@@ -160,7 +160,7 @@ const garageSpecialtyCatalog = [
   },
   {
     name: "Expert automobile",
-    services: ["Expertise après sinistre", "Estimation valeur véhicule", "Conseil Ã  l'achat", "Litiges mécaniques"]
+    services: ["Expertise après sinistre", "Estimation valeur véhicule", "Conseil à l'achat", "Litiges mécaniques"]
   },
   {
     name: "Auto-école",
@@ -192,7 +192,7 @@ const garageSpecialtyCatalog = [
   },
   {
     name: "Entretien & réparation Moto",
-    services: ["Révision moto", "Pneumatiques moto", "Kit chaÃ®ne et carburation", "Entretien mécanique moto"]
+    services: ["Révision moto", "Pneumatiques moto", "Kit chaîne et carburation", "Entretien mécanique moto"]
   },
   {
     name: "Personnalisation & préparation Moto",
@@ -442,6 +442,7 @@ const serializeScheduleText = (schedule) =>
 const GarageDashboard = () => {
   const [activePanel, setActivePanel] = useState("garage");
   const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
 
   const { user } = useContext(AuthContext);
 
@@ -506,6 +507,13 @@ const GarageDashboard = () => {
   const [presentationSaving, setPresentationSaving] = useState(false);
   const [presentationMessage, setPresentationMessage] = useState("");
   const [presentationError, setPresentationError] = useState("");
+
+  useEffect(() => {
+    const requestedPanel = searchParams.get("panel");
+    if (requestedPanel === "garage" || requestedPanel === "presentation") {
+      setActivePanel(requestedPanel);
+    }
+  }, [searchParams]);
 
   const hasGarageProfile = Boolean(garage?.id);
 
@@ -1308,7 +1316,7 @@ const GarageDashboard = () => {
               <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Marques</h3>
-                  <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                  <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">×</button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                   {garageBrands.map((brand) => {
@@ -1359,7 +1367,7 @@ const GarageDashboard = () => {
               <div className="max-h-[92vh] w-full max-w-[1100px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Spécialités</h3>
-                  <button type="button" onClick={() => setShowSpecialtiesModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                  <button type="button" onClick={() => setShowSpecialtiesModal(false)} className="text-3xl text-slate-500">×</button>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {garageSpecialties.map((specialty) => {
@@ -1385,7 +1393,7 @@ const GarageDashboard = () => {
               <div className="max-h-[92vh] w-full max-w-[1100px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Services</h3>
-                  <button type="button" onClick={() => setShowServicesModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                  <button type="button" onClick={() => setShowServicesModal(false)} className="text-3xl text-slate-500">×</button>
                 </div>
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
@@ -1434,7 +1442,7 @@ const GarageDashboard = () => {
               <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Ouverture</h3>
-                  <button type="button" onClick={() => setShowOpenModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                  <button type="button" onClick={() => setShowOpenModal(false)} className="text-3xl text-slate-500">×</button>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {['Ouvert maintenant', ...openingDays].map((option) => {
@@ -1460,7 +1468,7 @@ const GarageDashboard = () => {
               <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
                 <div className="mb-4 flex items-center justify-between">
                   <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Déplacement</h3>
-                  <button type="button" onClick={() => setShowDeplacementModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                  <button type="button" onClick={() => setShowDeplacementModal(false)} className="text-3xl text-slate-500">×</button>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {displacementOptions.map((option) => {
@@ -1533,7 +1541,7 @@ const GarageDashboard = () => {
                       <h2 className="text-3xl font-black text-[#1a2b4b]">Gérer le garage</h2>
                     </div>
                     <p className="max-w-xl text-sm leading-6 text-[#617089]">
-                      Mettez Ã  jour votre fiche, vos spécialités, vos photos et votre position pour une présentation plus claire côté utilisateur.
+                      Mettez à jour votre fiche, vos spécialités, vos photos et votre position pour une présentation plus claire côté utilisateur.
                     </p>
                   </div>
                   {isGarageLoading ? (
@@ -1547,7 +1555,7 @@ const GarageDashboard = () => {
 
                       <label className="text-sm font-semibold text-[#334155]">
                         Description
-                        <textarea name="description" className="vb-input mt-1 w-full px-3 py-2" value={garageForm.description} onChange={handleGarageFieldChange} rows={3} placeholder="Décrivez votre point d'intérÃªt" />
+                        <textarea name="description" className="vb-input mt-1 w-full px-3 py-2" value={garageForm.description} onChange={handleGarageFieldChange} rows={3} placeholder="Décrivez votre point d'intérêt" />
                       </label>
 
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
@@ -1779,7 +1787,7 @@ const GarageDashboard = () => {
                             <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-500">Publier point d'interet</p>
                             <h3 className="mt-1 text-lg font-black text-[#1a2b4b]">Informations avancées</h3>
                             <p className="mt-2 max-w-xl text-sm leading-6 text-[#64748b]">
-                              Utilise la carte pour placer ton point d'intérÃªt avec précision, puis publie-le quand tout est prÃªt.
+                              Utilise la carte pour placer ton point d'intérêt avec précision, puis publie-le quand tout est prêt.
                             </p>
                           </div>
 
@@ -1799,7 +1807,7 @@ const GarageDashboard = () => {
                         </div>
 
                         <div className="mt-4 rounded-2xl border border-dashed border-[#dbe2ec] bg-white px-4 py-3 text-sm text-[#475569]">
-                          Astuce: clique sur la carte Google Maps pour définir la position GPS exacte de ton point d'intérÃªt.
+                          Astuce: clique sur la carte Google Maps pour définir la position GPS exacte de ton point d'intérêt.
                           <div className="mt-2 font-semibold text-[#1e293b]">
                             Position actuelle: {garageForm.latitude || "-"}, {garageForm.longitude || "-"}
                           </div>
@@ -1955,7 +1963,7 @@ const GarageDashboard = () => {
                     <h3 className="text-2xl font-black text-slate-900">Services complémentaires</h3>
                     <ul className="mt-3 space-y-2 text-lg text-slate-700">
                       {storeServices.map((service) => (
-                        <li key={service}>âœ“ {service}</li>
+                        <li key={service}>✅ {service}</li>
                       ))}
                     </ul>
                   </div>

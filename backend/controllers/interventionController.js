@@ -28,7 +28,7 @@ const parsePositiveInt = (value, fallback = null) => {
   return parsed;
 };
 
-// Vérifie qu'un véhicule appartient bien Ã  l'utilisateur connecté.
+// Vérifie qu'un véhicule appartient bien à l'utilisateur connecté.
 const checkVehicleOwnership = async (vehicleId, userId, client = pool) => {
   try {
     const result = await client.query(
@@ -98,7 +98,7 @@ const getInterventionBaseById = async (interventionId, client = pool) => {
   }
 };
 
-// Charge les pièces liées Ã  une intervention.
+// Charge les pièces liées à une intervention.
 const getPiecesByInterventionId = async (interventionId, client = pool) => {
   try {
     const result = await client.query(
@@ -155,7 +155,7 @@ const getInterventionWithPiecesById = async (interventionId, client = pool) => {
   };
 };
 
-// Recalcule le coût total d'une intervention Ã  partir des pièces liées.
+// Recalcule le coût total d'une intervention à partir des pièces liées.
 const recalculateInterventionTotal = async (interventionId, client = pool) => {
   const sumResult = await client.query(
     `SELECT COALESCE(SUM(quantite * prix_unitaire_applique), 0) AS total
@@ -176,7 +176,7 @@ const recalculateInterventionTotal = async (interventionId, client = pool) => {
   return total;
 };
 
-// Crée une intervention pour un véhicule appartenant Ã  l'utilisateur.
+// Crée une intervention pour un véhicule appartenant à l'utilisateur.
 exports.createIntervention = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -211,7 +211,7 @@ exports.createIntervention = async (req, res) => {
   try {
     const isOwner = await checkVehicleOwnership(vehicleId, req.user.id, client);
     if (!isOwner) {
-      return res.status(403).json({ message: 'Accès interdit Ã  ce véhicule' });
+      return res.status(403).json({ message: 'Accès interdit à ce véhicule' });
     }
 
     const currentMileage = await getVehicleMileage(vehicleId, client);
@@ -415,7 +415,7 @@ exports.getInterventionById = async (req, res) => {
   }
 };
 
-// Met Ã  jour les champs principaux d'une intervention existante.
+// Met à jour les champs principaux d'une intervention existante.
 exports.updateIntervention = async (req, res) => {
   const interventionId = Number.parseInt(req.params.id, 10);
   const {
@@ -525,7 +525,7 @@ exports.deleteIntervention = async (req, res) => {
   }
 };
 
-// Ajoute (ou incrémente) une pièce liée Ã  une intervention.
+// Ajoute (ou incrémente) une pièce liée à une intervention.
 exports.addPieceToIntervention = async (req, res) => {
   const interventionId = Number.parseInt(req.params.id, 10);
   const pieceId = Number.parseInt(req.body?.pieceId, 10);

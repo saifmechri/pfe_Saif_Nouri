@@ -131,7 +131,7 @@ const GarageDashboardAppointments = ({ garageId }) => {
       {pendingAppointments.length > 0 && (
         <div className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
           <h3 className="text-lg font-black text-slate-900 mb-4">
-            ðŸ”” Demandes en attente ({pendingAppointments.length})
+            🔔 Demandes en attente ({pendingAppointments.length})
           </h3>
           <div className="space-y-3">
             {pendingAppointments.map((apt) => (
@@ -184,7 +184,7 @@ const GarageDashboardAppointments = ({ garageId }) => {
       {/* All Appointments */}
       <div className="rounded-[28px] border border-white/70 bg-white/85 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur">
         <h3 className="text-lg font-black text-slate-900 mb-4">
-          ðŸ“‹ Tous les rendez-vous ({appointments.length})
+          📋 Tous les rendez-vous ({appointments.length})
         </h3>
 
         {loading ? (
@@ -227,10 +227,10 @@ const GarageDashboardAppointments = ({ garageId }) => {
                         }`}
                       >
                         {apt.status === "confirmed"
-                          ? "âœ“ Confirmé"
+                          ? "✅ Confirmé"
                           : apt.status === "cancelled"
-                          ? "âœ• Annulé"
-                          : "â³ En attente"}
+                          ? "❌ Annulé"
+                          : "⏳ En attente"}
                       </span>
                     </div>
                     <div className="mt-2 flex flex-col gap-1 text-sm text-slate-700">
@@ -271,7 +271,7 @@ const GarageDashboardAppointments = ({ garageId }) => {
             onClick={() => fetchAppointments()}
             className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
           >
-            ðŸ”„ Actualiser les demandes
+            🔄 Actualiser les demandes
           </button>
           <Link
             to="/garage/appointments"

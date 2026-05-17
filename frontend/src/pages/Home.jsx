@@ -262,7 +262,7 @@ const Navbar = () => {
               to="/dashboard"
               className="rounded-2xl border border-slate-300 bg-white px-6 py-4 text-center font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-400 hover:shadow-md"
             >
-              Accéder Ã  l’espace
+              Accéder à l’espace
             </Link>
           </section>
         )}
@@ -306,7 +306,7 @@ const Navbar = () => {
         </section>
 
         <section className="vb-card bg-[linear-gradient(135deg,#1a2b4b_0%,#1d4ed8_100%)] p-8 text-center text-white">
-          <h2 className="text-3xl font-extrabold">PrÃªt a accelerer votre gestion automobile ?</h2>
+          <h2 className="text-3xl font-extrabold">Prêt a accelerer votre gestion automobile ?</h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-blue-100">Centralisez vehicules, interventions, stocks et recommandations dans une seule plateforme.</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             {!isAuthenticated ? (

@@ -57,13 +57,13 @@ const Profil = () => {
 
     try {
       const res = await updateProfile(profileForm);
-      // Mettre Ã  jour le contexte avec les nouvelles données utilisateur
-      updateUser(res.data.user); // suppose que l'API retourne l'utilisateur mis Ã  jour
-      setMessage({ type: 'success', text: 'Profil mis Ã  jour avec succès' });
+      // Mettre à jour le contexte avec les nouvelles données utilisateur
+      updateUser(res.data.user); // suppose que l'API retourne l'utilisateur mis à jour
+      setMessage({ type: 'success', text: 'Profil mis à jour avec succès' });
       // Réinitialiser le champ mot de passe
       setProfileForm({ ...profileForm, password: '' });
     } catch (err) {
-      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors de la mise Ã  jour' });
+      setMessage({ type: 'error', text: err.response?.data?.message || 'Erreur lors de la mise à jour' });
     } finally {
       setLoading({ ...loading, profile: false });
     }
@@ -188,7 +188,7 @@ const Profil = () => {
               disabled={loading.profile}
               className="vb-btn-primary w-full p-3 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading.profile ? 'Mise Ã  jour...' : 'Mettre Ã  jour'}
+              {loading.profile ? 'Mise à jour...' : 'Mettre à jour'}
             </button>
           </form>
         </div>

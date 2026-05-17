@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import interventionsApi from '../../services/interventions';
 
 const formatDate = (value) => {
-  if (!value) return 'â€”';
+  if (!value) return '—';
   const dt = new Date(value);
   if (Number.isNaN(dt.getTime())) return value;
   return dt.toLocaleDateString('fr-FR');
@@ -56,7 +56,7 @@ const VehicleHistory = () => {
                   <div className="text-sm text-gray-600">{formatDate(it.date_intervention)}</div>
                 </div>
                 <div className="text-right">
-                  <div>{it.garage_nom || 'â€”'}</div>
+                  <div>{it.garage_nom || '—'}</div>
                   <div className="text-sm text-gray-600">{it.kilometrage ? `${it.kilometrage} km` : ''}</div>
                 </div>
               </div>

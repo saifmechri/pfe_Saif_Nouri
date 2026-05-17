@@ -262,10 +262,10 @@ const AppointmentNotificationModal = ({ isOpen, onClose, notification, appointme
                   appointment.status === "cancelled" ? "text-rose-600" :
                   "text-amber-600"
                 }`}>
-                  {appointment.status === "confirmed" ? "âœ“ Confirmé" :
-                   appointment.status === "cancelled" ? "âœ• Annulé" :
-                   appointment.status === "proposed" ? "ðŸ“… Proposition" :
-                   "â³ En attente"}
+                  {appointment.status === "confirmed" ? "✅ Confirmé" :
+                   appointment.status === "cancelled" ? "❌ Annulé" :
+                   appointment.status === "proposed" ? "📅 Proposition" :
+                   "⏳ En attente"}
                 </p>
               </div>
             </div>
@@ -286,14 +286,14 @@ const AppointmentNotificationModal = ({ isOpen, onClose, notification, appointme
                     disabled={loading}
                     className="flex-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
                   >
-                    âœ“ Accepter
+                    ✅ Accepter
                   </button>
                   <button
                     onClick={() => handleDecision("reject")}
                     disabled={loading}
                     className="flex-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                   >
-                    âœ• Refuser
+                    ❌ Refuser
                   </button>
                 </div>
                 <button
@@ -301,7 +301,7 @@ const AppointmentNotificationModal = ({ isOpen, onClose, notification, appointme
                   disabled={loading}
                   className="w-full rounded-lg border border-amber-300 bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-200 disabled:opacity-50"
                 >
-                  ðŸ“… Proposer une autre date
+                  📅 Proposer une autre date
                 </button>
               </div>
             )}

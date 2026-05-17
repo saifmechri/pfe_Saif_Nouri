@@ -199,6 +199,14 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/automobiliste/catalogue"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste", "admin", "garage", "vendeur"]}>
+              <CataloguePieces />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/vendeur/magasin"
           element={
             <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
@@ -235,6 +243,41 @@ const AppRouter = () => {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/messages"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ChatCenter />
+            </ProtectedRoute>
+          }
+        />
+        {/* Admin view of garages (reuse existing GaragesPage) */}
+        <Route
+          path="/admin/garages"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <GaragesPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Admin view of catalogue (reuse CataloguePieces) */}
+        <Route
+          path="/admin/catalogue"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <CataloguePieces />
+            </ProtectedRoute>
+          }
+        />
+        {/* Garage view of catalogue (reuse CataloguePieces) */}
+        <Route
+          path="/garage/catalogue"
+          element={
+            <ProtectedRoute allowedRoles={["garage", "admin", "vendeur", "automobiliste"]}>
+              <CataloguePieces />
             </ProtectedRoute>
           }
         />

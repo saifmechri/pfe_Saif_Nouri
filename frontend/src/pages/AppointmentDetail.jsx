@@ -95,7 +95,7 @@ const AppointmentDetail = () => {
       const status = decision === "accept" ? "confirmed" : "cancelled";
       await updateAppointment(appointmentId, { status });
       
-      setMessage(status === "confirmed" ? "âœ“ Rendez-vous confirmé" : "âœ• Rendez-vous refusé");
+      setMessage(status === "confirmed" ? "✅ Rendez-vous confirmé" : "❌ Rendez-vous refusé");
       setMessageType("success");
       
       setTimeout(() => {
@@ -103,7 +103,7 @@ const AppointmentDetail = () => {
       }, 2000);
     } catch (err) {
       console.error("Error:", err);
-      setMessage("Erreur lors de la mise Ã  jour");
+      setMessage("Erreur lors de la mise à jour");
       setMessageType("error");
     } finally {
       setActionLoading(false);
@@ -121,7 +121,7 @@ const AppointmentDetail = () => {
         proposed_note: proposalNote
       });
       
-      setMessage("âœ“ Proposition envoyée Ã  l'automobiliste");
+      setMessage("✅ Proposition envoyée à l'automobiliste");
       setMessageType("success");
       setShowProposal(false);
       
@@ -163,7 +163,7 @@ const AppointmentDetail = () => {
 
       setMessages(updatedMessages);
       setNewMessage("");
-      setMessage("âœ“ Message envoyé");
+      setMessage("✅ Message envoyé");
       setMessageType("success");
     } catch (err) {
       console.error("Error sending message:", err);
@@ -243,10 +243,10 @@ const AppointmentDetail = () => {
                   <div>
                     <p className="text-sm font-semibold opacity-75">Statut du Rendez-vous</p>
                     <p className="mt-1 text-2xl font-bold">
-                      {appointment.status === "confirmed" ? "âœ“ Confirmé" :
-                       appointment.status === "cancelled" ? "âœ• Annulé" :
-                       appointment.status === "proposed" ? "ðŸ“… Proposition" :
-                       "â³ En attente"}
+                      {appointment.status === "confirmed" ? "✅ Confirmé" :
+                       appointment.status === "cancelled" ? "❌ Annulé" :
+                       appointment.status === "proposed" ? "📅 Proposition" :
+                       "⏳ En attente"}
                     </p>
                   </div>
                 </div>
@@ -287,8 +287,8 @@ const AppointmentDetail = () => {
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Créé le</p>
                     <p className="mt-2 text-base font-semibold text-slate-900">
                       {dayjs(appointment.created_at).isValid()
-                        ? dayjs(appointment.created_at).format("D MMMM Ã  HH:mm")
-                        : "â€”"}
+                        ? dayjs(appointment.created_at).format("D MMMM à HH:mm")
+                        : "—"}
                     </p>
                   </div>
                 </div>
@@ -324,7 +324,7 @@ const AppointmentDetail = () => {
                   <div className="mt-3 space-y-2">
                     <p className="flex items-center gap-2 font-semibold text-blue-900">
                       <Calendar className="h-5 w-5" />
-                      {dayjs(appointment.proposed_date).format("D MMMM YYYY")} Ã  {appointment.proposed_time}
+                      {dayjs(appointment.proposed_date).format("D MMMM YYYY")} à {appointment.proposed_time}
                     </p>
                     {appointment.proposed_note && (
                       <p className="text-sm text-blue-800 italic">"{appointment.proposed_note}"</p>
@@ -415,7 +415,7 @@ const AppointmentDetail = () => {
                     disabled={actionLoading}
                     className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
                   >
-                    âœ“ Accepter
+                    ✅ Accepter
                   </button>
                   
                   <button
@@ -423,7 +423,7 @@ const AppointmentDetail = () => {
                     disabled={actionLoading}
                     className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                   >
-                    âœ• Refuser
+                    ❌ Refuser
                   </button>
                   
                   <button
@@ -431,7 +431,7 @@ const AppointmentDetail = () => {
                     disabled={actionLoading}
                     className="w-full rounded-xl border border-amber-300 bg-amber-100 px-4 py-3 font-semibold text-amber-700 transition hover:bg-amber-200 disabled:opacity-50"
                   >
-                    ðŸ“… Proposer Autre Date
+                    📅 Proposer Autre Date
                   </button>
                 </div>
 

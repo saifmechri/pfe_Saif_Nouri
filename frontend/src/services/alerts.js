@@ -25,9 +25,9 @@ export const calculateUrgencyLevel = (revisionData) => {
     return { level: 'urgent', label: 'URGENT', color: 'red', priority: 2 };
   }
 
-  // Niveau 2: BIENTÃ”T
+  // Niveau 2: BIENTÔT
   if (maxProgress >= 70) {
-    return { level: 'bientot', label: 'BIENTÃ”T', color: 'orange', priority: 1 };
+    return { level: 'bientot', label: 'BIENTÔT', color: 'orange', priority: 1 };
   }
 
   // Niveau 3: AUCUN

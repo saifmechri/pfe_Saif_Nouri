@@ -44,13 +44,13 @@ const register = async (req, res) => {
       });
     }
 
-    // Vérifier si l'email existe déjÃ 
+    // Vérifier si l'email existe déjà
     const emailAlreadyUsed = await emailExists(email);
     if (emailAlreadyUsed) {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
-        message: "Cet email existe déjÃ ",
+        message: "Cet email existe déjà",
         error: { code: 'EMAIL_ALREADY_EXISTS' }
       });
     }

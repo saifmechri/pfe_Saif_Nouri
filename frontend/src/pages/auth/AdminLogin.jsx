@@ -122,7 +122,7 @@ const AdminLogin = () => {
             to="/"
             className="text-sm text-slate-400 hover:text-slate-200 transition"
           >
-            â† Retour Ã  l'accueil
+            ← Retour à l'accueil
           </Link>
         </div>
       </div>

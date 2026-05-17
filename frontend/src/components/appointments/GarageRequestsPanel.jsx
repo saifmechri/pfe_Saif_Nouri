@@ -154,25 +154,25 @@ const GarageRequestsPanel = ({
                   {/* Info Grid */}
                   <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                     <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600">ðŸ“… Date</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600">📅 Date</p>
                       <p className="mt-1 font-medium text-slate-900">
                         {appointmentDateTime.format("D MMMM YYYY")}
                       </p>
                     </div>
                     {request.appointment_time && (
                       <div className="rounded-lg bg-slate-50 p-3">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-600">â° Heure</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-600">⏰ Heure</p>
                         <p className="mt-1 font-medium text-slate-900">{request.appointment_time}</p>
                       </div>
                     )}
                     <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600">ðŸ“ Type</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600">📝 Type</p>
                       <p className="mt-1 font-medium text-slate-900 truncate">
                         {request.description || "Consultation"}
                       </p>
                     </div>
                     <div className="rounded-lg bg-slate-50 p-3">
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600">ðŸ• Créée</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-slate-600">🕐 Créée</p>
                       <p className="mt-1 font-medium text-slate-900 text-sm">
                         {dayjs(request.created_at).fromNow()}
                       </p>
@@ -230,8 +230,8 @@ const GarageRequestsPanel = ({
                     <div className={`border-t ${statusInfo.bg} pt-4`}>
                       <p className={`text-sm font-medium ${statusInfo.color}`}>
                         {request.status === "confirmed"
-                          ? "âœ“ Rendez-vous confirmé"
-                          : "âœ• Rendez-vous annulé"}
+                          ? "✅ Rendez-vous confirmé"
+                          : "❌ Rendez-vous annulé"}
                       </p>
                     </div>
                   )}

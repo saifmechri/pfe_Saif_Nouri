@@ -719,10 +719,10 @@ const AutomobilisteDashboard = () => {
                             }`}
                           >
                             {apt.status === "confirmed"
-                              ? "âœ“ Confirmé"
+                              ? "✅ Confirmé"
                               : apt.status === "cancelled"
-                              ? "âœ• Annulé"
-                              : "â³ En attente"}
+                              ? "❌ Annulé"
+                              : "⏳ En attente"}
                           </span>
                           {apt.status === "pending" && (
                             <button
@@ -849,7 +849,7 @@ const AutomobilisteDashboard = () => {
                           onChange={handleInterventionFieldChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded"
                           rows="3"
-                          placeholder="Écrire manuellement, ex: Filtre Ã  huile x1, Huile moteur 5W30 x4L"
+                          placeholder="Écrire manuellement, ex: Filtre à huile x1, Huile moteur 5W30 x4L"
                         />
                       </label>
                     </div>

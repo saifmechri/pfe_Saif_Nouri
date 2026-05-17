@@ -103,7 +103,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
       });
 
       setMessageType("success");
-      setMessage("âœ“ Rendez-vous réservé avec succès! Le garage répondra dans les 24 heures.");
+      setMessage("✅ Rendez-vous réservé avec succès! Le garage répondra dans les 24 heures.");
       
       // Reset form and close after delay
       setTimeout(() => {
@@ -142,7 +142,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
         <div className="mb-6 flex items-center justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-amber-600">Réservation rapide</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-900">Prendre rendez-vous Â· {garage.name}</h2>
+            <h2 className="mt-2 text-2xl font-black text-slate-900">Prendre rendez-vous · {garage.name}</h2>
             <p className="mt-1 text-sm text-slate-600">Complétez le formulaire pour demander un rendez-vous</p>
           </div>
           <button
@@ -168,7 +168,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
               <option value="">Sélectionnez un véhicule (optionnel)</option>
               {vehicules.map((v) => (
                 <option key={v.id} value={v.id}>
-                  {v.modele_voiture || v.modele || `Véhicule ${v.id}`} {v.matricule_voiture ? `Â· ${v.matricule_voiture}` : ""}
+                  {v.modele_voiture || v.modele || `Véhicule ${v.id}`} {v.matricule_voiture ? `· ${v.matricule_voiture}` : ""}
                 </option>
               ))}
             </select>
@@ -191,7 +191,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
                     }`}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      <span className="text-base">âš™ï¸</span>
+                      <span className="text-base">⚙️</span>
                       <span className="line-clamp-1 text-xs">{s.name || s.title || s}</span>
                     </div>
                   </button>
@@ -213,7 +213,7 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
                 required
                 className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
               />
-              <p className="mt-1 text-xs text-slate-500">Minimum 2 heures Ã  l'avance</p>
+              <p className="mt-1 text-xs text-slate-500">Minimum 2 heures à l'avance</p>
             </div>
             <div>
               <label className="mb-2 block text-sm font-semibold text-slate-700">Heure (optionnel)</label>

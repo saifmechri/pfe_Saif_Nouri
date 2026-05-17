@@ -7,7 +7,7 @@ const isValidBcryptHash = (value) => {
 };
 
 /**
- * Met Ã  jour le profil de l'utilisateur connecté.
+ * Met à jour le profil de l'utilisateur connecté.
  * Champs supportés: name, email, phone, password, store_name, store_address, store_description, store_hours, store_specialties, store_services.
  */
 // ============================================
@@ -23,7 +23,7 @@ const updateProfile = async (req, res) => {
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
-        message: "Veuillez fournir au moins un champ Ã  modifier",
+        message: "Veuillez fournir au moins un champ à modifier",
         error: { code: 'VALIDATION_ERROR' }
       });
     }
@@ -45,7 +45,7 @@ const updateProfile = async (req, res) => {
 
     const user = currentUser.rows[0];
 
-    // Préparer les valeurs Ã  mettre Ã  jour
+    // Préparer les valeurs à mettre à jour
     let updateName = name || user.name;
     let updateEmail = email || user.email;
     let updatePhone = phone || user.phone;
@@ -57,7 +57,7 @@ const updateProfile = async (req, res) => {
     let updateStoreServices = store_services !== undefined ? store_services : user.store_services;
     let updatePassword = null; // Null => ne pas modifier le mot de passe existant
 
-    // Si un nouvel email est fourni, vérifier qu'il n'existe pas déjÃ 
+    // Si un nouvel email est fourni, vérifier qu'il n'existe pas déjà
     if (email && email !== user.email) {
       const emailCheck = await pool.query(
         "SELECT * FROM users WHERE email = $1 AND id != $2",
@@ -65,7 +65,7 @@ const updateProfile = async (req, res) => {
       );
       
       if (emailCheck.rows.length > 0) {
-        return res.status(400).json({ message: "Cet email est déjÃ  utilisé" });
+        return res.status(400).json({ message: "Cet email est déjà utilisé" });
       }
     }
 
@@ -109,7 +109,7 @@ const updateProfile = async (req, res) => {
       updatePassword = await bcrypt.hash(password, saltRounds);
     }
 
-    // Mettre Ã  jour dans la base de données
+    // Mettre à jour dans la base de données
     await pool.query(
       `UPDATE users 
        SET name = $1,
@@ -138,13 +138,13 @@ const updateProfile = async (req, res) => {
     );
 
     return sendApiResponse(res, {
-      message: "Profil mis Ã  jour avec succès",
+      message: "Profil mis à jour avec succès",
       data: { user: userWithRole.rows[0] },
       extra: { user: userWithRole.rows[0] }
     });
 
   } catch (err) {
-    console.error("Erreur lors de la mise Ã  jour du profil:", err);
+    console.error("Erreur lors de la mise à jour du profil:", err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
@@ -311,7 +311,7 @@ const changePassword = async (req, res) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
-    // Mettre Ã  jour le mot de passe
+    // Mettre à jour le mot de passe
     await pool.query(
       "UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2",
       [hashedPassword, userId]

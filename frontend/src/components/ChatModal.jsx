@@ -420,7 +420,7 @@ const ChatModal = ({ isOpen, onClose }) => {
                               <p className="mt-1 text-xs text-slate-600">{contact.subtitle}</p>
                             )}
                           </div>
-                          <div className="text-xl">ðŸ’¬</div>
+                          <div className="text-xl">💬</div>
                         </div>
                       </button>
                     );

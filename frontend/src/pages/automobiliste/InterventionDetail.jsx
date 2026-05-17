@@ -120,7 +120,7 @@ const InterventionDetail = () => {
 
     const quantite = Number.parseInt(pieceForm.quantite, 10);
     if (!Number.isInteger(quantite) || quantite <= 0) {
-      setPieceActionError('La quantité doit être supérieure ou égale Ã  1.');
+      setPieceActionError('La quantité doit être supérieure ou égale à 1.');
       return;
     }
 
@@ -164,7 +164,7 @@ const InterventionDetail = () => {
   const currentPieces = Array.isArray(item?.pieces) ? item.pieces : [];
 
   const formatDate = (value) => {
-    if (!value) return 'â€”';
+    if (!value) return '—';
     const dt = new Date(value);
     if (Number.isNaN(dt.getTime())) return value;
     return dt.toLocaleDateString('fr-FR');
@@ -204,7 +204,7 @@ const InterventionDetail = () => {
           className="inline-flex items-center gap-2 rounded-lg border border-[#d6deeb] bg-white px-3 py-2 text-sm font-semibold text-[#153563] hover:bg-[#f3f7ff]"
         >
           <ArrowLeft size={16} />
-          Retour Ã  l'historique
+          Retour à l'historique
         </Link>
 
         <section className="overflow-hidden rounded-2xl border border-[#dbe4f2] bg-white shadow-sm">
@@ -247,23 +247,23 @@ const InterventionDetail = () => {
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Type</p>
-                <p className="mt-2 text-lg font-semibold capitalize text-[#102848]">{item.type || 'â€”'}</p>
+                <p className="mt-2 text-lg font-semibold capitalize text-[#102848]">{item.type || '—'}</p>
               </div>
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Garage</p>
-                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.garage_nom || 'â€”'}</p>
+                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.garage_nom || '—'}</p>
                 <p className="mt-1 text-sm text-[#5d7397]">{item.garage_adresse || 'Adresse non renseignée'}</p>
               </div>
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Kilométrage</p>
-                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.kilometrage ? `${item.kilometrage} km` : 'â€”'}</p>
+                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.kilometrage ? `${item.kilometrage} km` : '—'}</p>
               </div>
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Coût total</p>
-                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.cout_total ? `${item.cout_total} TND` : 'â€”'}</p>
+                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.cout_total ? `${item.cout_total} TND` : '—'}</p>
               </div>
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">
@@ -295,7 +295,7 @@ const InterventionDetail = () => {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-[#5d7397]">Aucune pièce associée Ã  cette intervention.</p>
+                    <p className="text-sm text-[#5d7397]">Aucune pièce associée à cette intervention.</p>
                   )}
                 </div>
 

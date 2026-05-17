@@ -17,7 +17,7 @@ const normalizeText = (value) => {
 const parsePositiveNumber = (value, fieldName) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new AppError(`${fieldName} doit être supérieur Ã  0`, 400, 'INVALID_PRICE');
+    throw new AppError(`${fieldName} doit être supérieur à 0`, 400, 'INVALID_PRICE');
   }
 
   return parsed;

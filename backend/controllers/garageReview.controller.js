@@ -249,8 +249,8 @@ const createGarageReview = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant garage invalide', 400, 'INVALID_GARAGE_ID');
   }
 
-  if (req.user?.role !== 'automobiliste') {
-    throw new AppError('Seuls les automobilistes peuvent laisser un avis', 403, 'FORBIDDEN_ROLE');
+  if (!['automobiliste', 'admin'].includes(req.user?.role)) {
+    throw new AppError('Seuls les automobilistes et administrateurs peuvent laisser un avis', 403, 'FORBIDDEN_ROLE');
   }
 
   await getGarageById(garageId);

@@ -48,7 +48,7 @@ const formatKm = (value) => {
 const normalizeUrgencyLevel = (value) => {
   const normalized = String(value || '').toUpperCase();
   if (normalized === 'URGENT') return 'urgent';
-  if (normalized === 'BIENTOT' || normalized === 'BIENTÃ”T') return 'soon';
+  if (normalized === 'BIENTOT' || normalized === 'BIENTÔT') return 'soon';
   return 'ok';
 };
 

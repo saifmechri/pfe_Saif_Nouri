@@ -139,7 +139,7 @@ const AutomobilisteAppointments = () => {
       const statusLabel = status === "confirmed" ? "confirmé" : "annulé";
       setNotification({
         type: "appointment",
-        title: status === "confirmed" ? "âœ“ Rendez-vous confirmé" : "âœ• Rendez-vous annulé",
+        title: status === "confirmed" ? "✅ Rendez-vous confirmé" : "❌ Rendez-vous annulé",
         body: `Votre rendez-vous a été ${statusLabel}.`
       });
       setSelectedAppointment(apt);
@@ -205,7 +205,7 @@ const AutomobilisteAppointments = () => {
 
       // Validate date
       if (!isDateValid(form.appointmentDate)) {
-        throw new Error("Veuillez sélectionner une date valide (au moins 2 heures Ã  l'avance)");
+        throw new Error("Veuillez sélectionner une date valide (au moins 2 heures à l'avance)");
       }
 
       // Validate time if provided
@@ -230,12 +230,12 @@ const AutomobilisteAppointments = () => {
       const selectedGarage = garages.find((garage) => Number(garage.id) === Number(form.garageId));
       setNotification({
         type: "appointment",
-        title: "âœ“ Rendez-vous réservé",
-        body: `Votre demande a été envoyée Ã  ${selectedGarage?.name || selectedGarage?.nom || "votre garage"}.`
+        title: "✅ Rendez-vous réservé",
+        body: `Votre demande a été envoyée à ${selectedGarage?.name || selectedGarage?.nom || "votre garage"}.`
       });
 
       setMessageType("success");
-      setMessage("âœ“ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
+      setMessage("✅ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
       setForm({
         garageId: "",
         vehicleId: "",
@@ -339,7 +339,7 @@ const AutomobilisteAppointments = () => {
                   {vehicules.map((vehicle) => (
                     <option key={vehicle.id} value={vehicle.id}>
                       {vehicle.modele_voiture || vehicle.modele || `Véhicule ${vehicle.id}`}{" "}
-                      {vehicle.matricule_voiture ? `Â· ${vehicle.matricule_voiture}` : ""}
+                      {vehicle.matricule_voiture ? `· ${vehicle.matricule_voiture}` : ""}
                     </option>
                   ))}
                 </select>
@@ -356,7 +356,7 @@ const AutomobilisteAppointments = () => {
                   required
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 />
-                <p className="mt-1 text-xs text-slate-500">Minimum 2 heures Ã  l'avance</p>
+                <p className="mt-1 text-xs text-slate-500">Minimum 2 heures à l'avance</p>
               </div>
 
               <div>
@@ -414,7 +414,7 @@ const AutomobilisteAppointments = () => {
                             className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
                             title="Cliquer pour retirer"
                           >
-                            {serviceLabel} Ã—
+                            {serviceLabel} ×
                           </button>
                         ))}
                       </div>

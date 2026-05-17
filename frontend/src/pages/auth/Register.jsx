@@ -200,7 +200,7 @@ const Register = () => {
         </form>
 
         <p className="mt-5 text-sm text-[#617089]">
-          DéjÃ  inscrit ?{" "}
+          Déjà inscrit ?{" "}
           <Link to="/login" className="font-semibold text-[#1d4ed8] hover:underline">
             Se connecter
           </Link>

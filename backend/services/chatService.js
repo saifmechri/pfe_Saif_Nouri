@@ -282,7 +282,45 @@ const resolvePairForStart = async ({ requester, conversationType, garageId, vend
     throw createChatError('INVALID_AUTOMOBILISTE_ID', 'automobilisteId ou vendeurId est obligatoire');
   }
 
-  throw createChatError('FORBIDDEN_ROLE', 'Seuls automobiliste, vendeur et admin peuvent creer ce chat');
+  // Allow garages to initiate an automobiliste <-> vendeur conversation when both parties are specified.
+  if (requester.role === 'garage') {
+    if (conversationType === 'automobiliste_vendeur') {
+      const normalizedAutomobilisteId = Number.parseInt(automobilisteId, 10);
+      const normalizedVendeurId = Number.parseInt(vendeurId, 10);
+
+      if (!Number.isInteger(normalizedAutomobilisteId) || normalizedAutomobilisteId <= 0) {
+        throw createChatError('INVALID_AUTOMOBILISTE_ID', 'automobilisteId est obligatoire');
+      }
+
+      if (!Number.isInteger(normalizedVendeurId) || normalizedVendeurId <= 0) {
+        throw createChatError('INVALID_VENDEUR_ID', 'vendeurId est obligatoire');
+      }
+
+      const meAsGarage = await findGarageIdentityByUserId(requesterId);
+      if (!meAsGarage) {
+        throw createChatError('GARAGE_PROFILE_NOT_FOUND', 'Profil garage introuvable');
+      }
+
+      const automobilisteUser = await findUserByIdWithRole(normalizedAutomobilisteId);
+      if (!automobilisteUser || automobilisteUser.role !== 'automobiliste') {
+        throw createChatError('AUTOMOBILISTE_NOT_FOUND', 'Automobiliste introuvable');
+      }
+
+      const vendeurUser = await findUserByIdWithRole(normalizedVendeurId);
+      if (!vendeurUser || vendeurUser.role !== 'vendeur') {
+        throw createChatError('VENDEUR_NOT_FOUND', 'Vendeur introuvable');
+      }
+
+      return {
+        conversationType,
+        automobilisteUserId: normalizedAutomobilisteId,
+        garageId: Number(meAsGarage.id),
+        vendeurUserId: normalizedVendeurId
+      };
+    }
+  }
+
+  throw createChatError('FORBIDDEN_ROLE', 'Seuls automobiliste, vendeur, garage et admin peuvent creer ce chat');
 };
 
 const getConversationById = async (conversationId, user) => {

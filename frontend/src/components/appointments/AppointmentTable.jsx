@@ -56,9 +56,9 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
           onChange={(e) => setSortBy(e.target.value)}
           className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="date-asc">ðŸ“… Date (plus proche)</option>
-          <option value="date-desc">ðŸ“… Date (plus loin)</option>
-          <option value="status">ðŸ·ï¸ Statut</option>
+          <option value="date-asc">📅 Date (plus proche)</option>
+          <option value="date-desc">📅 Date (plus loin)</option>
+          <option value="status">🏷️ Statut</option>
         </select>
       </div>
 
@@ -86,8 +86,8 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
               const parsedNotes = parseAppointmentNotes(item.notes);
               const servicesLabel = parsedNotes.services.length > 0 ? parsedNotes.services.join(", ") : "Aucun service renseigné";
               const createdAtLabel = dayjs(item.created_at).isValid()
-                ? dayjs(item.created_at).format("D MMMM YYYY [Ã ] HH:mm")
-                : "â€”";
+                ? dayjs(item.created_at).format("D MMMM YYYY [à] HH:mm")
+                : "—";
 
               return (
                 <div key={item.id} className="hover:bg-slate-50 transition">
@@ -152,7 +152,7 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Date & Heure</p>
                             <p className="mt-1 text-sm font-medium text-slate-900">
                               {formatAppointmentDate(item.appointment_date)}
-                              {item.appointment_time && ` Ã  ${item.appointment_time}`}
+                              {item.appointment_time && ` à ${item.appointment_time}`}
                             </p>
                           </div>
                           <div>
@@ -211,13 +211,13 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
                                 onClick={() => onUpdate?.(item.id, "confirmed")}
                                 className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
                               >
-                                âœ“ Confirmer
+                                ✅ Confirmer
                               </button>
                               <button
                                 onClick={() => onUpdate?.(item.id, "cancelled")}
                                 className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
                               >
-                                âœ• Annuler
+                                ❌ Annuler
                               </button>
                             </>
                           )}

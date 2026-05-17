@@ -16,13 +16,13 @@ const NotificationCenter = ({ notifications = [], onMarkAsRead, onDelete, isLoad
   const getNotificationIcon = (type) => {
     switch (type?.toLowerCase()) {
       case "appointment":
-        return "ðŸ“…";
+        return "📅";
       case "message":
-        return "ðŸ’¬";
+        return "💬";
       case "alert":
-        return "âš ï¸";
+        return "⚠️";
       default:
-        return "â„¹ï¸";
+        return "ℹ️";
     }
   };
 

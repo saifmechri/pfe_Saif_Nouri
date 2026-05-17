@@ -210,7 +210,7 @@ const ComparaisonPrix = () => {
                   />
                   Inclure hors stock
                 </label>
-                <p className="mt-1 text-xs text-slate-500">Affiche aussi les vendeurs qui ont actuellement un stock Ã  0.</p>
+                <p className="mt-1 text-xs text-slate-500">Affiche aussi les vendeurs qui ont actuellement un stock à 0.</p>
               </div>
             </div>
             <div className="mt-3">
@@ -247,22 +247,22 @@ const ComparaisonPrix = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">ðŸª Vendeurs</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-700">🏪 Vendeurs</p>
                   <p className="mt-1 text-4xl font-black text-blue-800">{summary.vendeurs_count ?? sortedOffers.length ?? 0}</p>
                 </div>
                 <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">ðŸ’¸ Prix minimum</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">💸 Prix minimum</p>
                   <p className="mt-1 text-4xl font-black text-emerald-700">{Number(bestPrice).toFixed(2)} DT</p>
                 </div>
                 <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wide text-amber-700">ðŸŸ§ Économie max</p>
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-700">🟧 Économie max</p>
                   <p className="mt-1 text-4xl font-black text-amber-700">{Number(economyAmount).toFixed(2)} DT</p>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-emerald-800 shadow-sm">
                 <p className="text-sm font-semibold">
-                  Vous pouvez économiser jusqu'Ã  {Number(economyAmount).toFixed(2)} DT ({Number(economyPercent).toFixed(1)}%).
+                  Vous pouvez économiser jusqu'à {Number(economyAmount).toFixed(2)} DT ({Number(economyPercent).toFixed(1)}%).
                 </p>
               </div>
 

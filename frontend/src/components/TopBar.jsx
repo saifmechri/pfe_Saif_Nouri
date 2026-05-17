@@ -19,9 +19,9 @@ const TopBar = ({ onLogout }) => {
           <div className="hidden sm:block">
             <p className="text-sm font-semibold text-slate-900">{user?.name || "Utilisateur"}</p>
             <p className="text-xs text-slate-500 capitalize">
-              {user?.role === "automobiliste" ? "ðŸš— Automobiliste" :
-               user?.role === "garage" ? "ðŸ”§ Garage" :
-               user?.role === "vendeur" ? "ðŸ“¦ Vendeur" :
+              {user?.role === "automobiliste" ? "🚗 Automobiliste" :
+               user?.role === "garage" ? "🔧 Garage" :
+               user?.role === "vendeur" ? "📦 Vendeur" :
                user?.role}
             </p>
           </div>

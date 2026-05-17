@@ -130,7 +130,7 @@ const AlertsPage = () => {
                 <p className="text-gray-700 mt-2">
                   {urgency?.level === 'urgent' && 'Révision urgente. Une maintenance immédiate est recommandée.'}
                   {urgency?.level === 'bientot' && 'Révision bientôt nécessaire. Planifiez une visite prochainement.'}
-                  {urgency?.level === 'aucun' && 'Aucune révision urgente. Votre véhicule est Ã  jour.'}
+                  {urgency?.level === 'aucun' && 'Aucune révision urgente. Votre véhicule est à jour.'}
                 </p>
               </div>
             </div>

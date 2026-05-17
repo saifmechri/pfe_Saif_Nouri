@@ -1,10 +1,10 @@
 ﻿/**
- * ðŸ“Š ALGORITHMES DE RECOMMANDATION
+ * 📊 ALGORITHMES DE RECOMMANDATION
  * Fonctions de scoring pour interventions et garages
  */
 
 /**
- * âœ… FONCTION 1: Calculer distance Haversine entre 2 points GPS
+ * ✅ FONCTION 1: Calculer distance Haversine entre 2 points GPS
  */
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371; // Rayon Terre en km
@@ -22,7 +22,7 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * âœ… FONCTION 2: Convertir distance en score (0-10)
+ * ✅ FONCTION 2: Convertir distance en score (0-10)
  */
 function getDistanceScore(distanceKm) {
   const distance = Number(distanceKm);
@@ -33,7 +33,7 @@ function getDistanceScore(distanceKm) {
 }
 
 /**
- * âœ… FONCTION 3: Calculer score intervalle kilométrage (0-100)
+ * ✅ FONCTION 3: Calculer score intervalle kilométrage (0-100)
  */
 function getKilometrationScore(kmActuel, kmRecommande) {
   if (!kmRecommande) return 0;
@@ -42,7 +42,7 @@ function getKilometrationScore(kmActuel, kmRecommande) {
 }
 
 /**
- * âœ… FONCTION 4: Calculer score intervalle temps (0-100)
+ * ✅ FONCTION 4: Calculer score intervalle temps (0-100)
  */
 function getDateScore(dateLastIntervention, joursRecommandes) {
   if (!joursRecommandes) return 0;
@@ -56,7 +56,7 @@ function getDateScore(dateLastIntervention, joursRecommandes) {
 }
 
 /**
- * âœ… FONCTION 5: Convertir rating (0-5) en score (0-10)
+ * ✅ FONCTION 5: Convertir rating (0-5) en score (0-10)
  */
 function getRatingScore(rating) {
   const parsed = Number(rating);
@@ -65,7 +65,7 @@ function getRatingScore(rating) {
 }
 
 /**
- * âœ… FONCTION 6: Score disponibilité du garage
+ * ✅ FONCTION 6: Score disponibilité du garage
  */
 function getAvailabilityScore(garage) {
   if (garage.isOpen) return 10;
@@ -73,7 +73,7 @@ function getAvailabilityScore(garage) {
 }
 
 /**
- * âœ… FONCTION 7: Calculer score TOTAL d'une intervention
+ * ✅ FONCTION 7: Calculer score TOTAL d'une intervention
  * Poids: Kilométrage 40% + Date 30% + Type véhicule 10%
  */
 function calculateInterventionScore(vehicle, lastIntervention, interventionType) {
@@ -113,7 +113,7 @@ function calculateInterventionScoreDetailed(vehicle, lastIntervention, intervent
 }
 
 /**
- * âœ… FONCTION 8: Calculer score TOTAL d'un garage
+ * ✅ FONCTION 8: Calculer score TOTAL d'un garage
  * Poids: Distance 40% + Rating 35% + Disponibilité 25%
  */
 function calculateGarageScore(userLat, userLon, garage) {
@@ -152,7 +152,7 @@ function calculateGarageScoreDetailed(userLat, userLon, garage) {
 }
 
 /**
- * âœ… DÉTERMINER URGENCE basé sur le kilométrage
+ * ✅ DÉTERMINER URGENCE basé sur le kilométrage
  * Règles:
  * - km_actuel >= km_recommande => URGENT
  * - km_restant <= 1000 => RECOMMANDÉ

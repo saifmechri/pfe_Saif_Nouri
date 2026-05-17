@@ -4,7 +4,7 @@
 // =====================================
 
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin, Navigation2, Package, TrendingDown } from "lucide-react";
 import { comparePieceAcrossVendors, createPiece, deletePiece, getPieceById, getPieces, updatePiece } from "../../services/pieces";
 import { extractConversationAndMessages, startChatConversation } from "../../services/chat";
@@ -46,7 +46,7 @@ const zoneFilters = [
 ];
 
 const marques = [
-  "Audi", "BMW", "BYD", "Changan", "Chery", "Chevrolet", "CitroÃ«n", "Cupra",
+  "Audi", "BMW", "BYD", "Changan", "Chery", "Chevrolet", "Citroën", "Cupra",
   "Daewoo", "Dacia", "DFM", "FAW", "Fiat", "Ford", "Foton", "Geely", "Great Wall",
   "Haval", "Honda", "Hyundai", "Isuzu", "JAC", "Jeep", "Kia", "Lada", "Land Rover",
   "MG", "Mitsubishi", "Nissan", "Peugeot", "Renault", "Rolls-Royce", "Seat", "Skoda",
@@ -60,7 +60,7 @@ const modelsByMarque = {
   "Changan": ["Alsvin", "CS15", "CS35", "CS55", "CS75", "Eado", "Hunter", "UNI-T"],
   "Chery": ["Arrizo 5", "Arrizo 8", "Tiggo 2", "Tiggo 3", "Tiggo 4", "Tiggo 7", "Tiggo 8"],
   "Chevrolet": ["Aveo", "Camaro", "Captiva", "Cruze", "Malibu", "Spark", "Tahoe", "Trailblazer"],
-  "CitroÃ«n": ["C1", "C3", "C4", "C5", "C-Elysee", "Berlingo", "Jumpy", "Jumper"],
+  "Citroën": ["C1", "C3", "C4", "C5", "C-Elysee", "Berlingo", "Jumpy", "Jumper"],
   "Cupra": ["Ateca", "Born", "Formentor", "Leon", "Tavascan", "Terramar"],
   "Daewoo": ["Cielo", "Espero", "Kalos", "Lanos", "Leganza", "Matiz", "Nubira"],
   "Dacia": ["Duster", "Jogger", "Lodgy", "Logan", "Sandero", "Spring"],
@@ -126,7 +126,7 @@ const chatRouteByRole = {
 const marqueStyleByName = {
   Audi: "from-slate-100 to-white",
   BMW: "from-sky-100 to-white",
-  CitroÃn: "from-red-100 to-white",
+  Citroën: "from-red-100 to-white",
   Ford: "from-blue-100 to-white",
   Hyundai: "from-indigo-100 to-white",
   Peugeot: "from-zinc-100 to-white",
@@ -136,21 +136,21 @@ const marqueStyleByName = {
 };
 
 const categoryVisual = {
-  Moteur: { icon: "âš™", color: "from-zinc-100 to-white" },
-  "Échappement": { icon: "ðŸ› ", color: "from-slate-100 to-white" },
-  "Intérieur": { icon: "ðŸª‘", color: "from-stone-100 to-white" },
-  "Refroidissement et Climatisation": { icon: "â„", color: "from-cyan-100 to-white" },
-  Freinage: { icon: "ðŸ›‘", color: "from-rose-100 to-white" },
-  "Train Avant-Arrière": { icon: "ðŸ§©", color: "from-violet-100 to-white" },
-  Roue: { icon: "â­•", color: "from-slate-100 to-white" },
-  "Carrosserie latérale gauche": { icon: "ðŸš˜", color: "from-indigo-100 to-white" },
-  "Pièces latérale droite": { icon: "ðŸš—", color: "from-blue-100 to-white" },
+  Moteur: { icon: "⚙", color: "from-zinc-100 to-white" },
+  "Échappement": { icon: "🛠", color: "from-slate-100 to-white" },
+  "Intérieur": { icon: "🪑", color: "from-stone-100 to-white" },
+  "Refroidissement et Climatisation": { icon: "❄", color: "from-cyan-100 to-white" },
+  Freinage: { icon: "🛑", color: "from-rose-100 to-white" },
+  "Train Avant-Arrière": { icon: "🧩", color: "from-violet-100 to-white" },
+  Roue: { icon: "⭕", color: "from-slate-100 to-white" },
+  "Carrosserie latérale gauche": { icon: "🚘", color: "from-indigo-100 to-white" },
+  "Pièces latérale droite": { icon: "🚗", color: "from-blue-100 to-white" },
   "Toit voiture": { icon: "â¬’", color: "from-zinc-100 to-white" },
-  "Carrosserie Arrière": { icon: "ðŸ”§", color: "from-gray-100 to-white" },
-  "Pièces Face Avant": { icon: "ðŸš™", color: "from-emerald-100 to-white" },
-  Accessoires: { icon: "ðŸ§°", color: "from-amber-100 to-white" },
-  "Huiles et Fluides": { icon: "ðŸ§´", color: "from-yellow-100 to-white" },
-  Batterie: { icon: "ðŸ”‹", color: "from-lime-100 to-white" }
+  "Carrosserie Arrière": { icon: "🔧", color: "from-gray-100 to-white" },
+  "Pièces Face Avant": { icon: "🚙", color: "from-emerald-100 to-white" },
+  Accessoires: { icon: "🧰", color: "from-amber-100 to-white" },
+  "Huiles et Fluides": { icon: "🧴", color: "from-yellow-100 to-white" },
+  Batterie: { icon: "🔋", color: "from-lime-100 to-white" }
 };
 
 const getMarqueInitials = (marque) =>
@@ -177,7 +177,7 @@ const brandLogoDomains = {
   Changan: "changan.com",
   Chery: "cheryinternational.com",
   Chevrolet: "chevrolet.com",
-  "CitroÃ«n": "citroen.com",
+  "Citroën": "citroen.com",
   Cupra: "cupraofficial.com",
   Daewoo: "daewoo.com",
   Dacia: "dacia.com",
@@ -464,6 +464,7 @@ const getPieceVendorDisplayName = (piece) => {
 
 const CataloguePieces = () => {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("pieces");
@@ -483,6 +484,13 @@ const CataloguePieces = () => {
   const [presentationSaving, setPresentationSaving] = useState(false);
   const [presentationMessage, setPresentationMessage] = useState("");
   const [presentationError, setPresentationError] = useState("");
+  const isGarageCataloguePage = location.pathname === "/garage/catalogue" || location.pathname.startsWith("/garage/catalogue/");
+
+  useEffect(() => {
+    if (isGarageCataloguePage) {
+      setActiveTab("pieces");
+    }
+  }, [isGarageCataloguePage]);
 
   const [filters, setFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
@@ -1316,12 +1324,12 @@ const CataloguePieces = () => {
   };
 
   const syncPiecesList = () => {
-    // Réinitialiser Ã  la page 1 et forcer un refresh complet
+    // Réinitialiser à la page 1 et forcer un refresh complet
     setPage(1);
     // Déclencher un refresh en changeant appliedFilters
     setAppliedFilters((prev) => ({
       ...prev,
-      _refreshToken: Date.now() // Force React Ã  voir un changement
+      _refreshToken: Date.now() // Force React à voir un changement
     }));
   };
 
@@ -1610,15 +1618,17 @@ const CataloguePieces = () => {
               >
                 Pieces Vendeur
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("presentation")}
-                className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
-                  activeTab === "presentation" ? "bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] text-white shadow-md shadow-blue-900/15" : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Presentation
-              </button>
+              {!isGarageCataloguePage && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("presentation")}
+                  className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
+                    activeTab === "presentation" ? "bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] text-white shadow-md shadow-blue-900/15" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Presentation
+                </button>
+              )}
             </div>
           )}
 
@@ -1662,7 +1672,7 @@ const CataloguePieces = () => {
 
               <div className="mb-4 flex gap-2">
                 <div className="flex flex-1 items-center rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-[0_10px_20px_rgba(15,23,42,0.05)] focus-within:border-blue-300">
-                  <span className="mr-2 text-lg text-slate-500">ðŸ”</span>
+                  <span className="mr-2 text-lg text-slate-500">🔍</span>
                   <input
                     type="text"
                     value={filters.search}
@@ -1848,7 +1858,7 @@ const CataloguePieces = () => {
             </>
           )}
 
-          {activeTab === "presentation" && (
+          {!isGarageCataloguePage && activeTab === "presentation" && (
             <div className="space-y-5">
               {canManagePieces && !isStoreView && (
                 <form onSubmit={handlePresentationSave} className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
@@ -1932,7 +1942,7 @@ const CataloguePieces = () => {
                 <h3 className="text-2xl font-black text-slate-900">Services complementaires</h3>
                 <ul className="mt-3 space-y-2 text-lg text-slate-700">
                   {storeServices.map((service) => (
-                    <li key={service}>âœ“ {service}</li>
+                    <li key={service}>✅ {service}</li>
                   ))}
                 </ul>
               </div>
@@ -1970,7 +1980,7 @@ const CataloguePieces = () => {
             <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Marques</h3>
-                <button type="button" onClick={() => setShowMarquesModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                <button type="button" onClick={() => setShowMarquesModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                 {marques.map((marque) => {
@@ -2050,7 +2060,7 @@ const CataloguePieces = () => {
             <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-4xl font-black text-slate-900">Choisir • Catégories</h3>
-                <button type="button" onClick={() => setShowCategoriesModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                <button type="button" onClick={() => setShowCategoriesModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {categories.map((categorie) => {
@@ -2111,7 +2121,7 @@ const CataloguePieces = () => {
             <div className="mx-auto flex h-full w-full max-w-3xl flex-col bg-transparent">
               <div className="sticky top-0 z-10 border-b border-slate-200/80 bg-white/90 px-4 pb-3 pt-4 backdrop-blur-xl">
                 <div className="flex items-center justify-between">
-                  <button type="button" onClick={closePieceForm} className="text-4xl leading-none font-light text-blue-700">â€¹</button>
+                  <button type="button" onClick={closePieceForm} className="text-4xl leading-none font-light text-blue-700">‹</button>
                   <h2 className="text-2xl font-medium text-slate-900">{editingPieceId ? "Modifier une pièce" : "Ajouter une pièce"}</h2>
                   <button
                     type="submit"
@@ -2286,7 +2296,7 @@ const CataloguePieces = () => {
             <div className="max-h-[96vh] w-full max-w-6xl overflow-y-auto rounded-none bg-[linear-gradient(180deg,#fffdf9_0%,#faf7f2_100%)] shadow-2xl sm:rounded-3xl">
               <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 px-4 pb-3 pt-4 backdrop-blur-xl sm:px-6">
                 <div className="mb-3 flex items-center justify-between">
-                  <button type="button" onClick={() => setSelectedPiece(null)} className="text-4xl leading-none font-light text-blue-700">â€¹</button>
+                  <button type="button" onClick={() => setSelectedPiece(null)} className="text-4xl leading-none font-light text-blue-700">‹</button>
                   <h2 className="text-2xl font-medium text-slate-900">Détails Pièce</h2>
                   <div className="w-8" />
                 </div>
@@ -2301,12 +2311,12 @@ const CataloguePieces = () => {
                 <div className="space-y-4">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <button type="button" onClick={handleOpenVendorStore} className="group flex flex-1 items-center justify-center rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-5 py-3 text-white shadow-[0_10px_18px_rgba(30,64,175,0.18)]">
-                      <span className="mr-3 text-2xl">ðŸª</span>
+                      <span className="mr-3 text-2xl">🏪</span>
                       <span className="flex flex-col items-start leading-tight">
                         <span className="text-lg font-semibold">Voir magasin de vendeur</span>
                         <span className="text-xs text-blue-100">Pieces + Presentation</span>
                       </span>
-                      <span className="ml-3 text-xl transition-transform group-hover:translate-x-0.5">â€º</span>
+                      <span className="ml-3 text-xl transition-transform group-hover:translate-x-0.5">›</span>
                     </button>
                     {canContactSelectedPieceVendor ? (
                       <button
@@ -2316,7 +2326,7 @@ const CataloguePieces = () => {
                         aria-label="Contacter le vendeur"
                         title="Contacter le vendeur"
                       >
-                        <span>ðŸ’¬</span>
+                        <span>💬</span>
                         <span>Contacter le vendeur</span>
                       </button>
                     ) : (
@@ -2348,12 +2358,12 @@ const CataloguePieces = () => {
                   <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <div className="space-y-4 text-slate-900">
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">â“˜</span>
+                        <span className="mt-1 text-2xl">ⓘ</span>
                         <p className="text-2xl font-black tracking-wide">{selectedPiece.reference || "Référence non renseignée"}</p>
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">ðŸ·</span>
+                        <span className="mt-1 text-2xl">🏷</span>
                         <div>
                           <p className="text-2xl font-black">{selectedPiece.nom || "Pièce sans nom"}</p>
                           <p className="text-base text-slate-500">{selectedPiece.description || "Pas de description"}</p>
@@ -2361,7 +2371,7 @@ const CataloguePieces = () => {
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">âš™</span>
+                        <span className="mt-1 text-2xl">⚙</span>
                         <div className="space-y-1">
                           <p className="text-xl font-bold">{selectedPiece.categorie || "Pièce automobile"}</p>
                           <p className="text-base text-slate-500">{selectedPiece.marque ? `${selectedPiece.marque}${selectedPiece.modele ? ` ${selectedPiece.modele}` : ""}` : "Marque non renseignée"}</p>
@@ -2369,12 +2379,12 @@ const CataloguePieces = () => {
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">âš </span>
+                        <span className="mt-1 text-2xl">⚠</span>
                         <p className="text-xl font-bold">{selectedPiece.condition || "Neuf"}</p>
                       </div>
 
                       <div className="flex items-start gap-4">
-                        <span className="mt-1 text-2xl">ðŸ“ž</span>
+                        <span className="mt-1 text-2xl">📞</span>
                         <p className="text-xl font-bold">{vendorPhone}</p>
                       </div>
                     </div>
@@ -2443,7 +2453,7 @@ const CataloguePieces = () => {
                       {getCompatibleVehiclesForPiece(selectedPiece).length > 0 ? (
                         getCompatibleVehiclesForPiece(selectedPiece).map((vehicle, index) => (
                           <div key={`${vehicle}-${index}`} className="flex items-center gap-4 rounded-2xl bg-slate-50 px-3 py-3">
-                            <span className="text-3xl">ðŸš—</span>
+                            <span className="text-3xl">🚗</span>
                             <p className="text-lg font-semibold text-slate-800">{vehicle}</p>
                           </div>
                         ))
@@ -2473,7 +2483,7 @@ const CataloguePieces = () => {
                   setShowComparisonModal(false);
                 }} 
                 className="text-3xl text-slate-500"
-              >Ã—</button>
+              >×</button>
             </div>
 
             {comparisonLoading ? (

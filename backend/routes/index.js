@@ -121,9 +121,9 @@ const registerRoutes = (app) => {
   if (chatRoutes) {
     console.log('[registerRoutes] Mounting /api/chat - chatRoutes is:', typeof chatRoutes);
     app.use('/api/chat', chatRoutes);
-    console.log('[registerRoutes] âœ“ /api/chat mounted');
+    console.log('[registerRoutes] ✅ /api/chat mounted');
   } else {
-    console.log('[registerRoutes] âœ— chatRoutes is undefined or falsy');
+    console.log('[registerRoutes] ❌ chatRoutes is undefined or falsy');
   }
   if (notificationRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/notifications');
@@ -152,7 +152,7 @@ const registerRoutes = (app) => {
     console.log('[registerRoutes] Mounting /api/admin - adminRoutes is:', typeof adminRoutes);
     app.use('/api/admin', adminRoutes);
   } else {
-    console.log('[registerRoutes] âœ— adminRoutes is undefined or falsy');
+    console.log('[registerRoutes] ❌ adminRoutes is undefined or falsy');
   }
   if (interventionRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/vehicules/:vehicleId/interventions');

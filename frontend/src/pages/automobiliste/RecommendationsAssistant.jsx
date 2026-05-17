@@ -98,7 +98,7 @@ const DEFAULT_DECISION = {
     current_state: "À vérifier"
   },
   recommended_garage: {
-    name: "Garage Ã  confirmer",
+    name: "Garage à confirmer",
     distance_km: null,
     rating: null,
     isOpen: false,
@@ -225,7 +225,7 @@ const RecommendationsAssistant = () => {
                     Recommandation intelligente pour l'entretien véhicule
                   </h1>
                   <p className="max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-                    Le moteur décisionnel d'Auto Bot analyse le véhicule, l'historique de maintenance et les garages pour fournir une décision canonique prÃªte Ã  être consommée en production.
+                    Le moteur décisionnel d'Auto Bot analyse le véhicule, l'historique de maintenance et les garages pour fournir une décision canonique prête à être consommée en production.
                   </p>
                 </div>
               </div>
@@ -278,7 +278,7 @@ const RecommendationsAssistant = () => {
                     <div>
                       <h2 className="mt-2 text-3xl font-black text-slate-900">{decision.vehicle?.modele || decision.vehicle?.type || "Votre véhicule"}</h2>
                       <p className="mt-2 text-sm text-slate-600">
-                        ID: {decision.vehicle?.id ?? FALLBACK_TEXT} Â· Matricule: {decision.vehicle?.matricule || FALLBACK_TEXT} Â· KM: {formatKm(decision.vehicle?.kilometrage_voiture)} Â· Carburant: {decision.vehicle?.fuel || FALLBACK_TEXT} Â· État: {decision.vehicle?.current_state || FALLBACK_TEXT}
+                        ID: {decision.vehicle?.id ?? FALLBACK_TEXT} · Matricule: {decision.vehicle?.matricule || FALLBACK_TEXT} · KM: {formatKm(decision.vehicle?.kilometrage_voiture)} · Carburant: {decision.vehicle?.fuel || FALLBACK_TEXT} · État: {decision.vehicle?.current_state || FALLBACK_TEXT}
                       </p>
                     </div>
 
@@ -379,7 +379,7 @@ const RecommendationsAssistant = () => {
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2">
                             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Rating</p>
-                            <p className="mt-1 font-semibold text-slate-900">â­ {formatRating(finalRecommendedGarage.rating)}</p>
+                            <p className="mt-1 font-semibold text-slate-900">⭐ {formatRating(finalRecommendedGarage.rating)}</p>
                           </div>
                           <div className="rounded-2xl bg-white px-3 py-2">
                             <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Disponibilité</p>
@@ -421,7 +421,7 @@ const RecommendationsAssistant = () => {
                                   <div className="flex-1">
                                     <p className="text-sm font-bold text-slate-900">{garage.name}</p>
                                     <p className="mt-1 text-xs text-slate-500">
-                                      {formatDistance(garage.distance_km)} Â· â­ {formatRating(garage.rating)} Â· {garage.isOpen ? "Disponible" : "Sur rendez-vous"}
+                                      {formatDistance(garage.distance_km)} · ⭐ {formatRating(garage.rating)} · {garage.isOpen ? "Disponible" : "Sur rendez-vous"}
                                     </p>
                                   </div>
                                   <div className="text-right">

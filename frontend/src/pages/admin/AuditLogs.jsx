@@ -41,15 +41,15 @@ export default function AuditLogs() {
   // Format action name pour affichage
   const formatActionName = (action) => {
     const mapping = {
-      'approve_user': 'âœ… Approuver Utilisateur',
-      'reject_user': 'âŒ Rejeter Utilisateur',
-      'approve_garage': 'âœ… Approuver Garage',
-      'reject_garage': 'âŒ Rejeter Garage',
-      'deactivate_garage': 'â¸ï¸ Désactiver Garage',
-      'delete_garage': 'ðŸ—‘ï¸ Supprimer Garage',
-      'approve_piece': 'âœ… Approuver Pièce',
-      'reject_piece': 'âŒ Rejeter Pièce',
-      'delete_piece': 'ðŸ—‘ï¸ Supprimer Pièce'
+      'approve_user': '✅ Approuver Utilisateur',
+      'reject_user': '❌ Rejeter Utilisateur',
+      'approve_garage': '✅ Approuver Garage',
+      'reject_garage': '❌ Rejeter Garage',
+      'deactivate_garage': '⏸️ Désactiver Garage',
+      'delete_garage': '🗑️ Supprimer Garage',
+      'approve_piece': '✅ Approuver Pièce',
+      'reject_piece': '❌ Rejeter Pièce',
+      'delete_piece': '🗑️ Supprimer Pièce'
     };
     return mapping[action] || action;
   };
@@ -57,9 +57,9 @@ export default function AuditLogs() {
   // Format entity name
   const formatEntityName = (entity) => {
     const mapping = {
-      'user': 'ðŸ‘¤ Utilisateur',
-      'garage': 'ðŸ¢ Garage',
-      'piece': 'ðŸ”§ Pièce'
+      'user': '👤 Utilisateur',
+      'garage': '🏢 Garage',
+      'piece': '🔧 Pièce'
     };
     return mapping[entity] || entity;
   };
@@ -150,7 +150,7 @@ export default function AuditLogs() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">ðŸ“‹ Journal d'Audit</h1>
+          <h1 className="text-4xl font-bold text-slate-900 mb-2">📋 Journal d'Audit</h1>
           <p className="text-slate-600">Suivi complèt des actions administratives critiques</p>
         </div>
 
@@ -341,7 +341,7 @@ export default function AuditLogs() {
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-6 px-6 py-4 bg-white rounded-lg shadow-md border border-slate-200">
             <div className="text-sm text-slate-600">
-              Affichage de {(page - 1) * limit + 1} Ã  {Math.min(page * limit, total)} sur {total} résultats
+              Affichage de {(page - 1) * limit + 1} à {Math.min(page * limit, total)} sur {total} résultats
             </div>
             <div className="flex gap-2">
               <button
@@ -396,7 +396,7 @@ export default function AuditLogs() {
                 onClick={() => setShowDetails(false)}
                 className="text-slate-500 hover:text-slate-700 text-2xl"
               >
-                Ã—
+                ×
               </button>
             </div>
 

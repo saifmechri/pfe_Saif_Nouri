@@ -53,39 +53,33 @@ const PlatformLayout = ({ children }) => {
       { label: "Accueil", to: "/" },
       { label: "Mon profil", to: "/profil" },
       { label: "Tableau de bord", to: dashboardPath },
-      { label: "Catalogue pièces", to: "/vendeur/catalogue" }
     ];
 
-    // Admin should have the union of automobiliste/garage/vendeur links
+    // Admin keeps the same shared shell, with actions handled from admin pages only.
     if (user?.role === "admin") {
-      items.push({ label: "Véhicules & entretien", to: "/automobiliste" });
-      items.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
-      items.push({ label: "Garages", to: "/automobiliste/garages" });
-      items.push({ label: "Rendez-vous", to: "/automobiliste/appointments" });
-      items.push({ label: "Messagerie", to: "/automobiliste/messages" });
-      items.push({ label: "Historique entretien", to: "/automobiliste" });
-      items.push({ label: "Gestion garage", to: "/garage" });
+      items.push({ label: "Catalogue pièces", to: "/admin/catalogue" });
+      items.push({ label: "Garages", to: "/admin/garages" });
+      items.push({ label: "Messagerie", to: "/admin/messages" });
       return items;
     }
 
     if (user?.role === "automobiliste") {
-      items.push({ label: "Véhicules & entretien", to: "/automobiliste" });
-      items.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
+      // For automobiliste keep only essential links (Garages, Messagerie and Catalogue pièces).
       items.push({ label: "Garages", to: "/automobiliste/garages" });
-      items.push({ label: "Rendez-vous", to: "/automobiliste/appointments" });
       items.push({ label: "Messagerie", to: "/automobiliste/messages" });
-      items.push({ label: "Historique entretien", to: "/automobiliste" });
+      items.push({ label: "Catalogue pièces", to: "/automobiliste/catalogue" });
     }
 
     if (user?.role === "garage") {
-      items.push({ label: "Gestion garage", to: "/garage" });
+      items.push({ label: "Présentation garage", to: "/garage?panel=presentation" });
+      items.push({ label: "Catalogue pièces", to: "/garage/catalogue" });
     }
 
     return items;
   })();
 
   if (user?.role === "vendeur") {
-    // Messagerie accessible via navbar/chat modal â€” removed from sidebar
+    // Messagerie accessible via navbar/chat modal — removed from sidebar
   }
 
   return (
@@ -121,7 +115,8 @@ const PlatformLayout = ({ children }) => {
 
         <nav className="flex flex-col gap-2">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+            const targetPath = item.to.split("?")[0];
+            const isActive = location.pathname === targetPath || location.pathname.startsWith(`${targetPath}/`);
             return (
               <Link
                 key={`${item.to}-${item.label}`}

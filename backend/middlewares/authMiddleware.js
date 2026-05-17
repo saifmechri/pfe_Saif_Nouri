@@ -31,7 +31,7 @@ const fetchUserForToken = async (userId) => {
 
 /**
  * Vérifie le JWT, charge l'utilisateur courant et attache req.user.
- * Bloque la requÃªte avec 401 si le token est absent, expiré ou invalide.
+ * Bloque la requête avec 401 si le token est absent, expiré ou invalide.
  */
 const verifyToken = async (req, res, next) => {
   try {

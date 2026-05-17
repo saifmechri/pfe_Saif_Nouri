@@ -31,7 +31,7 @@ const featuredGarages = [
     latitude: 35.8256,
     longitude: 10.6369,
     rating: 4.7,
-    note: "Garage ajouté manuellement Ã  la carte"
+    note: "Garage ajouté manuellement à la carte"
   },
   {
     id: "featured-gargouri-auto",
@@ -41,7 +41,7 @@ const featuredGarages = [
     latitude: 33.875,
     longitude: 10.857,
     rating: 4.6,
-    note: "Garage ajouté manuellement Ã  la carte"
+    note: "Garage ajouté manuellement à la carte"
   }
 ];
 
@@ -97,7 +97,7 @@ const garageServicesCatalog = [
   "Débosselage et carrosserie", "Peinture au four", "Lustrage et polissage", "Peinture jantes",
   "Diagnostic électrique", "Alternateur / Démarreur", "Batterie", "Câblage et fusibles",
   "Montage et équilibrage", "Parallélisme / Géométrie", "Réparation crevaison", "Gonflage azote",
-  "Passage Ã  la valise", "Lecture/Effacement défauts", "Programmation calculateurs", "Test de composants",
+  "Passage à la valise", "Lecture/Effacement défauts", "Programmation calculateurs", "Test de composants",
   "Vidange et filtres", "Freinage (Plaquettes/Disques)", "Amortisseurs", "Révision saisonnière",
   "Remplacement pare-brise", "Réparation d'impact", "Vitres teintées / Film solaire", "Rénovation optiques",
   "Recharge climatisation", "Détection de fuites", "Remplacement compresseur", "Traitement antibactérien",
@@ -118,7 +118,7 @@ const garageServicesCatalog = [
   "Pièces de casse auto", "Moteurs d'occasion", "Portières / Capots", "Jantes occasion",
   "Tapis et housses", "Coffres de toit", "Produits d'entretien", "Gadgets auto",
   "Carburant (Essence/Diesel)", "Gonflage pneus", "Boutique de dépannage", "Lavage automatique",
-  "Expertise après sinistre", "Estimation valeur véhicule", "Conseil Ã  l'achat", "Litiges mécaniques",
+  "Expertise après sinistre", "Estimation valeur véhicule", "Conseil à l'achat", "Litiges mécaniques",
   "Permis B (Voiture)", "Code de la route", "Conduite accompagnée", "Perfectionnement",
   "Visite périodique", "Contre-visite", "Contrôle pollution", "Contrôle spécifique (VTC/Taxi)",
   "Vente véhicules neufs", "Essai routier", "Reprise ancien véhicule", "Financement / Garantie",
@@ -126,7 +126,7 @@ const garageServicesCatalog = [
   "Dépannage sur place", "Remorquage 24h/24", "Transport longue distance", "Sortie de fourrière",
   "Location Longue Durée (LLD)", "LOA (Location avec Option d'Achat)", "Gestion de flotte", "Location courte durée",
   "Vente motos", "Pièces détachées moto", "Accessoires motard", "Casques et équipements",
-  "Révision moto", "Pneumatiques moto", "Kit chaÃ®ne et carburation", "Entretien mécanique moto",
+  "Révision moto", "Pneumatiques moto", "Kit chaîne et carburation", "Entretien mécanique moto",
   "Personnalisation moto", "Préparation moteur", "Aménagement esthétique"
 ];
 
@@ -171,7 +171,7 @@ const brandLogoDomains = {
   Chery: "cheryinternational.com",
   Chevrolet: "chevrolet.com",
   Citroen: "citroen.com",
-  "CitroÃ«n": "citroen.com",
+  "Citroën": "citroen.com",
   Cupra: "cupraofficial.com",
   Daewoo: "daewoo.com",
   Dacia: "dacia.com",
@@ -907,7 +907,7 @@ const GaragesPage = () => {
               <div className="max-h-[92vh] w-full max-w-[980px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Marques</h3>
-                <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
                 {filterOptions.brands.map((brand) => {
@@ -957,7 +957,7 @@ const GaragesPage = () => {
               <div className="max-h-[92vh] w-full max-w-[1100px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Spécialités</h3>
-                <button type="button" onClick={() => setShowSpecialtiesModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                <button type="button" onClick={() => setShowSpecialtiesModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filterOptions.specialties.map((speciality) => {
@@ -983,7 +983,7 @@ const GaragesPage = () => {
               <div className="max-h-[92vh] w-full max-w-[1100px] overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Services</h3>
-                <button type="button" onClick={() => setShowServicesModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                <button type="button" onClick={() => setShowServicesModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {filterOptions.services.map((service) => {
@@ -1009,7 +1009,7 @@ const GaragesPage = () => {
               <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Ouvert</h3>
-                <button type="button" onClick={() => setShowOpenModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                <button type="button" onClick={() => setShowOpenModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {filterOptions.openModes.map((option) => {
@@ -1035,7 +1035,7 @@ const GaragesPage = () => {
               <div className="max-h-[85vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white px-4 py-5 shadow-2xl sm:px-5">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-2xl font-black text-slate-900 sm:text-4xl">Choisir • Déplacement</h3>
-                <button type="button" onClick={() => setShowDeplacementModal(false)} className="text-3xl text-slate-500">Ã—</button>
+                <button type="button" onClick={() => setShowDeplacementModal(false)} className="text-3xl text-slate-500">×</button>
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {filterOptions.displacements.map((option) => {
@@ -1317,7 +1317,7 @@ const GaragesPage = () => {
                       }}
                       className="flex-shrink-0 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition"
                     >
-                      ðŸš© Signaler
+                      🚩 Signaler
                     </button>
                   </div>
 
@@ -1468,7 +1468,7 @@ const GaragesPage = () => {
         garage={selectedGarage}
         vehicules={vehicules}
         onAppointmentCreated={() => {
-          setSuccessMessage("âœ“ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
+          setSuccessMessage("✅ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
           setShowAppointmentModal(false);
         }}
       />
@@ -1480,7 +1480,7 @@ const GaragesPage = () => {
         entityId={reportData.entityId}
         entityName={reportData.entityName}
         onSuccess={() => {
-          setSuccessMessage("âœ“ Merci! Votre signalement a été reçu par nos modérateurs.");
+          setSuccessMessage("✅ Merci! Votre signalement a été reçu par nos modérateurs.");
           setTimeout(() => setSuccessMessage(""), 3000);
         }}
       />

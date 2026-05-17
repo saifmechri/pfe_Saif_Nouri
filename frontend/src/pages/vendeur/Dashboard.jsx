@@ -89,7 +89,7 @@ const VendeurDashboard = () => {
       await updateProfile(payload);
       setPresentationMessage("Présentation enregistrée avec succès.");
       
-      // Recharger le profil pour mettre Ã  jour la présentation
+      // Recharger le profil pour mettre à jour la présentation
       const response = await getCompleteProfile();
       const profile = getPayload(response)?.user || getPayload(response) || {};
       setPresentationForm({
@@ -142,7 +142,7 @@ const VendeurDashboard = () => {
     if (!selectedPieceToDelete) return;
     setDeleting(true);
     try {
-      // Appel API pour supprimer la pièce (Ã  adapter selon votre API)
+      // Appel API pour supprimer la pièce (à adapter selon votre API)
       await fetch(`/api/pieces/${selectedPieceToDelete.id}`, { method: 'DELETE' });
       setSellerPieces(sellerPieces.filter(p => p.id !== selectedPieceToDelete.id));
       setShowDeleteModal(false);
@@ -348,7 +348,7 @@ const VendeurDashboard = () => {
                                   ? "bg-green-100 text-green-700" 
                                   : "bg-yellow-100 text-yellow-700"
                               }`}>
-                                {isInStock ? "âœ… Disponible" : "âš ï¸ Rupture"}
+                                {isInStock ? "✅ Disponible" : "⚠️ Rupture"}
                               </span>
                             </td>
                             <td className="px-4 py-3">
@@ -392,7 +392,7 @@ const VendeurDashboard = () => {
           {activeTab === "messages" && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Messages</h2>
-              <p className="text-gray-500">BoÃ®te de réception...</p>
+              <p className="text-gray-500">Boîte de réception...</p>
             </div>
           )}
         </div>

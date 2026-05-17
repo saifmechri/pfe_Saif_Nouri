@@ -118,7 +118,7 @@ const createAppointment = async (req, res) => {
       if (garageResult && garageResult.user_id) {
         const garageUserId = Number(garageResult.user_id);
         const title = `Nouveau rendez-vous de ${req.user.name || 'automobiliste'}`;
-        const body = `${appointmentDate}${appointmentTime ? ` Ã  ${appointmentTime}` : ''} - ${description || 'Consultation'}`;
+        const body = `${appointmentDate}${appointmentTime ? ` à ${appointmentTime}` : ''} - ${description || 'Consultation'}`;
 
         await notificationService.createForUser({
           userId: garageUserId,
@@ -167,7 +167,7 @@ const updateAppointment = async (req, res) => {
     if (!validation.valid) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Données de mise Ã  jour invalides', 
+        message: 'Données de mise à jour invalides', 
         data: { errors: validation.errors } 
       });
     }
@@ -210,22 +210,22 @@ const updateAppointment = async (req, res) => {
             let title, body;
             
             if (newStatus === 'confirmed' && acceptedProposedDate) {
-              title = `âœ“ Date proposée acceptée`;
-              body = `L'automobiliste a accepté la nouvelle date ${updated.proposed_date || updated.appointment_date}${updated.proposed_time ? ` Ã  ${updated.proposed_time}` : updated.appointment_time ? ` Ã  ${updated.appointment_time}` : ''}. Veuillez confirmer ou refuser cette réservation.`;
+              title = `✅ Date proposée acceptée`;
+              body = `L'automobiliste a accepté la nouvelle date ${updated.proposed_date || updated.appointment_date}${updated.proposed_time ? ` à ${updated.proposed_time}` : updated.appointment_time ? ` à ${updated.appointment_time}` : ''}. Veuillez confirmer ou refuser cette réservation.`;
             } else if (newStatus === 'cancelled' && refusedProposedDate) {
-              title = `âœ• Date proposée refusée`;
-              body = `L'automobiliste a refusé la date proposée ${updated.proposed_date || updated.appointment_date}${updated.proposed_time ? ` Ã  ${updated.proposed_time}` : updated.appointment_time ? ` Ã  ${updated.appointment_time}` : ''}. Merci de proposer une autre date si nécessaire.`;
+              title = `❌ Date proposée refusée`;
+              body = `L'automobiliste a refusé la date proposée ${updated.proposed_date || updated.appointment_date}${updated.proposed_time ? ` à ${updated.proposed_time}` : updated.appointment_time ? ` à ${updated.appointment_time}` : ''}. Merci de proposer une autre date si nécessaire.`;
             } else if (newStatus === 'confirmed') {
-              title = `âœ“ Rendez-vous confirmé`;
-              body = `${updated.appointment_date}${updated.appointment_time ? ` Ã  ${updated.appointment_time}` : ''} - ${updated.description || ''}`;
+              title = `✅ Rendez-vous confirmé`;
+              body = `${updated.appointment_date}${updated.appointment_time ? ` à ${updated.appointment_time}` : ''} - ${updated.description || ''}`;
             } else if (newStatus === 'cancelled') {
-              title = `âœ• Rendez-vous annulé`;
-              body = `${updated.appointment_date}${updated.appointment_time ? ` Ã  ${updated.appointment_time}` : ''} - ${updated.description || ''}`;
+              title = `❌ Rendez-vous annulé`;
+              body = `${updated.appointment_date}${updated.appointment_time ? ` à ${updated.appointment_time}` : ''} - ${updated.description || ''}`;
             } else if (newStatus === 'proposed') {
-              title = `ðŸ“… Contre-proposition de date`;
-              const proposedDate = updates.proposed_date || updated.proposed_date || 'date Ã  déterminer';
+              title = `📅 Contre-proposition de date`;
+              const proposedDate = updates.proposed_date || updated.proposed_date || 'date à déterminer';
               const proposedTime = updates.proposed_time || updated.proposed_time || '';
-              body = `Le garage propose: ${proposedDate}${proposedTime ? ` Ã  ${proposedTime}` : ''} ${updates.proposed_note ? `- ${updates.proposed_note}` : ''}`;
+              body = `Le garage propose: ${proposedDate}${proposedTime ? ` à ${proposedTime}` : ''} ${updates.proposed_note ? `- ${updates.proposed_note}` : ''}`;
             }
 
             await notificationService.createForUser({
@@ -252,7 +252,7 @@ const updateAppointment = async (req, res) => {
       console.error('Failed to create status-change notification:', err && err.message ? err.message : err);
     }
 
-    return res.json({ success: true, message: 'Rendez-vous mis Ã  jour', data: { appointment: updated } });
+    return res.json({ success: true, message: 'Rendez-vous mis à jour', data: { appointment: updated } });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: 'Erreur serveur', data: null });
@@ -301,8 +301,8 @@ const deleteAppointment = async (req, res) => {
       }
 
       if (recipientUserId) {
-        const title = `âœ• Rendez-vous annulé`;
-        const body = `${existing.appointment_date}${existing.appointment_time ? ` Ã  ${existing.appointment_time}` : ''} - ${existing.description || ''}`;
+        const title = `❌ Rendez-vous annulé`;
+        const body = `${existing.appointment_date}${existing.appointment_time ? ` à ${existing.appointment_time}` : ''} - ${existing.description || ''}`;
 
         await notificationService.createForUser({
           userId: recipientUserId,

@@ -93,7 +93,7 @@ export const useAppointmentForm = (garageId = null, onSuccess = null) => {
           notes: JSON.stringify(notesPayload)
         });
 
-        setSuccess('âœ“ Rendez-vous réservé avec succès');
+        setSuccess('✅ Rendez-vous réservé avec succès');
         
         // Reset form
         setForm({
@@ -229,7 +229,7 @@ export const useAppointments = (statusFilter = 'all') => {
           prev.map((a) => (a.id === id ? { ...a, status } : a))
         );
       } catch (err) {
-        setError('Erreur lors de la mise Ã  jour');
+        setError('Erreur lors de la mise à jour');
         console.error(err);
       }
     },
@@ -288,7 +288,7 @@ export const useGarageAppointments = () => {
           prev.map((a) => (a.id === id ? { ...a, status } : a))
         );
       } catch (err) {
-        setError('Erreur lors de la mise Ã  jour');
+        setError('Erreur lors de la mise à jour');
         console.error(err);
       }
     },

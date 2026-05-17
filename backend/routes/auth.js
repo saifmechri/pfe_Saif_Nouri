@@ -35,7 +35,7 @@ router.delete("/profile", verifyToken, deleteProfile);
 router.put("/profile/password", verifyToken, changePassword);
 
 // ============================================
-// EXEMPLES DE ROUTES PROTÉGÉES PAR RÃ”LE
+// EXEMPLES DE ROUTES PROTÉGÉES PAR RÔLE
 // ============================================
 
 // Route accessible SEULEMENT aux admins
@@ -146,7 +146,7 @@ router.get("/vendeur/mes-annonces", verifyToken, isVendeurOrAdmin, (req, res) =>
   });
 });
 
-// Route accessible Ã  tous les utilisateurs authentifiés (sans restriction de rôle)
+// Route accessible à tous les utilisateurs authentifiés (sans restriction de rôle)
 router.get("/profile-complet", verifyToken, async (req, res) => {
   try {
     const result = await pool.query(

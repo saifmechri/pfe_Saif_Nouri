@@ -38,7 +38,7 @@ const fileFilter = (_req, file, cb) => {
   }
 };
 
-// Middleware prÃªt Ã  l'emploi pour l'upload photo véhicule.
+// Middleware prêt à l'emploi pour l'upload photo véhicule.
 const uploadVehiculePhoto = multer({
   storage,
   fileFilter,

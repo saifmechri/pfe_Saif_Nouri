@@ -29,7 +29,7 @@ export const APPOINTMENT_STATUS_COLORS = {
 
 export const APPOINTMENT_MESSAGES = {
   CREATED_SUCCESS: 'Rendez-vous créé avec succès',
-  UPDATED_SUCCESS: 'Rendez-vous mis Ã  jour',
+  UPDATED_SUCCESS: 'Rendez-vous mis à jour',
   DELETED_SUCCESS: 'Rendez-vous supprimé',
   CONFIRMED_SUCCESS: 'Rendez-vous confirmé',
   CANCELLED_SUCCESS: 'Rendez-vous annulé',
@@ -131,9 +131,9 @@ export const parseAppointmentNotes = (notes) => {
 export const getStatusIcon = (status) => {
   switch (status) {
     case APPOINTMENT_STATUS.CONFIRMED:
-      return 'âœ“';
+      return '✅';
     case APPOINTMENT_STATUS.CANCELLED:
-      return 'âœ•';
+      return '❌';
     default:
       return 'â±';
   }

@@ -35,7 +35,7 @@ const RecommendedGarages = ({ garages = [], onReserve }) => {
         {garages.length === 0 ? (
           <div className="rounded-[28px] border border-dashed border-slate-200 bg-white p-6 text-center">
             <Sparkles className="mx-auto h-8 w-8 text-slate-400" />
-            <p className="mt-3 text-base font-bold text-slate-900">Aucun garage ne correspond Ã  cette session</p>
+            <p className="mt-3 text-base font-bold text-slate-900">Aucun garage ne correspond à cette session</p>
             <p className="mt-1 text-sm text-slate-500">Essayez d’élargir la zone de distance ou vérifiez les garages actifs.</p>
           </div>
         ) : (

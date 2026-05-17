@@ -43,7 +43,7 @@ const validateAppointmentDate = (appointmentDate, minAdvanceHours = APPOINTMENT_
 
   // Check minimum advance booking
   if (apptDate.getTime() - now.getTime() < minAdvanceHours * 60 * 60 * 1000) {
-    return { valid: false, error: `Le rendez-vous doit être réservé au moins ${minAdvanceHours} heures Ã  l'avance` };
+    return { valid: false, error: `Le rendez-vous doit être réservé au moins ${minAdvanceHours} heures à l'avance` };
   }
 
   return { valid: true, error: null };

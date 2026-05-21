@@ -30,7 +30,7 @@ const AutomobilisteDashboard = () => {
     }
   }, [location.search]);
 
-  const backendBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api\/?$/, "");
+  const backendBaseUrl = import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "");
 
   const getVehiclePhotoUrl = (photoVoiture) => {
     if (!photoVoiture) return "";

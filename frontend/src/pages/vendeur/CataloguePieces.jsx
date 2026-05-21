@@ -648,8 +648,7 @@ const CataloguePieces = () => {
   };
 
   const backendBaseUrl = useMemo(() => {
-    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
-    return apiUrl.replace(/\/api\/?$/, "");
+    return import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "");
   }, []);
 
   const canManagePieces = user?.role === "vendeur";

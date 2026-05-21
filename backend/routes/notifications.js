@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middlewares/authMiddleware');
 const notificationController = require('../controllers/notification.controller');
@@ -19,3 +19,5 @@ router.patch('/read-all', verifyToken, notificationController.markAll);
 router.delete('/:id', verifyToken, notificationController.removeNotification);
 
 module.exports = router;
+
+

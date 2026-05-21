@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
@@ -10,7 +10,7 @@ let chatRoutes;
 try {
   chatRoutes = require('./routes/chat.routes');
 } catch (e) {
-  console.error('[app.js] ✗ Error loading chat.routes:', e.message);
+  console.error('[app.js] ❌ Error loading chat.routes:', e.message);
 }
 
 const createApp = () => {
@@ -49,7 +49,7 @@ const createApp = () => {
   if (chatRoutes) {
     app.use('/api/chat', chatRoutes);
   } else {
-    console.error('[app.js] ✗ chatRoutes is not available!');
+    console.error('[app.js] ❌ chatRoutes is not available!');
   }
 
   app.use(errorHandler);
@@ -60,3 +60,5 @@ const createApp = () => {
 module.exports = {
   createApp
 };
+
+

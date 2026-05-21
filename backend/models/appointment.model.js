@@ -1,10 +1,10 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
-const createAppointment = async ({ automobilisteUserId, garageId, appointmentDate, appointmentTime, description, notes }) => {
+const createAppointment = async ({ automobilisteUserId, garageId, appointmentDate, appointmentTime, description, notes, status = 'pending' }) => {
   const result = await pool.query(
-    `INSERT INTO appointments (automobiliste_user_id, garage_id, appointment_date, appointment_time, description, notes)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-    [automobilisteUserId, garageId, appointmentDate, appointmentTime, description, notes]
+    `INSERT INTO appointments (automobiliste_user_id, garage_id, appointment_date, appointment_time, description, notes, status)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+    [automobilisteUserId, garageId, appointmentDate, appointmentTime, description, notes, status]
   );
   return result.rows[0];
 };
@@ -47,7 +47,7 @@ const listAppointmentsForGarage = async (garageId, { limit = 50, offset = 0, sta
 };
 
 const updateAppointment = async (appointmentId, updates) => {
-  const validFields = ['appointment_date', 'appointment_time', 'status', 'description', 'notes'];
+  const validFields = ['appointment_date', 'appointment_time', 'status', 'description', 'notes', 'proposed_date', 'proposed_time', 'proposed_note'];
   const fields = [];
   const values = [];
   let paramCount = 1;
@@ -81,3 +81,5 @@ module.exports = {
   updateAppointment,
   deleteAppointment
 };
+
+

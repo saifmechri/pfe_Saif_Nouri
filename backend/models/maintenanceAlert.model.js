@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const createMaintenanceAlert = async ({ vehicleId, userId, alertType, kmTrigger, daysTrigger, lastKm, lastDate }) => {
   const result = await pool.query(
@@ -104,3 +104,5 @@ module.exports = {
   deleteAlert,
   checkDueAlerts
 };
+
+

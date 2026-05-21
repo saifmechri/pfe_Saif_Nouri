@@ -1,5 +1,10 @@
-let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, recommendationRoutes, garageRoutes, chatRoutes;
-let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes;
+﻿// CENTRAL ROUTE REGISTRY
+// This file loads and registers all backend API routes.
+
+let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, garageRoutes, chatRoutes;
+let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes, maintenanceRoutes, reportRoutes;
+let adminRoutes;
+let publicRoutes;
 
 try {
   authRoutes = require('./auth');
@@ -25,10 +30,11 @@ try {
   console.error('[routes/index] Error loading pieces:', e.message);
 }
 
+
 try {
-  recommendationRoutes = require('./recommendations');
+  publicRoutes = require('./public');
 } catch (e) {
-  console.error('[routes/index] Error loading recommendations:', e.message);
+  console.error('[routes/index] Error loading public routes:', e.message);
 }
 
 try {
@@ -61,6 +67,24 @@ try {
   console.error('[routes/index] Error loading maintenanceAlerts:', e.message);
 }
 
+try {
+  adminRoutes = require('./admin');
+} catch (e) {
+  console.error('[routes/index] Error loading admin routes:', e.message);
+}
+
+try {
+  maintenanceRoutes = require('./maintenance.routes');
+} catch (e) {
+  console.error('[routes/index] Error loading maintenance:', e.message);
+}
+
+try {
+  reportRoutes = require('./reports');
+} catch (e) {
+  console.error('[routes/index] Error loading reports:', e.message);
+}
+
 const registerRoutes = (app) => {
   console.log('[registerRoutes] CALLED - debug mode', process.env.DEBUG_ROUTES ? 'ON' : 'OFF');
   const debug = process.env.DEBUG_ROUTES;
@@ -77,10 +101,11 @@ const registerRoutes = (app) => {
     if (debug) console.log('[registerRoutes] Mounting /api/pieces');
     app.use('/api/pieces', pieceRoutes);
   }
-  if (recommendationRoutes) {
-    if (debug) console.log('[registerRoutes] Mounting /api/recommendations');
-    app.use('/api/recommendations', recommendationRoutes);
+  if (publicRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/public');
+    app.use('/api/public', publicRoutes);
   }
+  // Dynamic recommendations API removed
   if (garageRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/garages');
     app.use('/api/garages', garageRoutes);
@@ -88,9 +113,9 @@ const registerRoutes = (app) => {
   if (chatRoutes) {
     console.log('[registerRoutes] Mounting /api/chat - chatRoutes is:', typeof chatRoutes);
     app.use('/api/chat', chatRoutes);
-    console.log('[registerRoutes] ✓ /api/chat mounted');
+    console.log('[registerRoutes] ✅ /api/chat mounted');
   } else {
-    console.log('[registerRoutes] ✗ chatRoutes is undefined or falsy');
+    console.log('[registerRoutes] ❌ chatRoutes is undefined or falsy');
   }
   if (notificationRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/notifications');
@@ -104,9 +129,30 @@ const registerRoutes = (app) => {
     if (debug) console.log('[registerRoutes] Mounting /api/maintenance-alerts');
     app.use('/api/maintenance-alerts', maintenanceAlertRoutes);
   }
+  if (reportRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/reports');
+    app.use('/api/reports', reportRoutes);
+  }
+  if (!adminRoutes) {
+    try {
+      adminRoutes = require('./admin');
+    } catch (e) {
+      console.error('[registerRoutes] Error loading admin routes at mount time:', e.message);
+    }
+  }
+  if (adminRoutes) {
+    console.log('[registerRoutes] Mounting /api/admin - adminRoutes is:', typeof adminRoutes);
+    app.use('/api/admin', adminRoutes);
+  } else {
+    console.log('[registerRoutes] ❌ adminRoutes is undefined or falsy');
+  }
   if (interventionRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/vehicules/:vehicleId/interventions');
     app.use('/api/vehicules/:vehicleId/interventions', interventionRoutes);
+  }
+  if (maintenanceRoutes) {
+    if (debug) console.log('[registerRoutes] Mounting /api/maintenance');
+    app.use('/api/maintenance', maintenanceRoutes);
   }
   
   if (debug) console.log('[registerRoutes] All routes registered. App router stack length:', app._router?.stack?.length || 0);
@@ -115,3 +161,5 @@ const registerRoutes = (app) => {
 module.exports = {
   registerRoutes
 };
+
+

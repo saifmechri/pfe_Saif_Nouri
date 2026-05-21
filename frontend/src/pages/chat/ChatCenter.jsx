@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import PlatformLayout from "../../components/PlatformLayout";
 import { AuthContext } from "../../context/AuthContext";
@@ -32,7 +32,8 @@ const formatTime = (value) => {
 const humanRole = {
   automobiliste: "Automobiliste",
   garage: "Garage",
-  vendeur: "Vendeur"
+  vendeur: "Vendeur",
+  admin: "Administrateur"
 };
 
 const ChatCenter = () => {
@@ -426,6 +427,12 @@ const ChatCenter = () => {
                     {humanRole[selectedConversation.counterpart.role]}
                   </p>
                 )}
+                {selectedConversation?.counterpart && (
+                  <div className="mt-1 space-y-0.5 text-xs text-[#617089]">
+                    {selectedConversation.counterpart.phone && <p>Téléphone: {selectedConversation.counterpart.phone}</p>}
+                    {selectedConversation.counterpart.email && <p>Email: {selectedConversation.counterpart.email}</p>}
+                  </div>
+                )}
               </div>
 
               <div ref={messagesContainerRef} className="mt-4 flex-1 space-y-3 overflow-y-auto rounded-lg bg-[#f8fbff] p-3">
@@ -479,3 +486,5 @@ const ChatCenter = () => {
 };
 
 export default ChatCenter;
+
+

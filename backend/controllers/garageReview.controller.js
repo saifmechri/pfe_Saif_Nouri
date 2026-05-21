@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
@@ -147,6 +147,61 @@ const listGarageReviews = asyncHandler(async (req, res) => {
 });
 
 const listMyGarageReviews = asyncHandler(async (req, res) => {
+  if (req.user?.role === 'admin') {
+    const requestedGarageId = Number.parseInt(req.query?.garageId, 10);
+    let myGarage = null;
+
+    if (Number.isInteger(requestedGarageId) && requestedGarageId > 0) {
+      myGarage = await findGarageIdentityById(requestedGarageId);
+    } else {
+      const latestGarageResult = await pool.query(
+        `SELECT id, user_id
+         FROM garages
+         ORDER BY created_at DESC
+         LIMIT 1`
+      );
+      myGarage = latestGarageResult.rows[0] || null;
+    }
+
+    if (!myGarage) {
+      throw new AppError('Profil garage introuvable pour cet utilisateur', 404, 'GARAGE_PROFILE_NOT_FOUND');
+    }
+
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 10));
+    const offset = (page - 1) * limit;
+    const includeHidden = ['true', '1', 'yes', 'on'].includes(String(req.query.includeHidden || '').toLowerCase());
+
+    const result = await pool.query(
+      `SELECT r.id, r.garage_id, r.user_id, r.rating, r.comment, r.is_published, r.created_at, r.updated_at,
+              u.name AS reviewer_name, u.email AS reviewer_email, u.phone AS reviewer_phone,
+              COUNT(*) OVER() AS total_count
+       FROM garage_reviews r
+       LEFT JOIN users u ON u.id = r.user_id
+       WHERE r.garage_id = $1 ${includeHidden ? '' : 'AND r.is_published = true'}
+       ORDER BY r.created_at DESC
+       LIMIT $2
+       OFFSET $3`,
+      [myGarage.id, limit, offset]
+    );
+
+    const totalItems = result.rows.length > 0 ? Number(result.rows[0].total_count) : 0;
+
+    return sendApiResponse(res, {
+      message: 'Liste de vos avis recuperee avec succes',
+      data: {
+        garage_id: Number(myGarage.id),
+        items: result.rows.map(mapReviewRow),
+        pagination: {
+          page,
+          limit,
+          totalItems,
+          totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / limit)
+        }
+      }
+    });
+  }
+
   const currentUserId = Number(req.user?.id);
   if (!Number.isInteger(currentUserId) || currentUserId <= 0) {
     throw new AppError('Utilisateur authentifie invalide', 401, 'INVALID_AUTH_USER');
@@ -194,8 +249,8 @@ const createGarageReview = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant garage invalide', 400, 'INVALID_GARAGE_ID');
   }
 
-  if (req.user?.role !== 'automobiliste') {
-    throw new AppError('Seuls les automobilistes peuvent laisser un avis', 403, 'FORBIDDEN_ROLE');
+  if (!['automobiliste', 'admin'].includes(req.user?.role)) {
+    throw new AppError('Seuls les automobilistes et administrateurs peuvent laisser un avis', 403, 'FORBIDDEN_ROLE');
   }
 
   await getGarageById(garageId);
@@ -326,3 +381,5 @@ module.exports = {
   updateGarageReview,
   deleteGarageReview
 };
+
+

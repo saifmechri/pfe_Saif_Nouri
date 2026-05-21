@@ -1,4 +1,4 @@
-const maintenanceAlertModel = require('../models/maintenanceAlert.model');
+﻿const maintenanceAlertModel = require('../models/maintenanceAlert.model');
 const notificationService = require('./notificationService');
 
 const create = async (payload) => {
@@ -67,3 +67,5 @@ module.exports = {
   remove,
   checkAndNotifyDueAlerts
 };
+
+

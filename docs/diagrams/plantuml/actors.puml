@@ -1,0 +1,38 @@
+@startuml
+left to right direction
+
+actor Visiteur
+actor Automobiliste
+actor "Automobiliste\n(authentifié)" as AutomobilisteAuth
+actor Garage
+actor "Garage Owner" as GarageOwner
+actor Vendeur
+actor "Vendeur Commercial" as VendeurCommercial
+actor Admin
+actor "Admin Moderateur" as AdminModerateur
+actor "Admin Systeme" as AdminSystem
+
+Automobiliste <|-- AutomobilisteAuth
+Automobiliste <|-- Visiteur
+GarageOwner <|-- Garage
+VendeurCommercial <|-- Vendeur
+AdminModerateur <|-- Admin
+AdminSystem <|-- Admin
+
+note right of Automobiliste
+  Utilisateur final (automobiliste)
+end note
+
+note right of Garage
+  Garage (entite commerciale)
+end note
+
+note right of Vendeur
+  Vendeur / Fournisseur de pieces
+end note
+
+note right of Admin
+  Administrateur plateforme (moderation, gestion)
+end note
+
+@enduml

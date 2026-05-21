@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test file for distance calculator utility
  * Tests the Haversine formula and distance formatting functions
  */
@@ -51,3 +51,5 @@ distances.forEach(dist => {
 });
 
 console.log("\n=== All tests completed ===");
+
+

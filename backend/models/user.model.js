@@ -1,11 +1,11 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const createUser = async ({ name, email, password, phone, roleId }) => {
   const result = await pool.query(
-    `INSERT INTO users(name, email, password, phone, role_id)
-     VALUES($1, $2, $3, $4, $5)
+    `INSERT INTO users(name, email, password, phone, role_id, is_validated)
+     VALUES($1, $2, $3, $4, $5, $6)
      RETURNING id, name, email, phone, role_id, created_at`,
-    [name, email, password, phone, roleId]
+    [name, email, password, phone, roleId, true]
   );
 
   return result.rows[0] || null;
@@ -13,7 +13,7 @@ const createUser = async ({ name, email, password, phone, roleId }) => {
 
 const findUserByEmail = async (email) => {
   const result = await pool.query(
-    `SELECT u.*, r.name as role_name
+    `SELECT u.id, u.name, u.email, u.password, u.phone, u.role_id, u.is_validated, u.store_name, u.store_address, u.store_description, u.store_hours, u.store_specialties, u.store_services, u.created_at, u.updated_at, r.name as role_name
      FROM users u
      JOIN roles r ON u.role_id = r.id
      WHERE u.email = $1`,
@@ -60,3 +60,5 @@ module.exports = {
   findUserForAuthById,
   hasRole
 };
+
+

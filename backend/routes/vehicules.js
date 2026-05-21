@@ -1,4 +1,4 @@
-const express = require("express");
+﻿const express = require("express");
 const router = express.Router();
 const { verifyToken } = require("../middlewares/authMiddleware");
 const { uploadVehiculePhoto } = require("../middlewares/uploadVehiculePhoto");
@@ -23,3 +23,4 @@ router.put("/:id", verifyToken, uploadVehiculePhoto.single("photo"), updateVehic
 router.delete("/:id", verifyToken, deleteVehicule);
 
 module.exports = router;
+

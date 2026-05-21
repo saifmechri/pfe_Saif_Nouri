@@ -1,4 +1,4 @@
-const { pool } = require("../db");
+﻿const { pool } = require("../db");
 const bcrypt = require("bcrypt");
 const { sendApiResponse } = require("../utils/apiResponse");
 
@@ -332,3 +332,5 @@ module.exports = {
   deleteProfile,
   changePassword 
 };
+
+

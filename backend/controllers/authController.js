@@ -1,7 +1,14 @@
+﻿/**
+ * AUTHENTICATION CONTROLLER
+ * Handles user registration, login, and account management
+ * Supports 3 roles: automobiliste, garage, admin
+ */
+
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { sendApiResponse } = require("../utils/apiResponse");
 const { createUser, emailExists, findUserByEmail } = require("../models/user.model");
+const { pool } = require("../db");
 
 const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
 
@@ -117,19 +124,25 @@ const login = async (req, res) => {
       });
     }
 
+    console.log('[LOGIN ATTEMPT] Email:', email);
+
     // Récupérer l'utilisateur ET son rôle
     const user = await findUserByEmail(email);
     
     if (!user) {
+      console.log('[LOGIN FAIL] Utilisateur non trouvé:', email);
       return sendApiResponse(res, {
-        statusCode: 400,
+        statusCode: 401,
         success: false,
-        message: "User not found",
-        error: { code: 'USER_NOT_FOUND' }
+        message: "Email ou mot de passe incorrect",
+        error: { code: 'INVALID_PASSWORD' }
       });
     }
 
+    console.log('[LOGIN] Utilisateur trouvé:', user.id, 'Email:', user.email);
+
     if (!user.password || !isValidBcryptHash(user.password)) {
+      console.log('[LOGIN FAIL] Mot de passe invalide/absent:', user.id);
       return sendApiResponse(res, {
         statusCode: 400,
         success: false,
@@ -141,13 +154,48 @@ const login = async (req, res) => {
     // Comparer le mot de passe avec bcrypt
     const isPasswordValid = await bcrypt.compare(password, user.password);
     
+    console.log('[LOGIN] Comparaison password:', isPasswordValid ? 'VALID' : 'INVALID');
+    
     if (!isPasswordValid) {
+      console.log('[LOGIN FAIL] Mot de passe incorrect pour ID:', user.id);
       return sendApiResponse(res, {
-        statusCode: 400,
+        statusCode: 401,
         success: false,
-        message: "Wrong password",
+        message: "Email ou mot de passe incorrect",
         error: { code: 'INVALID_PASSWORD' }
       });
+    }
+
+    // Vérifier que le compte n'est pas bloqué
+    if (!user.is_validated) {
+      console.log('[LOGIN FAIL] Compte bloqué pour ID:', user.id);
+      return sendApiResponse(res, {
+        statusCode: 403,
+        success: false,
+        message: "Ce compte a été bloqué par l'administrateur. Veuillez contacter le support.",
+        error: { code: 'ACCOUNT_BLOCKED' }
+      });
+    }
+
+    // Vérifier l'état du garage si l'utilisateur est garage
+    if (user.role_name === 'garage') {
+      const { findGarageIdentityByUserId } = require('../models/garage.model');
+      const garage = await findGarageIdentityByUserId(user.id);
+      
+      if (garage) {
+        const garageDetail = await pool.query('SELECT is_open FROM garages WHERE id = $1', [garage.id]);
+        const garageData = garageDetail.rows[0];
+        
+        if (garageData && !garageData.is_open) {
+          console.log('[LOGIN FAIL] Garage bloqué pour user ID:', user.id);
+          return sendApiResponse(res, {
+            statusCode: 403,
+            success: false,
+            message: "Votre garage a été bloqué par l'administrateur. Veuillez contacter le support.",
+            error: { code: 'GARAGE_BLOCKED' }
+          });
+        }
+      }
     }
 
     // Générer le token JWT
@@ -207,3 +255,4 @@ const login = async (req, res) => {
 };
 
 module.exports = { register, login };
+

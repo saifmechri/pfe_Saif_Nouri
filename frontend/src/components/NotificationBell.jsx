@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, CheckCheck, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
@@ -55,7 +55,8 @@ const formatNotificationDate = (rawDate) => {
 const chatRouteByRole = {
   automobiliste: "/automobiliste/messages",
   garage: "/garage/messages",
-  vendeur: "/vendeur/messages"
+  vendeur: "/vendeur/messages",
+  admin: "/automobiliste/messages"
 };
 
 const NotificationBell = () => {
@@ -138,6 +139,7 @@ const NotificationBell = () => {
 
   const handleNotificationOpen = (item) => {
     const conversationId = Number(item?.metadata?.conversationId || item?.reference_id);
+    const appointmentId = Number(item?.metadata?.appointmentId || item?.reference_id);
 
     if (item?.type === "message" && Number.isInteger(conversationId) && conversationId > 0) {
       void handleMarkAsRead(item.id);
@@ -146,6 +148,14 @@ const NotificationBell = () => {
       if (targetPath) {
         navigate(`${targetPath}?conversationId=${conversationId}`);
       }
+      setIsOpen(false);
+      return;
+    }
+
+    if (item?.type === "appointment" && Number.isInteger(appointmentId) && appointmentId > 0) {
+      void handleMarkAsRead(item.id);
+
+      navigate(`/appointments/${appointmentId}`);
     }
 
     setIsOpen(false);
@@ -252,11 +262,11 @@ const NotificationBell = () => {
                   return (
                     <li
                       key={item.id}
-                      role={item.type === "message" ? "button" : undefined}
-                      tabIndex={item.type === "message" ? 0 : undefined}
+                      role={item.type === "message" || item.type === "appointment" ? "button" : undefined}
+                      tabIndex={item.type === "message" || item.type === "appointment" ? 0 : undefined}
                       onClick={() => handleNotificationOpen(item)}
                       onKeyDown={(event) => {
-                        if (item.type !== "message") {
+                        if (item.type !== "message" && item.type !== "appointment") {
                           return;
                         }
 
@@ -327,3 +337,5 @@ const NotificationBell = () => {
 };
 
 export default NotificationBell;
+
+

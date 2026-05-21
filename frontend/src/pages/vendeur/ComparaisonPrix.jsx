@@ -1,9 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext";
 import PlatformLayout from "../../components/PlatformLayout";
 import { comparePieceAcrossVendors } from "../../services/pieces";
+import { extractConversationAndMessages, startChatConversation } from "../../services/chat";
+
+const chatRouteByRole = {
+  automobiliste: "/automobiliste/messages",
+  garage: "/garage/messages",
+  vendeur: "/vendeur/messages",
+  admin: "/vendeur/messages"
+};
 
 const ComparaisonPrix = () => {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -98,6 +108,61 @@ const ComparaisonPrix = () => {
   };
 
   const getSellerPhone = (offer) => offer?.vendeur?.telephone || "-";
+
+  const getSellerOwnerId = (offer) => {
+    if (!offer) return null;
+
+    const vendorProfile = offer?.vendeur && typeof offer.vendeur === "object" ? offer.vendeur : null;
+    const directCandidates = [
+      vendorProfile?.id,
+      offer?.user_id,
+      offer?.vendeur_user_id,
+      offer?.vendor_user_id,
+      offer?.seller_user_id,
+      offer?.owner_id,
+      offer?.vendeur_id,
+      offer?.vendor_id,
+      offer?.seller_id
+    ];
+
+    return directCandidates
+      .map((value) => Number.parseInt(value, 10))
+      .find((value) => Number.isFinite(value) && value > 0) || null;
+  };
+
+  const handleContactSeller = async () => {
+    const sellerUserId = getSellerOwnerId(selectedOffer);
+    const targetMessagesPath = chatRouteByRole[user?.role] || "/login";
+
+    if (!user?.role || !["automobiliste", "vendeur", "garage", "admin"].includes(user.role)) {
+      navigate("/login");
+      return;
+    }
+
+    if (!sellerUserId) {
+      setError("Impossible de trouver le vendeur pour demarrer le chat.");
+      return;
+    }
+
+    try {
+      setError("");
+      const response = await startChatConversation({
+        conversationType: "automobiliste_vendeur",
+        vendeurId: Number(sellerUserId),
+        historyLimit: 50
+      });
+
+      const { conversation } = extractConversationAndMessages(response);
+      if (conversation?.id) {
+        navigate(`${targetMessagesPath}?conversationId=${conversation.id}`);
+        return;
+      }
+
+      navigate(targetMessagesPath);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Impossible de contacter le vendeur par chat.");
+    }
+  };
 
   const submitSearch = (event) => {
     event.preventDefault();
@@ -281,6 +346,15 @@ const ComparaisonPrix = () => {
                       <p><span className="font-semibold text-slate-900">État:</span> {selectedOffer?.condition || "-"}</p>
                       <p><span className="font-semibold text-slate-900">Catégorie:</span> {selectedOffer?.categorie || "-"}</p>
                     </div>
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={handleContactSeller}
+                        className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
+                      >
+                        Contacter le vendeur
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -293,3 +367,5 @@ const ComparaisonPrix = () => {
 };
 
 export default ComparaisonPrix;
+
+

@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+﻿import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { updateProfile, changePassword, deleteAccount } from '../../services/user';
@@ -260,3 +260,4 @@ const Profil = () => {
 };
 
 export default Profil;
+

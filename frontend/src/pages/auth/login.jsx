@@ -1,10 +1,11 @@
-import { useState, useContext } from "react";
+﻿import { useState, useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 
 const Login = () => {
-  const { login } = useContext(AuthContext);
+  const { login, loginAdmin } = useContext(AuthContext);
   const navigate = useNavigate();
+  const adminEmail = "admin123@gmail.com";
 
   const [form, setForm] = useState({
     email: "",
@@ -36,10 +37,35 @@ const Login = () => {
 
     setLoading(true);
     try {
-      await login(form);
-      navigate("/dashboard");
+      if (form.email.trim().toLowerCase() === adminEmail) {
+        await loginAdmin(form);
+        navigate("/admin", { replace: true });
+      } else {
+        await login(form);
+        navigate("/dashboard", { replace: true });
+      }
     } catch (err) {
-      setError("Email ou mot de passe incorrect");
+      const errorCode = err?.response?.data?.error?.code;
+      const backendMessage = err?.response?.data?.message;
+      
+      if (errorCode === 'ACCOUNT_NOT_VALIDATED') {
+        setError("Votre compte est en attente de validation par l'administrateur.");
+      } else if (errorCode === 'ACCOUNT_BLOCKED') {
+        setError("Ce compte est bloqué. Veuillez contacter l'administrateur.");
+      } else if (errorCode === 'GARAGE_BLOCKED') {
+        setError("Ce garage est bloqué. L'accès est refusé.");
+      } else if (errorCode === 'USER_NOT_FOUND' || errorCode === 'INVALID_PASSWORD') {
+        setError("Email ou mot de passe incorrect.");
+      } else if (errorCode === 'ACCOUNT_INCOMPLETE') {
+        setError("Votre compte n'est pas complet. Contactez le support.");
+      } else if (backendMessage) {
+        setError(backendMessage);
+      } else {
+        setError("Erreur de connexion. Veuillez réessayer.");
+      }
+      if (!['ACCOUNT_BLOCKED', 'GARAGE_BLOCKED'].includes(errorCode)) {
+        console.error('Login error:', err?.response?.data || err);
+      }
     } finally {
       setLoading(false);
     }
@@ -124,3 +150,4 @@ const Login = () => {
 };
 
 export default Login;
+

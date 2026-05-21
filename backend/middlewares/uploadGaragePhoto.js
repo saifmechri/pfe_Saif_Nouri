@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 
@@ -45,3 +45,5 @@ const uploadGaragePhoto = multer({
 });
 
 module.exports = { uploadGaragePhoto };
+
+

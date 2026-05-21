@@ -1,4 +1,4 @@
-const sendApiResponse = (res, { statusCode = 200, success = true, message = '', data = null, error = null, extra = {} }) => {
+﻿const sendApiResponse = (res, { statusCode = 200, success = true, message = '', data = null, error = null, extra = {} }) => {
   return res.status(statusCode).json({
     success,
     message,
@@ -9,3 +9,4 @@ const sendApiResponse = (res, { statusCode = 200, success = true, message = '', 
 };
 
 module.exports = { sendApiResponse };
+

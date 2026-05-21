@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const findGarageIdentityById = async (garageId) => {
   const result = await pool.query('SELECT id, user_id FROM garages WHERE id = $1', [garageId]);
@@ -14,3 +14,5 @@ module.exports = {
   findGarageIdentityById,
   findGarageIdentityByUserId
 };
+
+

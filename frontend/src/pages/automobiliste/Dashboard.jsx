@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import {
   getVehicules,
   createVehicule,
@@ -6,14 +6,29 @@ import {
   deleteVehicule,
   getInterventionsByVehicle,
   createIntervention,
-  getPieces
 } from "../../services/vehicule";
-import { useNavigate } from "react-router-dom";
+import interventionsApi from "../../services/interventions";
+import { useNavigate, useLocation } from "react-router-dom";
 import PlatformLayout from "../../components/PlatformLayout";
+import { listAppointments, deleteAppointment } from "../../services/appointments";
+import { Calendar, Clock, MapPin, Trash2, Plus, ChevronRight } from "lucide-react";
+import dayjs from "dayjs";
+import "dayjs/locale/fr";
+import { formatAppointmentDate, parseAppointmentNotes } from "../../utils/appointmentConstants";
+dayjs.locale("fr");
 
 const AutomobilisteDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("vehicules");
+
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get("tab");
+    const allowedTabs = ["vehicules", "historique", "rendezvous"];
+    if (tab && allowedTabs.includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   const backendBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api\/?$/, "");
 
@@ -38,13 +53,12 @@ const AutomobilisteDashboard = () => {
   const [historiqueError, setHistoriqueError] = useState("");
   const [historiqueLoaded, setHistoriqueLoaded] = useState(false);
   const [historiqueByVehicule, setHistoriqueByVehicule] = useState([]);
+  const [interventionDeletingId, setInterventionDeletingId] = useState(null);
 
   // États pour la création d'intervention
   const [showInterventionForm, setShowInterventionForm] = useState(false);
   const [interventionLoading, setInterventionLoading] = useState(false);
   const [interventionError, setInterventionError] = useState("");
-  const [pieces, setPieces] = useState([]);
-  const [piecesLoading, setPiecesLoading] = useState(false);
   const [interventionFormData, setInterventionFormData] = useState({
     vehicleId: "",
     date_intervention: "",
@@ -53,7 +67,8 @@ const AutomobilisteDashboard = () => {
     garage_nom: "",
     garage_adresse: "",
     kilometrage: "",
-    pieces: []
+    cout_total: "",
+    pieces_libres: "",
   });
 
   // États pour le formulaire
@@ -61,6 +76,9 @@ const AutomobilisteDashboard = () => {
   const [editingId, setEditingId] = useState(null);
   const [selectedPhotoFile, setSelectedPhotoFile] = useState(null);
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState("");
+  const [appointments, setAppointments] = useState([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(false);
+  const [appointmentsError, setAppointmentsError] = useState("");
   const [formData, setFormData] = useState({
     modele_voiture: "",
     matricule_voiture: "",
@@ -68,22 +86,48 @@ const AutomobilisteDashboard = () => {
     photo_voiture: ""
   });
 
+  // Fetch appointments
+  const fetchAppointments = async () => {
+    setAppointmentsLoading(true);
+    setAppointmentsError("");
+    try {
+      const res = await listAppointments({ limit: 50 });
+      const items = res.data?.data?.items || res.data?.data || res.data || [];
+      const nextItems = Array.isArray(items) ? items : [];
+      setAppointments(nextItems);
+    } catch (err) {
+      setAppointmentsError(err.response?.data?.message || "Erreur lors du chargement des rendez-vous");
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
+  const handleDeleteAppointment = async (id) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce rendez-vous ?")) return;
+    try {
+      await deleteAppointment(id);
+      await fetchAppointments();
+    } catch (err) {
+      alert(err.response?.data?.message || "Erreur lors de la suppression");
+    }
+  };
+
   // Charger les véhicules au montage
   useEffect(() => {
     fetchVehicules();
   }, []);
 
   useEffect(() => {
+    if (activeTab === "rendezvous") {
+      fetchAppointments();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
     if (activeTab === "historique" && !historiqueLoaded) {
       fetchHistorique();
     }
   }, [activeTab, historiqueLoaded]);
-
-  useEffect(() => {
-    if (activeTab === "historique" && showInterventionForm && pieces.length === 0 && !piecesLoading) {
-      fetchPieces();
-    }
-  }, [activeTab, showInterventionForm, pieces.length, piecesLoading]);
 
   const fetchVehicules = async () => {
     setLoading(true);
@@ -101,6 +145,9 @@ const AutomobilisteDashboard = () => {
   const fetchHistorique = async () => {
     setHistoriqueLoading(true);
     setHistoriqueError("");
+    // Clear previous snapshot to avoid duplicates while reloading
+    setHistoriqueByVehicule([]);
+    setHistoriqueLoaded(false);
 
     try {
       let vehiculesList = vehicules;
@@ -120,10 +167,10 @@ const AutomobilisteDashboard = () => {
 
       const historiquePromises = vehiculesList.map(async (vehicule) => {
         try {
-          const res = await getInterventionsByVehicle(vehicule.id);
+          const interventions = await getInterventionsByVehicle(vehicule.id);
           return {
             vehicule,
-            interventions: Array.isArray(res.data) ? res.data : [],
+            interventions: Array.isArray(interventions) ? interventions : [],
             error: ""
           };
         } catch (err) {
@@ -145,15 +192,95 @@ const AutomobilisteDashboard = () => {
     }
   };
 
-  const fetchPieces = async () => {
-    setPiecesLoading(true);
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setSelectedPhotoFile(null);
+    setSelectedPhotoPreview("");
+    setFormData({
+      modele_voiture: "",
+      matricule_voiture: "",
+      kilometrage_voiture: "",
+      photo_voiture: ""
+    });
+  };
+
+  const handleAddVehicleClick = () => {
+    setError("");
+    setEditingId(null);
+    setSelectedPhotoFile(null);
+    setSelectedPhotoPreview("");
+    setFormData({
+      modele_voiture: "",
+      matricule_voiture: "",
+      kilometrage_voiture: "",
+      photo_voiture: ""
+    });
+    setShowForm(true);
+  };
+
+  const handleEditClick = (vehicule) => {
+    setError("");
+    setEditingId(vehicule.id);
+    setSelectedPhotoFile(null);
+    setSelectedPhotoPreview(vehicule.photo_voiture ? getVehiclePhotoUrl(vehicule.photo_voiture) : "");
+    setFormData({
+      modele_voiture: vehicule.modele_voiture || "",
+      matricule_voiture: vehicule.matricule_voiture || "",
+      kilometrage_voiture: vehicule.kilometrage_voiture ?? "",
+      photo_voiture: vehicule.photo_voiture || ""
+    });
+    setShowForm(true);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedPhotoFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setSelectedPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
     try {
-      const res = await getPieces();
-      setPieces(Array.isArray(res.data) ? res.data : []);
+      const multipartData = new FormData();
+      multipartData.append("modele_voiture", formData.modele_voiture);
+      multipartData.append("matricule_voiture", formData.matricule_voiture);
+      multipartData.append("kilometrage_voiture", formData.kilometrage_voiture || "");
+      if (selectedPhotoFile) {
+        multipartData.append("photo", selectedPhotoFile);
+      }
+
+      if (editingId) {
+        await updateVehicule(editingId, multipartData);
+        setSuccessMessage("Véhicule modifié avec succès");
+      } else {
+        await createVehicule(multipartData);
+        setSuccessMessage("Véhicule ajouté avec succès");
+      }
+      await fetchVehicules();
+      resetForm();
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
-      setInterventionError(err.response?.data?.message || "Erreur lors du chargement des pièces");
+      setError(err.response?.data?.message || "Erreur lors de la sauvegarde");
     } finally {
-      setPiecesLoading(false);
+      setLoading(false);
     }
   };
 
@@ -185,12 +312,9 @@ const AutomobilisteDashboard = () => {
       garage_nom: "",
       garage_adresse: "",
       kilometrage: "",
-      pieces: []
+      cout_total: "",
+      pieces_libres: "",
     });
-
-    if (pieces.length === 0) {
-      fetchPieces();
-    }
 
     setShowInterventionForm(true);
   };
@@ -198,27 +322,6 @@ const AutomobilisteDashboard = () => {
   const handleInterventionFieldChange = (e) => {
     const { name, value } = e.target;
     setInterventionFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const addPieceLine = () => {
-    setInterventionFormData((prev) => ({
-      ...prev,
-      pieces: [...prev.pieces, { pieceId: "", quantite: 1, prix_unitaire: "" }]
-    }));
-  };
-
-  const removePieceLine = (index) => {
-    setInterventionFormData((prev) => ({
-      ...prev,
-      pieces: prev.pieces.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handlePieceFieldChange = (index, field, value) => {
-    setInterventionFormData((prev) => ({
-      ...prev,
-      pieces: prev.pieces.map((piece, i) => (i === index ? { ...piece, [field]: value } : piece))
-    }));
   };
 
   const resetInterventionForm = () => {
@@ -232,32 +335,56 @@ const AutomobilisteDashboard = () => {
       garage_nom: "",
       garage_adresse: "",
       kilometrage: "",
-      pieces: []
+      cout_total: "",
+      pieces_libres: "",
     });
   };
 
+  /**
+   * INTERVENTION FORM SUBMISSION HANDLER
+   * 
+   * Processes the new intervention (maintenance record) form and saves to backend.
+   * 
+   * FORM FIELDS:
+   * - date_intervention: Date of maintenance work
+   * - type: vidange, revision, reparation, etc.
+   * - garage_nom: Garage name
+   * - garage_adresse: Garage location
+   * - kilometrage: Vehicle mileage when maintenance done
+   * - description: Detailed notes about work performed
+  * - cout_total: Total cost of the intervention
+  * - pieces_libres: Manual free-text parts used
+   * PROCESS:
+   * 1. Validate all required fields
+  * 2. Append pieces_libres to the description when provided
+  * 3. Send to backend API
+  * 4. Update vehicle intervention history
+  * 5. Show success/error message to user
+   * 
+   * USAGE:
+   * User fills form and clicks "Enregistrer".
+   * Intervention appears in vehicle history and contributes to maintenance timeline.
+   */
   const handleInterventionSubmit = async (e) => {
     e.preventDefault();
     setInterventionLoading(true);
     setInterventionError("");
 
     try {
-      const cleanedPieces = interventionFormData.pieces
-        .filter((p) => p.pieceId)
-        .map((p) => ({
-          pieceId: Number(p.pieceId),
-          quantite: p.quantite ? Number(p.quantite) : 1,
-          ...(p.prix_unitaire !== "" ? { prix_unitaire: Number(p.prix_unitaire) } : {})
-        }));
+      const manualPiecesText = String(interventionFormData.pieces_libres || "").trim();
+      const mergedDescription = [
+        interventionFormData.description?.trim(),
+        manualPiecesText ? `Pièces utilisées: ${manualPiecesText}` : ""
+      ].filter(Boolean).join("\n\n");
 
       const payload = {
         date_intervention: interventionFormData.date_intervention || undefined,
         type: interventionFormData.type,
-        description: interventionFormData.description || undefined,
+        description: mergedDescription || undefined,
         garage_nom: interventionFormData.garage_nom || undefined,
         garage_adresse: interventionFormData.garage_adresse || undefined,
         kilometrage: interventionFormData.kilometrage !== "" ? Number(interventionFormData.kilometrage) : undefined,
-        pieces: cleanedPieces
+        cout_total: interventionFormData.cout_total !== "" ? Number(interventionFormData.cout_total) : undefined,
       };
 
       await createIntervention(Number(interventionFormData.vehicleId), payload);
@@ -278,83 +405,25 @@ const AutomobilisteDashboard = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      modele_voiture: "",
-      matricule_voiture: "",
-      kilometrage_voiture: "",
-      photo_voiture: ""
-    });
-    setSelectedPhotoFile(null);
-    setSelectedPhotoPreview("");
-    setEditingId(null);
-    setShowForm(false);
+  const handleEditIntervention = (vehicleId, interventionId) => {
+    navigate(`/vehicules/${vehicleId}/interventions/${interventionId}?edit=1`);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleAddClick = () => {
-    resetForm();
-    setShowForm(true);
-  };
-
-  const handleEditClick = (vehicule) => {
-    setFormData({
-      modele_voiture: vehicule.modele_voiture,
-      matricule_voiture: vehicule.matricule_voiture,
-      kilometrage_voiture: vehicule.kilometrage_voiture || "",
-      photo_voiture: vehicule.photo_voiture || ""
-    });
-    setSelectedPhotoFile(null);
-    setSelectedPhotoPreview(vehicule.photo_voiture || "");
-    setEditingId(vehicule.id);
-    setShowForm(true);
-  };
-
-  const handlePhotoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    setSelectedPhotoFile(file);
-    setSelectedPhotoPreview(URL.createObjectURL(file));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
+  const handleDeleteIntervention = async (vehicleId, interventionId) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette intervention ?")) return;
+    
+    setInterventionDeletingId(interventionId);
     try {
-      const multipartData = new FormData();
-      multipartData.append("modele_voiture", formData.modele_voiture);
-      multipartData.append("matricule_voiture", formData.matricule_voiture);
-      multipartData.append("kilometrage_voiture", formData.kilometrage_voiture || "");
-      if (selectedPhotoFile) {
-        multipartData.append("photo", selectedPhotoFile);
-      }
-
-      if (editingId) {
-        await updateVehicule(editingId, multipartData);
-        setSuccessMessage("Véhicule modifié avec succès");
-      } else {
-        await createVehicule(multipartData);
-        setSuccessMessage("Véhicule ajouté avec succès");
-      }
-      await fetchVehicules();
-      resetForm();
+      await interventionsApi.deleteIntervention(vehicleId, interventionId);
+      window.dispatchEvent(new CustomEvent('maintenance:refresh', { detail: { vehicleId } }));
+      setSuccessMessage("Intervention supprimée avec succès");
+      setHistoriqueLoaded(false);
+      await fetchHistorique();
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || "Erreur lors de la sauvegarde");
+      setInterventionError(err.response?.data?.message || "Erreur lors de la suppression");
     } finally {
-      setLoading(false);
+      setInterventionDeletingId(null);
     }
   };
 
@@ -417,12 +486,7 @@ const AutomobilisteDashboard = () => {
             >
               Garages
             </button>
-            <button
-              onClick={() => navigate("/automobiliste/recommandations")}
-              className="vb-btn-primary ml-auto px-4 py-2 text-sm"
-            >
-              Recommandations dynamiques
-            </button>
+            {/* Bouton Recommandations dynamiques supprimé */}
           </div>
 
         {/* Contenu des onglets */}
@@ -432,7 +496,8 @@ const AutomobilisteDashboard = () => {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Mes véhicules</h2>
                 <button 
-                  onClick={handleAddClick}
+                  type="button"
+                  onClick={handleAddVehicleClick}
                   disabled={loading}
                   className="vb-btn-primary px-4 py-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -540,6 +605,12 @@ const AutomobilisteDashboard = () => {
                     {v.kilometrage_voiture !== null && <p className="text-gray-600">Kilometrage : {v.kilometrage_voiture} km</p>}
                     <div className="mt-3 flex space-x-2">
                       <button 
+                        onClick={() => navigate(`/vehicules/${v.id}/alerts`)}
+                        className="flex-1 px-2 py-1 text-sm bg-orange-100 text-orange-700 hover:bg-orange-200 rounded disabled:text-gray-400"
+                      >
+                        Alertes
+                      </button>
+                      <button 
                         onClick={() => handleEditClick(v)}
                         disabled={loading}
                         className="flex-1 text-blue-600 hover:underline disabled:text-gray-400"
@@ -563,32 +634,117 @@ const AutomobilisteDashboard = () => {
 
           {activeTab === "rendezvous" && (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Rendez-vous à venir</h2>
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b">
-                    <th className="py-2">Garage</th>
-                    <th>Date</th>
-                    <th>Heure</th>
-                    <th>Service</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rendezVous.map((rdv) => (
-                    <tr key={rdv.id} className="border-b">
-                      <td className="py-2">{rdv.garage}</td>
-                      <td>{rdv.date}</td>
-                      <td>{rdv.heure}</td>
-                      <td>{rdv.service}</td>
-                      <td>
-                        <button className="text-blue-600 hover:underline mr-2">Détails</button>
-                        <button className="text-red-600 hover:underline">Annuler</button>
-                      </td>
-                    </tr>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-black text-slate-900">Mes rendez-vous</h2>
+                  <p className="mt-1 text-sm text-slate-600">Consultez et gérez vos rendez-vous avec les garages.</p>
+                </div>
+                <button
+                  onClick={() => navigate("/automobiliste/appointments")}
+                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white transition hover:bg-blue-700"
+                >
+                  <Plus className="h-5 w-5" />
+                  Réserver
+                </button>
+              </div>
+
+              {appointmentsError && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {appointmentsError}
+                </div>
+              )}
+
+              {appointmentsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <p className="text-slate-600">Chargement des rendez-vous...</p>
+                </div>
+              ) : appointments.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 py-12 text-center">
+                  <Calendar className="mx-auto h-12 w-12 text-slate-400 mb-3" />
+                  <p className="text-sm text-slate-600">Aucun rendez-vous.</p>
+                  <button
+                    onClick={() => navigate("/automobiliste/appointments")}
+                    className="mt-4 inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-semibold"
+                  >
+                    Réserver votre premier rendez-vous
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+                  {appointments.map((apt) => (
+                    <div
+                      key={apt.id}
+                      className={`rounded-2xl border p-4 transition ${
+                        apt.status === "confirmed"
+                          ? "border-emerald-200 bg-emerald-50"
+                          : apt.status === "cancelled"
+                          ? "border-rose-200 bg-rose-50"
+                          : "border-amber-200 bg-amber-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-5 w-5 text-slate-600" />
+                            <span className="font-bold text-slate-900">
+                              {formatAppointmentDate(apt.appointment_date)}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-2 text-sm text-slate-700">
+                            <Clock className="h-4 w-4" />
+                            {apt.appointment_time ? apt.appointment_time : "À définir"}
+                          </div>
+                          {apt.description && (
+                            <p className="mt-3 text-sm text-slate-700">
+                              <strong>Service:</strong> {apt.description}
+                            </p>
+                          )}
+                          {parseAppointmentNotes(apt.notes).services.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {parseAppointmentNotes(apt.notes).services.map((service) => (
+                                <span key={service} className="rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700">
+                                  {service}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {apt.notes && (
+                            <p className="mt-2 text-xs text-slate-600">
+                              <strong>Notes:</strong> {apt.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-bold whitespace-nowrap ${
+                              apt.status === "confirmed"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : apt.status === "cancelled"
+                                ? "bg-rose-100 text-rose-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {apt.status === "confirmed"
+                              ? "✅ Confirmé"
+                              : apt.status === "cancelled"
+                              ? "❌ Annulé"
+                              : "⏳ En attente"}
+                          </span>
+                          {apt.status === "pending" && (
+                            <button
+                              onClick={() => handleDeleteAppointment(apt.id)}
+                              className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-100"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -598,6 +754,7 @@ const AutomobilisteDashboard = () => {
                 <h2 className="text-xl font-semibold">Historique des interventions</h2>
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={openInterventionForm}
                     disabled={interventionLoading}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
@@ -605,6 +762,7 @@ const AutomobilisteDashboard = () => {
                     + Nouvelle intervention
                   </button>
                   <button
+                    type="button"
                     onClick={fetchHistorique}
                     disabled={historiqueLoading}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
@@ -663,6 +821,17 @@ const AutomobilisteDashboard = () => {
                     />
 
                     <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      name="cout_total"
+                      placeholder="Coût total"
+                      value={interventionFormData.cout_total}
+                      onChange={handleInterventionFieldChange}
+                      className="px-3 py-2 border border-gray-300 rounded"
+                    />
+
+                    <input
                       type="text"
                       name="garage_nom"
                       placeholder="Nom du garage"
@@ -690,68 +859,17 @@ const AutomobilisteDashboard = () => {
                     />
 
                     <div className="md:col-span-2 border border-gray-200 rounded p-3 bg-white">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="font-semibold">Pièces utilisées (optionnel)</p>
-                        <button
-                          type="button"
-                          onClick={addPieceLine}
-                          className="text-sm bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
-                        >
-                          + Ajouter pièce
-                        </button>
-                      </div>
-
-                      {piecesLoading ? (
-                        <p className="text-sm text-gray-500">Chargement des pièces...</p>
-                      ) : interventionFormData.pieces.length === 0 ? (
-                        <p className="text-sm text-gray-500">Aucune pièce ajoutée.</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {interventionFormData.pieces.map((pieceLine, index) => (
-                            <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2">
-                              <select
-                                value={pieceLine.pieceId}
-                                onChange={(e) => handlePieceFieldChange(index, "pieceId", e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded"
-                                required
-                              >
-                                <option value="">Choisir pièce</option>
-                                {pieces.map((p) => (
-                                  <option key={p.id} value={p.id}>{p.nom} ({p.prix_unitaire} TND)</option>
-                                ))}
-                              </select>
-
-                              <input
-                                type="number"
-                                min="1"
-                                value={pieceLine.quantite}
-                                onChange={(e) => handlePieceFieldChange(index, "quantite", e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded"
-                                placeholder="Quantité"
-                                required
-                              />
-
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={pieceLine.prix_unitaire}
-                                onChange={(e) => handlePieceFieldChange(index, "prix_unitaire", e.target.value)}
-                                className="px-3 py-2 border border-gray-300 rounded"
-                                placeholder="Prix unitaire (optionnel)"
-                              />
-
-                              <button
-                                type="button"
-                                onClick={() => removePieceLine(index)}
-                                className="text-red-600 hover:underline"
-                              >
-                                Supprimer
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      <label className="block">
+                        <span className="mb-1 block text-sm font-medium text-gray-700">Pièces utilisées</span>
+                        <textarea
+                          name="pieces_libres"
+                          value={interventionFormData.pieces_libres}
+                          onChange={handleInterventionFieldChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded"
+                          rows="3"
+                          placeholder="Écrire manuellement, ex: Filtre à huile x1, Huile moteur 5W30 x4L"
+                        />
+                      </label>
                     </div>
 
                     <div className="md:col-span-2 flex gap-2">
@@ -808,11 +926,29 @@ const AutomobilisteDashboard = () => {
                         <div className="space-y-3">
                           {interventions.map((intervention) => (
                             <div key={intervention.id} className="bg-gray-50 border rounded-md p-3">
+                              <div className="mb-2 flex items-center justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditIntervention(vehicule.id, intervention.id)}
+                                  className="rounded border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                                >
+                                  Modifier
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteIntervention(vehicule.id, intervention.id)}
+                                  disabled={interventionDeletingId === intervention.id}
+                                  className="rounded border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                  {interventionDeletingId === intervention.id ? "Suppression..." : "Supprimer"}
+                                </button>
+                              </div>
+
                               <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                                 <p><span className="font-semibold">Date :</span> {intervention.date_intervention || "-"}</p>
                                 <p><span className="font-semibold">Type :</span> {intervention.type || "-"}</p>
                                 <p><span className="font-semibold">Kilométrage :</span> {intervention.kilometrage ?? "-"}</p>
-                                <p><span className="font-semibold">Coût total :</span> {intervention.cout_total ?? "0"} TND</p>
+                                <p><span className="font-semibold">Coût total :</span> {Number(intervention.cout_total) > 0 ? `${intervention.cout_total} TND` : "—"}</p>
                               </div>
 
                               {(intervention.garage_nom || intervention.garage_adresse) && (
@@ -860,3 +996,4 @@ const AutomobilisteDashboard = () => {
 };
 
 export default AutomobilisteDashboard;
+

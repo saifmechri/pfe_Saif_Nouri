@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { GoogleMap, Marker, InfoWindow } from "@react-google-maps/api";
 
 const mapContainerStyle = {
@@ -88,7 +88,7 @@ const GoogleMapGarages = ({
           icon={userMarkerIcon}
           title="Ma localisation"
         >
-          <InfoWindow>
+          <InfoWindow position={userPosition}>
             <div className="text-sm font-semibold">Ma localisation</div>
           </InfoWindow>
         </Marker>
@@ -105,7 +105,10 @@ const GoogleMapGarages = ({
             title={garage.name}
           >
             {selectedGarageId === garage.id && (
-              <InfoWindow onCloseClick={() => onMarkerClick(null)}>
+                <InfoWindow
+                  position={{ lat: garage.latitude, lng: garage.longitude }}
+                  onCloseClick={() => onMarkerClick(null)}
+                >
                 <div className="space-y-1 p-2 w-48">
                   <p className="font-semibold text-sm">{garage.name}</p>
                   <p className="text-xs text-gray-600">{garage.adresse || "Adresse non précisée"}</p>
@@ -131,7 +134,10 @@ const GoogleMapGarages = ({
           title={garage.name}
         >
           {selectedFeaturedGarageId === garage.id && (
-            <InfoWindow onCloseClick={() => setSelectedFeaturedGarageId(null)}>
+            <InfoWindow
+              position={{ lat: garage.latitude, lng: garage.longitude }}
+              onCloseClick={() => setSelectedFeaturedGarageId(null)}
+            >
               <div className="space-y-1 p-2 w-52">
                 <p className="font-semibold text-sm">{garage.name}</p>
                 <p className="text-xs text-gray-600">{garage.adresse || garage.city || "Adresse non précisée"}</p>
@@ -146,3 +152,5 @@ const GoogleMapGarages = ({
 };
 
 export default GoogleMapGarages;
+
+

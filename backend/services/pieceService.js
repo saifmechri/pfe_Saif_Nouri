@@ -1,6 +1,5 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 const { AppError } = require('../utils/appError');
-const { haversine } = require('../utils/algorithms');
 
 const ALLOWED_SORT_FIELDS = new Set(['nom', 'reference', 'prix_unitaire', 'created_at', 'updated_at']);
 const ALLOWED_SORT_ORDERS = new Set(['asc', 'desc']);
@@ -13,15 +12,6 @@ const normalizeText = (value) => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-};
-
-const parsePositiveInteger = (value, fieldName) => {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new AppError(`${fieldName} doit etre un entier superieur a 0`, 400, 'INVALID_INTEGER');
-  }
-
-  return parsed;
 };
 
 const parsePositiveNumber = (value, fieldName) => {
@@ -42,32 +32,6 @@ const parseNonNegativeInteger = (value, fieldName) => {
   return parsed;
 };
 
-const parseOptionalCoordinate = (value, fieldName, min, max) => {
-  if (value === undefined || value === null || value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
-    throw new AppError(`${fieldName} invalide`, 400, 'INVALID_COORDINATE');
-  }
-
-  return parsed;
-};
-
-const parseOptionalPositiveNumber = (value, fieldName) => {
-  if (value === undefined || value === null || value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new AppError(`${fieldName} doit etre superieur a 0`, 400, 'INVALID_NUMERIC_VALUE');
-  }
-
-  return parsed;
-};
-
 const buildSearchClause = (search) => {
   const normalizedSearch = normalizeText(search);
   if (!normalizedSearch) {
@@ -76,7 +40,7 @@ const buildSearchClause = (search) => {
 
   const searchParam = `%${normalizedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
   return {
-    sql: ' AND (p.nom ILIKE $1 OR p.reference ILIKE $1)',
+    sql: ' AND (nom ILIKE $1 OR reference ILIKE $1)',
     params: [searchParam]
   };
 };
@@ -85,24 +49,13 @@ const buildSortClause = (sortBy, sortOrder) => {
   const normalizedSortBy = ALLOWED_SORT_FIELDS.has(sortBy) ? sortBy : 'created_at';
   const normalizedSortOrder = ALLOWED_SORT_ORDERS.has(String(sortOrder).toLowerCase()) ? String(sortOrder).toUpperCase() : 'DESC';
 
-  const fieldMap = {
-    nom: 'p.nom',
-    reference: 'p.reference',
-    prix_unitaire: 'p.prix_unitaire',
-    created_at: 'p.created_at',
-    updated_at: 'p.updated_at'
-  };
-
-  return `${fieldMap[normalizedSortBy] || 'p.created_at'} ${normalizedSortOrder}`;
+  // always qualify with pieces table alias to avoid ambiguous column references when joining users/roles
+  return `p.${normalizedSortBy} ${normalizedSortOrder}`;
 };
 
 const mapPieceRow = (row) => ({
   id: row.id,
   user_id: row.user_id === null || row.user_id === undefined ? null : Number(row.user_id),
-  seller_name: row.seller_name || null,
-  seller_store_name: row.seller_store_name || null,
-  seller_phone: row.seller_phone || null,
-  seller_role: row.seller_role || null,
   nom: row.nom,
   reference: row.reference,
   description: row.description,
@@ -114,10 +67,26 @@ const mapPieceRow = (row) => ({
   marque: row.marque || null,
   modele: row.modele || null,
   categorie: row.categorie || null,
+  is_validated: row.is_validated === null || row.is_validated === undefined ? false : Boolean(row.is_validated),
   created_at: row.created_at,
   updated_at: row.updated_at,
-  deleted_at: row.deleted_at || null
+  deleted_at: row.deleted_at || null,
+  seller_name: row.seller_name || null,
+  seller_phone: row.seller_phone || null,
+  seller_email: row.seller_email || null,
+  seller_store_name: row.seller_store_name || null,
+  seller_store_address: row.seller_store_address || null,
+  seller_role: row.seller_role || null
 });
+
+const getSellerDisplayName = (row) => {
+  const sellerRole = String(row.seller_role || '').toLowerCase();
+  if (sellerRole === 'admin') {
+    return 'admin';
+  }
+
+  return row.seller_name || null;
+};
 
 const mapStockMovementRow = (row) => ({
   id: row.id,
@@ -161,7 +130,7 @@ const runInTransaction = async (executor) => {
 
 const getPieceForUpdate = async (client, pieceId) => {
   const result = await client.query(
-    `SELECT id, stock
+    `SELECT id, user_id, stock
      FROM pieces
      WHERE id = $1 AND deleted_at IS NULL
      FOR UPDATE`,
@@ -173,6 +142,41 @@ const getPieceForUpdate = async (client, pieceId) => {
   }
 
   return result.rows[0];
+};
+
+const getManagedPieceById = async (pieceId) => {
+  const result = await pool.query(
+    `SELECT id, user_id
+     FROM pieces
+     WHERE id = $1 AND deleted_at IS NULL`,
+    [pieceId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError('Piece non trouvee', 404, 'PIECE_NOT_FOUND');
+  }
+
+  return result.rows[0];
+};
+
+const canManagePiece = (pieceRow, actorUser = null) => {
+  if (!pieceRow) {
+    return false;
+  }
+
+  if (String(actorUser?.role || '').toLowerCase() === 'admin') {
+    return true;
+  }
+
+  const actorId = Number.parseInt(actorUser?.id, 10);
+  const ownerId = pieceRow.user_id === null || pieceRow.user_id === undefined ? null : Number.parseInt(pieceRow.user_id, 10);
+  return Number.isInteger(actorId) && actorId > 0 && ownerId !== null && ownerId === actorId;
+};
+
+const assertCanManagePiece = (pieceRow, actorUser = null) => {
+  if (!canManagePiece(pieceRow, actorUser)) {
+    throw new AppError('Acces refuse : piece appartenant a un autre vendeur', 403, 'FORBIDDEN_PIECE_OWNER');
+  }
 };
 
 const createStockMovement = async (client, payload) => {
@@ -202,6 +206,182 @@ const createStockMovement = async (client, payload) => {
   return mapStockMovementRow(movementResult.rows[0]);
 };
 
+const buildPieceSearchClause = (name) => {
+  const normalizedName = normalizeText(name);
+  if (!normalizedName) {
+    return { sql: '', params: [] };
+  }
+
+  const searchTerm = `%${normalizedName.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+  return {
+    sql: ' AND (p.nom ILIKE $1 OR p.reference ILIKE $1)',
+    params: [searchTerm]
+  };
+};
+
+const comparePieceAcrossVendors = async ({ pieceId = null, name = '', includeOutOfStock = false } = {}) => {
+  const normalizedName = normalizeText(name);
+  const clauses = ['p.deleted_at IS NULL', 'COALESCE(p.is_validated, false) = true'];
+  const params = [];
+
+  if (pieceId !== null && pieceId !== undefined && pieceId !== '') {
+    const parsedPieceId = Number(pieceId);
+    if (!Number.isInteger(parsedPieceId) || parsedPieceId <= 0) {
+      throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
+    }
+
+    params.push(parsedPieceId);
+    clauses.push(`p.id = $${params.length}`);
+  }
+
+  if (normalizedName) {
+    params.push(`%${normalizedName.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`);
+    clauses.push(`(p.nom ILIKE $${params.length} OR p.reference ILIKE $${params.length})`);
+  }
+
+  if (!pieceId && !normalizedName) {
+    throw new AppError('Nom ou reference de piece requis', 400, 'INVALID_PIECE_SEARCH');
+  }
+
+  if (!includeOutOfStock) {
+    clauses.push('COALESCE(p.stock, 0) > 0');
+  }
+
+  const result = await pool.query(
+    `SELECT
+      p.id,
+      p.user_id,
+      p.nom,
+      p.reference,
+      p.description,
+      p.photo_url,
+      p.prix_unitaire,
+      p.stock,
+      p.condition,
+      p.zone_geographique,
+      p.marque,
+      p.modele,
+      p.categorie,
+      p.is_validated,
+      p.created_at,
+      p.updated_at,
+      u.name AS seller_name,
+      u.phone AS seller_phone,
+      u.email AS seller_email,
+      u.store_name AS seller_store_name,
+      u.store_address AS seller_store_address
+     FROM pieces p
+     LEFT JOIN users u ON u.id = p.user_id
+     WHERE ${clauses.join(' AND ')}
+     ORDER BY p.prix_unitaire ASC, p.created_at DESC, p.id DESC`,
+    params
+  );
+
+  const offers = result.rows.map((row) => ({
+    id: Number(row.id),
+    user_id: row.user_id === null || row.user_id === undefined ? null : Number(row.user_id),
+    nom: row.nom,
+    reference: row.reference,
+    description: row.description,
+    photo_url: row.photo_url || null,
+    prix_unitaire: Number(row.prix_unitaire),
+    stock: Number(row.stock),
+    condition: row.condition || 'Neuf',
+    zone_geographique: row.zone_geographique || null,
+    marque: row.marque || null,
+    modele: row.modele || null,
+    categorie: row.categorie || null,
+    is_validated: row.is_validated === null || row.is_validated === undefined ? false : Boolean(row.is_validated),
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    vendeur: {
+      id: row.user_id === null || row.user_id === undefined ? null : Number(row.user_id),
+      nom: row.seller_name || null,
+      telephone: row.seller_phone || null,
+      email: row.seller_email || null,
+      magasin: row.seller_store_name || null,
+      adresse: row.seller_store_address || null
+    },
+    seller_name: row.seller_name || null,
+    seller_phone: row.seller_phone || null,
+    seller_email: row.seller_email || null,
+    seller_store_name: row.seller_store_name || null,
+    seller_store_address: row.seller_store_address || null
+  }));
+
+  const prices = offers.map((offer) => Number(offer.prix_unitaire));
+  const stockValues = offers.map((offer) => Number(offer.stock));
+  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+  const bestOffer = offers[0] || null;
+
+  return {
+    piece: bestOffer,
+    best_offer: bestOffer,
+    offres: offers,
+    offers,
+    summary: {
+      vendeurs_count: offers.length,
+      prix_min: minPrice,
+      prix_max: maxPrice,
+      economie_max: maxPrice > 0 ? maxPrice - minPrice : 0,
+      stock_total: stockValues.reduce((acc, value) => acc + value, 0)
+    }
+  };
+};
+
+const getPieceSellerLocations = async ({ name = '', pieceId = null } = {}) => {
+  const normalizedName = normalizeText(name);
+  const clauses = ['p.deleted_at IS NULL', 'COALESCE(p.is_validated, false) = true'];
+  const params = [];
+
+  if (pieceId !== null && pieceId !== undefined && pieceId !== '') {
+    const parsedPieceId = Number(pieceId);
+    if (!Number.isInteger(parsedPieceId) || parsedPieceId <= 0) {
+      throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
+    }
+
+    params.push(parsedPieceId);
+    clauses.push(`p.id = $${params.length}`);
+  }
+
+  if (normalizedName) {
+    params.push(`%${normalizedName.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`);
+    clauses.push(`(p.nom ILIKE $${params.length} OR p.reference ILIKE $${params.length})`);
+  }
+
+  const result = await pool.query(
+    `SELECT
+       u.id AS seller_id,
+       u.name AS seller_name,
+       u.email AS seller_email,
+       u.phone AS seller_phone,
+       u.store_name AS seller_store_name,
+       u.store_address AS seller_store_address,
+       p.zone_geographique,
+       COUNT(p.id)::int AS pieces_count
+     FROM pieces p
+     LEFT JOIN users u ON u.id = p.user_id
+     WHERE ${clauses.join(' AND ')}
+     GROUP BY u.id, u.name, u.email, u.phone, u.store_name, u.store_address, p.zone_geographique
+     ORDER BY pieces_count DESC, u.store_name ASC NULLS LAST, u.name ASC NULLS LAST`,
+    params
+  );
+
+  return {
+    items: result.rows.map((row) => ({
+      seller_id: row.seller_id === null || row.seller_id === undefined ? null : Number(row.seller_id),
+      seller_name: row.seller_name || null,
+      seller_email: row.seller_email || null,
+      seller_phone: row.seller_phone || null,
+      seller_store_name: row.seller_store_name || null,
+      seller_store_address: row.seller_store_address || null,
+      zone_geographique: row.zone_geographique || null,
+      pieces_count: Number(row.pieces_count || 0)
+    }))
+  };
+};
+
 const createPiece = async (payload) => {
   const userId = payload.user_id ? Number.parseInt(payload.user_id, 10) : null;
   const nom = normalizeText(payload.nom);
@@ -217,6 +397,7 @@ const createPiece = async (payload) => {
   const stock = payload.stock === undefined || payload.stock === null || payload.stock === ''
     ? 0
     : parseNonNegativeInteger(payload.stock, 'stock');
+  const isValidated = Boolean(payload.is_validated);
 
   if (!nom) {
     throw new AppError('Le nom est obligatoire', 400, 'INVALID_NAME');
@@ -228,16 +409,16 @@ const createPiece = async (payload) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO pieces (user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
-      [userId, nom, reference, description, photoUrl, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie]
+      `INSERT INTO pieces (user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, is_validated)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, is_validated, created_at, updated_at, deleted_at`,
+      [userId, nom, reference, description, photoUrl, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, isValidated]
     );
 
     return mapPieceRow(result.rows[0]);
   } catch (error) {
     if (error.code === '23505') {
-      throw new AppError('Cette reference existe deja dans votre espace vendeur', 400, 'PIECE_REFERENCE_ALREADY_EXISTS');
+      throw new AppError('Cette reference de piece existe deja', 400, 'PIECE_REFERENCE_ALREADY_EXISTS');
     }
 
     throw error;
@@ -270,9 +451,11 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
       p.updated_at,
       p.deleted_at,
       u.name AS seller_name,
-      u.store_name AS seller_store_name,
       u.phone AS seller_phone,
-      r.name AS seller_role,
+      u.email AS seller_email,
+      u.store_name AS seller_store_name,
+      u.store_address AS seller_store_address,
+      LOWER(r.name) AS seller_role,
       COUNT(*) OVER() AS total_count
     FROM pieces p
     LEFT JOIN users u ON u.id = p.user_id
@@ -284,11 +467,106 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
   `;
 
   const params = [...searchClause.params, safeLimit, offset];
+  let result;
+  try {
+    result = await pool.query(query, params);
+  } catch (err) {
+    // Retry once for transient connection timeout / termination errors
+    const msg = String(err && err.message || '').toLowerCase();
+    if (msg.includes('connection timeout') || msg.includes('terminated') || msg.includes('timeout')) {
+      try {
+        await new Promise((r) => setTimeout(r, 200));
+        result = await pool.query(query, params);
+      } catch (retryErr) {
+        console.error('getPieces retry failed', retryErr);
+        throw retryErr;
+      }
+    } else {
+      throw err;
+    }
+  }
+  const totalItems = result.rows.length > 0 ? Number(result.rows[0].total_count) : 0;
+
+  return {
+    items: result.rows.map((row) => {
+      const mappedRow = mapPieceRow(row);
+      return {
+        ...mappedRow,
+        seller_name: getSellerDisplayName(row)
+      };
+    }),
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      totalItems,
+      totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / safeLimit)
+    }
+  };
+};
+
+const getMyPieces = async ({ userId, page = 1, limit = 10, search = '', sortBy = 'created_at', sortOrder = 'desc' } = {}) => {
+  const parsedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
+    return getPieces({ page, limit, search, sortBy, sortOrder });
+  }
+
+  const safePage = Math.max(Number.parseInt(page, 10) || 1, 1);
+  const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 10, 1), 100);
+  const offset = (safePage - 1) * safeLimit;
+  const orderByClause = buildSortClause(sortBy, sortOrder);
+  const normalizedSearch = normalizeText(search);
+  const searchSql = normalizedSearch ? ' AND (p.nom ILIKE $2 OR p.reference ILIKE $2)' : '';
+  const limitIndex = normalizedSearch ? 3 : 2;
+  const offsetIndex = normalizedSearch ? 4 : 3;
+  const searchParam = normalizedSearch ? [`%${normalizedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`] : [];
+
+  const query = `
+    SELECT
+      p.id,
+      p.user_id,
+      p.nom,
+      p.reference,
+      p.description,
+      p.photo_url,
+      p.prix_unitaire,
+      p.stock,
+      p.condition,
+      p.zone_geographique,
+      p.marque,
+      p.modele,
+      p.categorie,
+      p.created_at,
+      p.updated_at,
+      p.deleted_at,
+      u.name AS seller_name,
+      u.phone AS seller_phone,
+      u.email AS seller_email,
+      u.store_name AS seller_store_name,
+      u.store_address AS seller_store_address,
+      LOWER(r.name) AS seller_role,
+      COUNT(*) OVER() AS total_count
+    FROM pieces p
+    LEFT JOIN users u ON u.id = p.user_id
+    LEFT JOIN roles r ON r.id = u.role_id
+    WHERE p.deleted_at IS NULL
+      AND p.user_id = $1${searchSql}
+    ORDER BY ${orderByClause}
+    LIMIT $${limitIndex}
+    OFFSET $${offsetIndex}
+  `;
+
+  const params = [parsedUserId, ...searchParam, safeLimit, offset];
   const result = await pool.query(query, params);
   const totalItems = result.rows.length > 0 ? Number(result.rows[0].total_count) : 0;
 
   return {
-    items: result.rows.map(mapPieceRow),
+    items: result.rows.map((row) => {
+      const mappedRow = mapPieceRow(row);
+      return {
+        ...mappedRow,
+        seller_name: getSellerDisplayName(row)
+      };
+    }),
     pagination: {
       page: safePage,
       limit: safeLimit,
@@ -301,7 +579,12 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
 const getPieceById = async (id) => {
   const result = await pool.query(
     `SELECT p.id, p.user_id, p.nom, p.reference, p.description, p.photo_url, p.prix_unitaire, p.stock, p.condition, p.zone_geographique, p.marque, p.modele, p.categorie, p.created_at, p.updated_at, p.deleted_at,
-            u.name AS seller_name, u.store_name AS seller_store_name, u.phone AS seller_phone, r.name AS seller_role
+            u.name AS seller_name,
+            u.phone AS seller_phone,
+            u.email AS seller_email,
+            u.store_name AS seller_store_name,
+            u.store_address AS seller_store_address,
+            LOWER(r.name) AS seller_role
      FROM pieces p
      LEFT JOIN users u ON u.id = p.user_id
      LEFT JOIN roles r ON r.id = u.role_id
@@ -313,264 +596,24 @@ const getPieceById = async (id) => {
     throw new AppError('Piece non trouvee', 404, 'PIECE_NOT_FOUND');
   }
 
-  return mapPieceRow(result.rows[0]);
-};
-
-const mapVendorOfferRow = (row) => ({
-  piece_id: Number(row.piece_id),
-  nom: row.nom,
-  reference: row.reference,
-  prix_unitaire: Number(row.prix_unitaire),
-  stock: Number(row.stock),
-  condition: row.condition || 'Neuf',
-  zone_geographique: row.zone_geographique || null,
-  marque: row.marque || null,
-  modele: row.modele || null,
-  categorie: row.categorie || null,
-  photo_url: row.photo_url || null,
-  vendeur: {
-    id: Number(row.vendeur_id),
-    nom: row.vendeur_nom || null,
-    magasin: row.vendeur_magasin || null,
-    telephone: row.vendeur_telephone || null,
-    email: row.vendeur_email || null,
-    latitude: row.vendeur_latitude === null ? null : Number(row.vendeur_latitude),
-    longitude: row.vendeur_longitude === null ? null : Number(row.vendeur_longitude)
-  }
-});
-
-const buildBestOfferSummary = (offers) => {
-  if (!Array.isArray(offers) || offers.length === 0) {
-    return null;
-  }
-
-  const offersSortedByPrice = [...offers].sort((a, b) => {
-    if (a.prix_unitaire !== b.prix_unitaire) {
-      return a.prix_unitaire - b.prix_unitaire;
-    }
-
-    return b.stock - a.stock;
-  });
-
-  const bestOffer = offersSortedByPrice[0];
   return {
-    prix_minimum: bestOffer.prix_unitaire,
-    meilleur_vendeur: {
-      id: bestOffer.vendeur.id,
-      nom: bestOffer.vendeur.nom,
-      magasin: bestOffer.vendeur.magasin,
-      telephone: bestOffer.vendeur.telephone,
-      email: bestOffer.vendeur.email
-    },
-    meilleure_offre: bestOffer
+    ...mapPieceRow(result.rows[0]),
+    seller_name: getSellerDisplayName(result.rows[0])
   };
 };
 
-const comparePieceAcrossVendors = async ({
-  pieceId,
-  name,
-  includeOutOfStock = false,
-  userLat,
-  userLon,
-  radiusKm,
-  sortBy = 'price',
-  sortOrder = 'asc'
-} = {}) => {
-  // Validation et normalisation des entrees principales.
-  const hasPieceId = pieceId !== undefined && pieceId !== null && String(pieceId).trim() !== '';
-  const normalizedName = normalizeText(name);
+const updatePiece = async (id, payload, actorUser = null) => {
+  const currentPiece = await getManagedPieceById(id);
+  assertCanManagePiece(currentPiece, actorUser);
 
-  // Coordonnees utilisateur + options geo (rayon / tri distance).
-  const parsedUserLat = parseOptionalCoordinate(userLat, 'userLat', -90, 90);
-  const parsedUserLon = parseOptionalCoordinate(userLon, 'userLon', -180, 180);
-  const parsedRadiusKm = parseOptionalPositiveNumber(radiusKm, 'radiusKm');
-  const normalizedSortBy = String(sortBy || 'price').toLowerCase() === 'distance' ? 'distance' : 'price';
-  const normalizedSortOrder = String(sortOrder || 'asc').toLowerCase() === 'desc' ? 'desc' : 'asc';
-
-  // Evite les requetes ambiguës: on exige toujours une paire complete.
-  if ((parsedUserLat === null) !== (parsedUserLon === null)) {
-    throw new AppError('userLat et userLon doivent etre fournis ensemble', 400, 'MISSING_COORDINATE_PAIR');
-  }
-
-  const hasUserCoordinates = parsedUserLat !== null && parsedUserLon !== null;
-
-  // Toute logique geo depend de la position utilisateur.
-  if ((parsedRadiusKm !== null || normalizedSortBy === 'distance') && !hasUserCoordinates) {
-    throw new AppError('userLat et userLon sont obligatoires pour distance/radiusKm', 400, 'COORDINATES_REQUIRED');
-  }
-
-  if (!hasPieceId && !normalizedName) {
-    throw new AppError('Vous devez fournir pieceId ou name', 400, 'MISSING_SEARCH_CRITERIA');
-  }
-
-  let targetPiece = null;
-  if (hasPieceId) {
-    const safePieceId = parsePositiveInteger(pieceId, 'pieceId');
-    const targetResult = await pool.query(
-      `SELECT id, nom, reference
-       FROM pieces
-       WHERE id = $1 AND deleted_at IS NULL`,
-      [safePieceId]
-    );
-
-    if (targetResult.rows.length === 0) {
-      throw new AppError('Piece de reference non trouvee', 404, 'PIECE_NOT_FOUND');
-    }
-
-    targetPiece = targetResult.rows[0];
-  }
-
-  const whereClauses = ['p.deleted_at IS NULL', "r.name = 'vendeur'"];
-  const params = [];
-
-  if (!includeOutOfStock) {
-    whereClauses.push('p.stock > 0');
-  }
-
-  if (targetPiece && targetPiece.reference) {
-    params.push(String(targetPiece.reference).trim());
-    whereClauses.push(`LOWER(p.reference) = LOWER($${params.length})`);
-  } else {
-    const likeSearch = `%${normalizedName.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
-    params.push(likeSearch);
-    whereClauses.push(`(p.nom ILIKE $${params.length} OR p.reference ILIKE $${params.length})`);
-  }
-
-  const offersResult = await pool.query(
-    `SELECT
-      p.id AS piece_id,
-      p.nom,
-      p.reference,
-      p.prix_unitaire,
-      p.stock,
-      p.condition,
-      p.zone_geographique,
-      p.marque,
-      p.modele,
-      p.categorie,
-      p.photo_url,
-      u.id AS vendeur_id,
-      u.name AS vendeur_nom,
-      u.store_name AS vendeur_magasin,
-      u.phone AS vendeur_telephone,
-      u.email AS vendeur_email,
-      u.latitude AS vendeur_latitude,
-      u.longitude AS vendeur_longitude
-     FROM pieces p
-     INNER JOIN users u ON u.id = p.user_id
-     INNER JOIN roles r ON r.id = u.role_id
-     WHERE ${whereClauses.join(' AND ')}
-     ORDER BY p.prix_unitaire ASC, p.stock DESC, p.id ASC`,
-    params
-  );
-
-  // Ajout de distance_km pour chaque offre vendeur.
-  let offers = offersResult.rows.map((row) => {
-    const offer = mapVendorOfferRow(row);
-
-    // Distance indisponible si coords manquantes cote vendeur.
-    if (!hasUserCoordinates || offer.vendeur.latitude === null || offer.vendeur.longitude === null) {
-      return {
-        ...offer,
-        distance_km: null
-      };
-    }
-
-    // Calcul Haversine (km) entre utilisateur et vendeur.
-    return {
-      ...offer,
-      distance_km: haversine(parsedUserLat, parsedUserLon, offer.vendeur.latitude, offer.vendeur.longitude)
-    };
-  });
-
-  // Si rayon fourni: ne garder que les offres dans le perimetre.
-  if (parsedRadiusKm !== null) {
-    offers = offers.filter((offer) => offer.distance_km !== null && offer.distance_km <= parsedRadiusKm);
-  }
-
-  // Tri principal: distance ou prix.
-  if (normalizedSortBy === 'distance') {
-    offers = offers.sort((a, b) => {
-      if (a.distance_km === null && b.distance_km === null) {
-        return 0;
-      }
-
-      if (a.distance_km === null) {
-        return 1;
-      }
-
-      if (b.distance_km === null) {
-        return -1;
-      }
-
-      if (a.distance_km !== b.distance_km) {
-        return normalizedSortOrder === 'desc'
-          ? b.distance_km - a.distance_km
-          : a.distance_km - b.distance_km;
-      }
-
-      return a.prix_unitaire - b.prix_unitaire;
-    });
-  } else if (normalizedSortOrder === 'desc') {
-    offers = offers.sort((a, b) => b.prix_unitaire - a.prix_unitaire);
-  }
-
-  if (offers.length === 0) {
-    throw new AppError('Aucune offre vendeur trouvee pour cette piece', 404, 'NO_VENDOR_OFFERS_FOUND');
-  }
-
-  // Le best_offer reste toujours "meilleur prix" pour eviter la confusion
-  // quand l utilisateur choisit un tri distance.
-  const prices = offers.map((offer) => offer.prix_unitaire);
-  const minPrice = Math.min(...prices);
-  const maxPrice = Math.max(...prices);
-  const bestOfferSummary = buildBestOfferSummary(offers);
-  const availablePrices = [...prices].sort((a, b) => a - b);
-
-  return {
-    searched_with: {
-      pieceId: hasPieceId ? Number(pieceId) : null,
-      name: normalizedName || null,
-      userLat: parsedUserLat,
-      userLon: parsedUserLon,
-      radiusKm: parsedRadiusKm
-    },
-    piece: {
-      nom: offers[0].nom,
-      reference: offers[0].reference,
-      marque: offers[0].marque,
-      modele: offers[0].modele,
-      categorie: offers[0].categorie
-    },
-    summary: {
-      vendeurs_count: offers.length,
-      prix_min: minPrice,
-      prix_max: maxPrice,
-      economie_max: Number((maxPrice - minPrice).toFixed(2))
-    },
-    sorting: {
-      sortBy: normalizedSortBy,
-      sortOrder: normalizedSortOrder
-    },
-    best_offer: bestOfferSummary,
-    available_prices: availablePrices,
-    offres: offers
-  };
-};
-
-const updatePiece = async (id, payload) => {
-  const currentPiece = await pool.query(
-    `SELECT id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, deleted_at
+  const currentDetails = await pool.query(
+    `SELECT id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, is_validated, deleted_at
      FROM pieces
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]
   );
 
-  if (currentPiece.rows.length === 0) {
-    throw new AppError('Piece non trouvee', 404, 'PIECE_NOT_FOUND');
-  }
-
-  const current = currentPiece.rows[0];
+  const current = currentDetails.rows[0];
   const nextNom = normalizeText(payload.nom) || current.nom;
   const nextReference = normalizeText(payload.reference) || current.reference;
   const nextDescription = payload.description === undefined ? current.description : normalizeText(payload.description);
@@ -603,21 +646,24 @@ const updatePiece = async (id, payload) => {
              categorie = $11,
            updated_at = NOW()
          WHERE id = $12 AND deleted_at IS NULL
-         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, is_validated, created_at, updated_at, deleted_at`,
         [nextNom, nextReference, nextDescription, nextPhotoUrl, nextPrice, nextStock, nextCondition, nextZoneGeographique, nextMarque, nextModele, nextCategorie, id]
     );
 
     return mapPieceRow(result.rows[0]);
   } catch (error) {
     if (error.code === '23505') {
-      throw new AppError('Cette reference existe deja dans votre espace vendeur', 400, 'PIECE_REFERENCE_ALREADY_EXISTS');
+      throw new AppError('Cette reference de piece existe deja', 400, 'PIECE_REFERENCE_ALREADY_EXISTS');
     }
 
     throw error;
   }
 };
 
-const deletePiece = async (id) => {
+const deletePiece = async (id, actorUser = null) => {
+  const currentPiece = await getManagedPieceById(id);
+  assertCanManagePiece(currentPiece, actorUser);
+
   const result = await pool.query(
     `UPDATE pieces
      SET deleted_at = NOW(), updated_at = NOW()
@@ -633,7 +679,7 @@ const deletePiece = async (id) => {
   return true;
 };
 
-const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
+const adjustPieceStock = async (id, payload = {}, actorUser = null) => {
   const quantityChange = Number(payload.quantity_change);
   if (!Number.isInteger(quantityChange) || quantityChange === 0) {
     throw new AppError('quantity_change doit etre un entier non nul', 400, 'INVALID_QUANTITY_CHANGE');
@@ -656,6 +702,7 @@ const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
 
   return runInTransaction(async (client) => {
     const piece = await getPieceForUpdate(client, id);
+    assertCanManagePiece(piece, actorUser);
     const stockBefore = Number(piece.stock);
     const stockAfter = stockBefore + quantityChange;
 
@@ -668,13 +715,13 @@ const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
        SET stock = $1,
            updated_at = NOW()
        WHERE id = $2
-         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, is_validated, created_at, updated_at, deleted_at`,
       [stockAfter, id]
     );
 
     const movement = await createStockMovement(client, {
       pieceId: id,
-      userId: actorUserId,
+      userId: Number.parseInt(actorUser?.id, 10) || null,
       movementType,
       quantityChange,
       stockBefore,
@@ -689,7 +736,7 @@ const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
   });
 };
 
-const setPieceStock = async (id, payload = {}, actorUserId = null) => {
+const setPieceStock = async (id, payload = {}, actorUser = null) => {
   const nextStock = Number(payload.stock);
   if (!Number.isInteger(nextStock) || nextStock < 0) {
     throw new AppError('stock doit etre un entier positif ou nul', 400, 'INVALID_STOCK');
@@ -699,6 +746,7 @@ const setPieceStock = async (id, payload = {}, actorUserId = null) => {
 
   return runInTransaction(async (client) => {
     const piece = await getPieceForUpdate(client, id);
+    assertCanManagePiece(piece, actorUser);
     const stockBefore = Number(piece.stock);
     const quantityChange = nextStock - stockBefore;
 
@@ -711,13 +759,13 @@ const setPieceStock = async (id, payload = {}, actorUserId = null) => {
        SET stock = $1,
            updated_at = NOW()
        WHERE id = $2
-         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, created_at, updated_at, deleted_at`,
+         RETURNING id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, is_validated, created_at, updated_at, deleted_at`,
       [nextStock, id]
     );
 
     const movement = await createStockMovement(client, {
       pieceId: id,
-      userId: actorUserId,
+      userId: Number.parseInt(actorUser?.id, 10) || null,
       movementType: 'SET',
       quantityChange,
       stockBefore,
@@ -732,12 +780,13 @@ const setPieceStock = async (id, payload = {}, actorUserId = null) => {
   });
 };
 
-const getPieceStockMovements = async (id, { page = 1, limit = 20 } = {}) => {
+const getPieceStockMovements = async (id, { page = 1, limit = 20 } = {}, actorUser = null) => {
   const safePage = Math.max(Number.parseInt(page, 10) || 1, 1);
   const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 20, 1), 100);
   const offset = (safePage - 1) * safeLimit;
 
-  await getPieceById(id);
+  const piece = await getManagedPieceById(id);
+  assertCanManagePiece(piece, actorUser);
 
   const result = await pool.query(
     `SELECT
@@ -771,101 +820,17 @@ const getPieceStockMovements = async (id, { page = 1, limit = 20 } = {}) => {
   };
 };
 
-const listPieceSellerLocations = async ({ userLat, userLon, radiusKm } = {}) => {
-  const parsedUserLat = parseOptionalCoordinate(userLat, 'userLat', -90, 90);
-  const parsedUserLon = parseOptionalCoordinate(userLon, 'userLon', -180, 180);
-  const parsedRadiusKm = parseOptionalPositiveNumber(radiusKm, 'radiusKm');
-  const hasUserCoordinates = parsedUserLat !== null && parsedUserLon !== null;
-
-  if ((parsedUserLat === null) !== (parsedUserLon === null)) {
-    throw new AppError('userLat et userLon doivent etre fournis ensemble', 400, 'MISSING_COORDINATE_PAIR');
-  }
-
-  if (parsedRadiusKm !== null && !hasUserCoordinates) {
-    throw new AppError('radiusKm necessite userLat et userLon', 400, 'COORDINATES_REQUIRED');
-  }
-
-  const result = await pool.query(
-    `SELECT
-      u.id AS user_id,
-      u.name,
-      u.store_name,
-      u.store_address,
-      u.phone,
-      u.latitude,
-      u.longitude,
-      COUNT(DISTINCT p.id)::int AS pieces_count,
-      MIN(p.prix_unitaire)::numeric AS min_piece_price
-     FROM users u
-     INNER JOIN roles r ON r.id = u.role_id
-     INNER JOIN pieces p ON p.user_id = u.id AND p.deleted_at IS NULL
-     WHERE r.name = 'vendeur'
-       AND u.latitude IS NOT NULL
-       AND u.longitude IS NOT NULL
-     GROUP BY u.id, u.name, u.store_name, u.store_address, u.phone, u.latitude, u.longitude
-     ORDER BY pieces_count DESC, min_piece_price ASC, u.id ASC`
-  );
-
-  let items = result.rows.map((row) => {
-    const latitude = Number(row.latitude);
-    const longitude = Number(row.longitude);
-    const base = {
-      user_id: Number(row.user_id),
-      name: row.name || null,
-      store_name: row.store_name || null,
-      store_address: row.store_address || null,
-      phone: row.phone || null,
-      latitude,
-      longitude,
-      pieces_count: Number(row.pieces_count || 0),
-      min_piece_price: row.min_piece_price === null ? null : Number(row.min_piece_price)
-    };
-
-    if (!hasUserCoordinates) {
-      return {
-        ...base,
-        distance_km: null
-      };
-    }
-
-    return {
-      ...base,
-      distance_km: haversine(parsedUserLat, parsedUserLon, latitude, longitude)
-    };
-  });
-
-  if (parsedRadiusKm !== null) {
-    items = items.filter((item) => item.distance_km !== null && item.distance_km <= parsedRadiusKm);
-  }
-
-  if (hasUserCoordinates) {
-    items = items.sort((a, b) => {
-      if (a.distance_km !== b.distance_km) {
-        return a.distance_km - b.distance_km;
-      }
-
-      return b.pieces_count - a.pieces_count;
-    });
-  }
-
-  return {
-    user_position: hasUserCoordinates
-      ? { latitude: parsedUserLat, longitude: parsedUserLon }
-      : null,
-    total: items.length,
-    items
-  };
-};
-
 module.exports = {
   createPiece,
   getPieces,
+  getMyPieces,
   getPieceById,
-  comparePieceAcrossVendors,
-  listPieceSellerLocations,
   updatePiece,
   deletePiece,
   adjustPieceStock,
   setPieceStock,
-  getPieceStockMovements
+  getPieceStockMovements,
+  comparePieceAcrossVendors,
+  getPieceSellerLocations
 };
+

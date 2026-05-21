@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 📊 ALGORITHMES DE RECOMMANDATION
  * Fonctions de scoring pour interventions et garages
  */
@@ -25,11 +25,11 @@ function haversine(lat1, lon1, lat2, lon2) {
  * ✅ FONCTION 2: Convertir distance en score (0-10)
  */
 function getDistanceScore(distanceKm) {
-  if (distanceKm < 5) return 10;
-  if (distanceKm < 10) return 8;
-  if (distanceKm < 20) return 6;
-  if (distanceKm < 30) return 4;
-  return 2;
+  const distance = Number(distanceKm);
+  if (!Number.isFinite(distance) || distance < 0) return 0;
+
+  const score = 10 - (distance * 0.35);
+  return Math.max(1, Number(score.toFixed(2)));
 }
 
 /**
@@ -59,8 +59,9 @@ function getDateScore(dateLastIntervention, joursRecommandes) {
  * ✅ FONCTION 5: Convertir rating (0-5) en score (0-10)
  */
 function getRatingScore(rating) {
-  if (!rating) return 5;
-  return (rating / 5) * 10;
+  const parsed = Number(rating);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.max(0, Math.min(10, (parsed / 5) * 10));
 }
 
 /**
@@ -76,29 +77,39 @@ function getAvailabilityScore(garage) {
  * Poids: Kilométrage 40% + Date 30% + Type véhicule 10%
  */
 function calculateInterventionScore(vehicle, lastIntervention, interventionType) {
-  let score = 0;
-  
-  // 1. Score kilométrage (40%)
-  if (interventionType.km_recommande) {
-    const kmScore = getKilometrationScore(vehicle.kilometrage, interventionType.km_recommande);
-    score += (kmScore / 100) * 40;
-  }
-  
-  // 2. Score date (30%)
-  if (lastIntervention && interventionType.jours_recommandes) {
-    const dateScore = getDateScore(lastIntervention.date_intervention || lastIntervention.createdAt, interventionType.jours_recommandes);
-    score += (dateScore / 100) * 30;
-  }
-  
-  // 3. Score type véhicule (10%)
+  // Backwards-compatible: return scalar total using detailed breakdown
+  const detail = calculateInterventionScoreDetailed(vehicle, lastIntervention, interventionType);
+  return Math.min(detail.total, 100);
+}
+
+function calculateInterventionScoreDetailed(vehicle, lastIntervention, interventionType) {
+  // km score (0-100) -> weight 40%
+  const kmScorePercent = interventionType.km_recommande ? getKilometrationScore(vehicle.kilometrage, interventionType.km_recommande) : 0;
+  const kmContribution = (kmScorePercent / 100) * 40;
+
+  // date score (0-100) -> weight 30%
+  const dateScorePercent = lastIntervention && interventionType.jours_recommandes ? getDateScore(lastIntervention.date_intervention || lastIntervention.createdAt, interventionType.jours_recommandes) : 0;
+  const dateContribution = (dateScorePercent / 100) * 30;
+
+  // vehicle type contribution (base 10 scaled by multiplier)
   let vehicleTypeMultiplier = 1.0;
   if (vehicle.type === 'Diesel') vehicleTypeMultiplier = 1.2;
   if (vehicle.type === 'SUV') vehicleTypeMultiplier = 1.15;
   if (vehicle.type === 'Électrique') vehicleTypeMultiplier = 0.8;
-  
-  score += vehicleTypeMultiplier * 10;
-  
-  return Math.min(score, 100);
+  const typeContribution = vehicleTypeMultiplier * 10;
+
+  const totalRaw = kmContribution + dateContribution + typeContribution;
+  const total = Math.min(totalRaw, 100);
+
+  return {
+    total: parseFloat(total.toFixed(2)),
+    kmScorePercent: parseFloat(kmScorePercent.toFixed(2)),
+    kmContribution: parseFloat(kmContribution.toFixed(2)),
+    dateScorePercent: parseFloat(dateScorePercent.toFixed(2)),
+    dateContribution: parseFloat(dateContribution.toFixed(2)),
+    vehicleTypeMultiplier,
+    typeContribution: parseFloat(typeContribution.toFixed(2))
+  };
 }
 
 /**
@@ -106,22 +117,38 @@ function calculateInterventionScore(vehicle, lastIntervention, interventionType)
  * Poids: Distance 40% + Rating 35% + Disponibilité 25%
  */
 function calculateGarageScore(userLat, userLon, garage) {
-  let score = 0;
-  
-  // 1. Distance (40%)
-  const distance = haversine(userLat, userLon, garage.latitude, garage.longitude);
-  const distanceScore = getDistanceScore(distance);
-  score += (distanceScore / 10) * 40;
-  
-  // 2. Rating (35%)
-  const ratingScore = getRatingScore(garage.rating);
-  score += (ratingScore / 10) * 35;
-  
-  // 3. Disponibilité (25%)
-  const availabilityScore = getAvailabilityScore(garage);
-  score += (availabilityScore / 10) * 25;
-  
-  return parseFloat(score.toFixed(2));
+  const detail = calculateGarageScoreDetailed(userLat, userLon, garage);
+  return parseFloat(detail.total.toFixed(2));
+}
+
+function calculateGarageScoreDetailed(userLat, userLon, garage) {
+  const garageLat = Number(garage.latitude);
+  const garageLon = Number(garage.longitude);
+  const hasGps = Number.isFinite(garageLat) && Number.isFinite(garageLon);
+  const distanceKm = hasGps ? haversine(userLat, userLon, garageLat, garageLon) : null;
+
+  const distanceScore0to10 = distanceKm !== null ? getDistanceScore(distanceKm) : 0;
+  const distanceContribution = (distanceScore0to10 / 10) * 40;
+
+  const ratingScore0to10 = getRatingScore(garage.rating);
+  const ratingContribution = (ratingScore0to10 / 10) * 35;
+
+  const availabilityScore0to10 = getAvailabilityScore(garage);
+  const availabilityContribution = (availabilityScore0to10 / 10) * 25;
+
+  const totalRaw = distanceContribution + ratingContribution + availabilityContribution;
+  const total = parseFloat(Math.min(totalRaw, 100).toFixed(2));
+
+  return {
+    total,
+    distanceKm,
+    distanceScore0to10: parseFloat(distanceScore0to10.toFixed(2)),
+    distanceContribution: parseFloat(distanceContribution.toFixed(2)),
+    ratingScore0to10: parseFloat(ratingScore0to10.toFixed(2)),
+    ratingContribution: parseFloat(ratingContribution.toFixed(2)),
+    availabilityScore0to10: parseFloat(availabilityScore0to10.toFixed(2)),
+    availabilityContribution: parseFloat(availabilityContribution.toFixed(2))
+  };
 }
 
 /**
@@ -154,6 +181,10 @@ module.exports = {
   getRatingScore,
   getAvailabilityScore,
   calculateInterventionScore,
+  calculateInterventionScoreDetailed,
   calculateGarageScore,
+  calculateGarageScoreDetailed,
   getUrgency
 };
+
+

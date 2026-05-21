@@ -1,8 +1,36 @@
-const { asyncHandler } = require('../middlewares/asyncHandler');
+﻿const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
+const { pool } = require('../db');
 const pieceService = require('../services/pieceService');
 const { logger } = require('../utils/logger');
+
+const resolvePieceOwnerId = async (user = {}) => {
+  const parsedUserId = Number.parseInt(user.id, 10);
+  if (Number.isInteger(parsedUserId) && parsedUserId > 0) {
+    return parsedUserId;
+  }
+
+  if (user.role !== 'admin' || !user.email) {
+    return null;
+  }
+
+  const result = await pool.query(
+    `SELECT u.id
+     FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE LOWER(u.email) = LOWER($1)
+       AND LOWER(r.name) = 'admin'
+     LIMIT 1`,
+    [user.email]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return Number.parseInt(result.rows[0].id, 10);
+};
 
 const createPiece = asyncHandler(async (req, res) => {
   logger.info('POST /api/pieces payload received', {
@@ -31,9 +59,12 @@ const createPiece = asyncHandler(async (req, res) => {
       : null
   });
 
+  const ownerId = await resolvePieceOwnerId(req.user || {});
+
   const payload = {
     ...(req.body || {}),
-    user_id: req.user?.id || null
+    user_id: ownerId,
+    is_validated: req.user?.role === 'admin'
   };
 
   if (req.file) {
@@ -64,6 +95,22 @@ const getAllPieces = asyncHandler(async (req, res) => {
   });
 });
 
+const getMyPieces = asyncHandler(async (req, res) => {
+  const pieces = await pieceService.getMyPieces({
+    userId: req.user?.id,
+    page: req.query.page,
+    limit: req.query.limit,
+    search: req.query.search,
+    sortBy: req.query.sortBy,
+    sortOrder: req.query.sortOrder
+  });
+
+  return sendApiResponse(res, {
+    message: 'Liste de vos pieces recuperee avec succes',
+    data: pieces
+  });
+});
+
 const getPieceById = asyncHandler(async (req, res) => {
   const pieceId = Number.parseInt(req.params.id, 10);
   if (!Number.isFinite(pieceId) || pieceId <= 0) {
@@ -78,60 +125,13 @@ const getPieceById = asyncHandler(async (req, res) => {
   });
 });
 
-const comparePieceAcrossVendors = asyncHandler(async (req, res) => {
-  const pieceId = req.query.pieceId;
-  const name = req.query.name;
-  const includeOutOfStock = ['true', '1', 'yes', 'on']
-    .includes(String(req.query.includeOutOfStock || '').toLowerCase());
-  const userLat = req.query.userLat;
-  const userLon = req.query.userLon;
-  const radiusKm = req.query.radiusKm;
-  const sortBy = req.query.sortBy;
-  const sortOrder = req.query.sortOrder;
-
-  const comparison = await pieceService.comparePieceAcrossVendors({
-    pieceId,
-    name,
-    includeOutOfStock,
-    userLat,
-    userLon,
-    radiusKm,
-    sortBy,
-    sortOrder
-  });
-
-  return sendApiResponse(res, {
-    message: 'Comparaison multi-vendeurs recuperee avec succes',
-    data: comparison
-  });
-});
-
-const getPieceSellerLocations = asyncHandler(async (req, res) => {
-  const locations = await pieceService.listPieceSellerLocations({
-    userLat: req.query.userLat,
-    userLon: req.query.userLon,
-    radiusKm: req.query.radiusKm
-  });
-
-  return sendApiResponse(res, {
-    message: 'Localisations vendeurs de pieces recuperees avec succes',
-    data: locations
-  });
-});
-
 const updatePiece = asyncHandler(async (req, res) => {
   const pieceId = Number.parseInt(req.params.id, 10);
   if (!Number.isFinite(pieceId) || pieceId <= 0) {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  const payload = req.body || {};
-
-  if (req.file) {
-    payload.photo_url = `/uploads/pieces/${req.file.filename}`;
-  }
-
-  const piece = await pieceService.updatePiece(pieceId, payload);
+  const piece = await pieceService.updatePiece(pieceId, req.body || {}, req.user);
 
   return sendApiResponse(res, {
     message: 'Piece mise a jour avec succes',
@@ -145,7 +145,7 @@ const deletePiece = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  await pieceService.deletePiece(pieceId);
+  await pieceService.deletePiece(pieceId, req.user);
 
   return sendApiResponse(res, {
     message: 'Piece supprimee avec succes',
@@ -159,10 +159,35 @@ const adjustPieceStock = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  const result = await pieceService.adjustPieceStock(pieceId, req.body || {}, req.user?.id || null);
+  const result = await pieceService.adjustPieceStock(pieceId, req.body || {}, req.user);
 
   return sendApiResponse(res, {
     message: 'Stock ajuste avec succes',
+    data: result
+  });
+});
+
+const comparePiecesAcrossVendors = asyncHandler(async (req, res) => {
+  const result = await pieceService.comparePieceAcrossVendors({
+    pieceId: req.query.pieceId,
+    name: req.query.name,
+    includeOutOfStock: ['true', '1', 'yes', 'on'].includes(String(req.query.includeOutOfStock || '').toLowerCase())
+  });
+
+  return sendApiResponse(res, {
+    message: 'Comparaison des pieces recuperee avec succes',
+    data: result
+  });
+});
+
+const getPieceSellerLocations = asyncHandler(async (req, res) => {
+  const result = await pieceService.getPieceSellerLocations({
+    pieceId: req.query.pieceId,
+    name: req.query.name
+  });
+
+  return sendApiResponse(res, {
+    message: 'Localisations des vendeurs recuperees avec succes',
     data: result
   });
 });
@@ -173,7 +198,7 @@ const setPieceStock = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  const result = await pieceService.setPieceStock(pieceId, req.body || {}, req.user?.id || null);
+  const result = await pieceService.setPieceStock(pieceId, req.body || {}, req.user);
 
   return sendApiResponse(res, {
     message: 'Stock defini avec succes',
@@ -190,7 +215,7 @@ const getPieceStockMovements = asyncHandler(async (req, res) => {
   const movements = await pieceService.getPieceStockMovements(pieceId, {
     page: req.query.page,
     limit: req.query.limit
-  });
+  }, req.user);
 
   return sendApiResponse(res, {
     message: 'Historique de stock recupere avec succes',
@@ -201,12 +226,14 @@ const getPieceStockMovements = asyncHandler(async (req, res) => {
 module.exports = {
   createPiece,
   getAllPieces,
+  getMyPieces,
   getPieceById,
-  comparePieceAcrossVendors,
-  getPieceSellerLocations,
   updatePiece,
   deletePiece,
   adjustPieceStock,
   setPieceStock,
-  getPieceStockMovements
+  getPieceStockMovements,
+  comparePiecesAcrossVendors,
+  getPieceSellerLocations
 };
+

@@ -1,7 +1,12 @@
+﻿// =====================================
+// REACT COMPONENT: CataloguePieces.jsx
+// FOLDER: vendeur
+// =====================================
+
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin, Navigation2, Package, TrendingDown } from "lucide-react";
-import { comparePieceAcrossVendors, createPiece, deletePiece, getPieces, updatePiece } from "../../services/pieces";
+import { comparePieceAcrossVendors, createPiece, deletePiece, getMyPieces, getPieceById, getPieces, updatePiece } from "../../services/pieces";
 import { extractConversationAndMessages, startChatConversation } from "../../services/chat";
 import { getCompleteProfile, getCompleteProfileById, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -114,7 +119,8 @@ const categories = [
 const chatRouteByRole = {
   automobiliste: "/automobiliste/messages",
   garage: "/garage/messages",
-  vendeur: "/vendeur/messages"
+  vendeur: "/vendeur/messages",
+  admin: "/vendeur/messages"
 };
 
 const marqueStyleByName = {
@@ -139,7 +145,7 @@ const categoryVisual = {
   Roue: { icon: "⭕", color: "from-slate-100 to-white" },
   "Carrosserie latérale gauche": { icon: "🚘", color: "from-indigo-100 to-white" },
   "Pièces latérale droite": { icon: "🚗", color: "from-blue-100 to-white" },
-  "Toit voiture": { icon: "⬒", color: "from-zinc-100 to-white" },
+  "Toit voiture": { icon: "â¬’", color: "from-zinc-100 to-white" },
   "Carrosserie Arrière": { icon: "🔧", color: "from-gray-100 to-white" },
   "Pièces Face Avant": { icon: "🚙", color: "from-emerald-100 to-white" },
   Accessoires: { icon: "🧰", color: "from-amber-100 to-white" },
@@ -191,14 +197,21 @@ const brandLogoDomains = {
   Kia: "kia.com",
   Lada: "lada.ru",
   "Land Rover": "landrover.com",
+  Lexus: "lexus.com",
+  Mahindra: "mahindra.com",
+  Mazda: "mazda.com",
+  Mercedes: "mercedes-benz.com",
   MG: "mgmotor.eu",
   Mitsubishi: "mitsubishi-motors.com",
   Nissan: "nissan-global.com",
+  Opel: "opel.com",
   Peugeot: "peugeot.com",
+  Porsche: "porsche.com",
   Renault: "renault.com",
   "Rolls-Royce": "rolls-roycemotorcars.com",
   Seat: "seat.com",
   Skoda: "skoda-auto.com",
+  SsangYong: "kg-mobility.com",
   Suzuki: "suzuki.com",
   Tesla: "tesla.com",
   Toyota: "toyota.com",
@@ -233,12 +246,14 @@ const getBrandLogoCandidates = (marque) => {
   );
 
   const domain = brandLogoDomains[marque];
-  if (!domain) {
-    return localCandidates;
-  }
+  const remoteCandidates = domain
+    ? [
+        `https://logo.clearbit.com/${encodeURIComponent(domain)}`,
+        `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`
+      ]
+    : [];
 
-  const encodedDomain = encodeURIComponent(domain);
-  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`];
+  return [...localCandidates, ...remoteCandidates];
 };
 
 const buildSvgDataUrl = ({ top = "#f8fafc", bottom = "#ffffff", title = "", subtitle = "", accent = "#1e293b" }) => {
@@ -449,8 +464,17 @@ const buildPieceLocationSearchUrl = (piece) => {
   return buildGoogleMapsSearchUrl(parts.join(", "));
 };
 
+const getPieceVendorDisplayName = (piece) => {
+  if (String(piece?.seller_role || "").toLowerCase() === "admin") {
+    return "admin";
+  }
+
+  return piece?.seller_store_name || piece?.seller_name || "Vendeur";
+};
+
 const CataloguePieces = () => {
   const { user } = useContext(AuthContext);
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("pieces");
@@ -470,6 +494,13 @@ const CataloguePieces = () => {
   const [presentationSaving, setPresentationSaving] = useState(false);
   const [presentationMessage, setPresentationMessage] = useState("");
   const [presentationError, setPresentationError] = useState("");
+  const isGarageCataloguePage = location.pathname === "/garage/catalogue" || location.pathname.startsWith("/garage/catalogue/");
+
+  useEffect(() => {
+    if (isGarageCataloguePage) {
+      setActiveTab("pieces");
+    }
+  }, [isGarageCataloguePage]);
 
   const [filters, setFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
@@ -491,7 +522,7 @@ const CataloguePieces = () => {
   const [createSuccess, setCreateSuccess] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [newPiece, setNewPiece] = useState(createEmptyPieceForm);
-  const [locationFocusToken, setLocationFocusToken] = useState(0);
+  const [isForSale, setIsForSale] = useState(false);
 
   const [showMarquesModal, setShowMarquesModal] = useState(false);
   const [showModelesModal, setShowModelesModal] = useState(false);
@@ -512,7 +543,6 @@ const CataloguePieces = () => {
   const mapContainerRef = useRef(null);
   const googleMapRef = useRef(null);
   const markerRef = useRef(null);
-  const vendorLocationRef = useRef(null);
 
   // Google Maps handlers
   const initializeGoogleMap = () => {
@@ -531,8 +561,41 @@ const CataloguePieces = () => {
 
     googleMapRef.current = map;
 
+    const markerApi = window.google?.maps?.marker;
+    const AdvancedMarkerElement = markerApi?.AdvancedMarkerElement;
+
+    const createMarker = (options) => {
+      if (AdvancedMarkerElement) {
+        return new AdvancedMarkerElement({
+          map: options.map,
+          position: options.position,
+          title: options.title,
+          gmpDraggable: Boolean(options.draggable)
+        });
+      }
+
+      return new window.google.maps.Marker(options);
+    };
+
+    const setMarkerPosition = (targetMarker, position) => {
+      if (!targetMarker) return;
+      if (typeof targetMarker.setPosition === "function") {
+        targetMarker.setPosition(position);
+        return;
+      }
+      targetMarker.position = position;
+    };
+
+    const readMarkerPosition = (targetMarker) => {
+      if (!targetMarker) return null;
+      if (typeof targetMarker.getPosition === "function") {
+        return targetMarker.getPosition();
+      }
+      return targetMarker.position || null;
+    };
+
     // Create marker
-    const marker = new window.google.maps.Marker({
+    const marker = createMarker({
       position: center,
       map: map,
       draggable: true,
@@ -543,11 +606,18 @@ const CataloguePieces = () => {
 
     // Handle marker drag
     marker.addListener("dragend", () => {
-      const pos = marker.getPosition();
+      const pos = readMarkerPosition(marker);
+      const latitude = typeof pos?.lat === "function" ? pos.lat() : pos?.lat;
+      const longitude = typeof pos?.lng === "function" ? pos.lng() : pos?.lng;
+
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        return;
+      }
+
       setNewPiece(prev => ({
         ...prev,
-        latitude: pos.lat(),
-        longitude: pos.lng()
+        latitude,
+        longitude
       }));
     });
 
@@ -555,7 +625,7 @@ const CataloguePieces = () => {
     map.addListener("click", (e) => {
       const lat = e.latLng.lat();
       const lng = e.latLng.lng();
-      marker.setPosition({ lat, lng });
+      setMarkerPosition(marker, { lat, lng });
       setNewPiece(prev => ({
         ...prev,
         latitude: lat,
@@ -582,8 +652,8 @@ const CataloguePieces = () => {
     return apiUrl.replace(/\/api\/?$/, "");
   }, []);
 
-  const canManagePieces = user?.role === "vendeur" || user?.role === "admin";
-  const canSeeStoreTabs = isStoreView || user?.role === "vendeur" || user?.role === "admin" || user?.role === "garage";
+  const canManagePieces = user?.role === "vendeur";
+  const canSeeStoreTabs = isStoreView || user?.role === "vendeur" || user?.role === "garage";
 
   // Initialize Google Map when modal opens
   useEffect(() => {
@@ -645,7 +715,9 @@ const CataloguePieces = () => {
           params.search = appliedFilters.search.trim();
         }
 
-        const res = await getPieces(params);
+        const res = canManagePieces && catalogScope === "private" && !isStoreView
+          ? await getMyPieces(params)
+          : await getPieces(params);
         const responseData = res.data?.data ?? res.data;
 
         if (Array.isArray(responseData)) {
@@ -674,7 +746,7 @@ const CataloguePieces = () => {
     };
 
     fetchPieces();
-  }, [page, appliedFilters]);
+  }, [page, appliedFilters, canManagePieces, catalogScope, isStoreView, storeOwnerId]);
 
   useEffect(() => {
     if (!canSeeStoreTabs && activeTab !== "pieces") {
@@ -687,6 +759,42 @@ const CataloguePieces = () => {
       setCatalogScope("public");
     }
   }, [canManagePieces]);
+
+  // Handle pieceId parameter from URL (for edit/view from Dashboard)
+  useEffect(() => {
+    const pieceIdParam = searchParams.get("pieceId");
+    const editParam = searchParams.get("edit");
+    const viewParam = searchParams.get("view");
+
+    if (!pieceIdParam) {
+      return;
+    }
+
+    const parsedPieceId = Number.parseInt(pieceIdParam, 10);
+    if (!Number.isInteger(parsedPieceId) || parsedPieceId <= 0) {
+      return;
+    }
+
+    // Find the piece in the current items
+    const targetPiece = items.find((p) => Number(p.id) === parsedPieceId);
+    
+    if (targetPiece) {
+      if (editParam === "true") {
+        // Open edit form
+        void openEditPieceModal(targetPiece);
+      } else if (viewParam === "true") {
+        // Show piece details
+        openPieceDetails(targetPiece);
+      }
+      
+      // Clean up the URL params
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("pieceId");
+      nextParams.delete("edit");
+      nextParams.delete("view");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [items, searchParams]);
 
   const openStoreViewByOwnerId = async (ownerId, options = {}) => {
     const { syncUrl = false, tab = "presentation" } = options;
@@ -782,8 +890,17 @@ const CataloguePieces = () => {
       return visibleItems;
     }
 
+    const hasValidOwnSellerId = Number.isInteger(ownSellerId) && ownSellerId > 0;
+
+    if (canManagePieces && catalogScope === "private" && hasValidOwnSellerId) {
+      return visibleItems.filter((item) => Number(item.user_id) === ownSellerId || item.user_id === null || item.user_id === undefined);
+    }
+
     if (canManagePieces && catalogScope === "private") {
-      return visibleItems.filter((item) => Number(item.user_id) === ownSellerId);
+      if (hasValidOwnSellerId) {
+        return visibleItems.filter((item) => Number(item.user_id) === ownSellerId || item.user_id === null || item.user_id === undefined);
+      }
+      return [];
     }
 
     return visibleItems;
@@ -885,8 +1002,7 @@ const CataloguePieces = () => {
   const canEditSelectedPiece = Boolean(
     selectedPiece
     && canManagePieces
-    && !isStoreView
-    && catalogScope === "private"
+    && !isPublicMarketplace
     && Number(selectedPiece.user_id) === ownSellerId
   );
 
@@ -986,38 +1102,8 @@ const CataloguePieces = () => {
 
     return offers;
   }, [selectedPiece]);
-  const selectedPieceLocationQuery = useMemo(() => {
-    const parts = [
-      selectedPieceVendor?.magasin,
-      selectedPieceVendor?.store_name,
-      selectedPieceVendor?.nom,
-      selectedPieceVendor?.name,
-      selectedPiece?.seller_store_name,
-      selectedPiece?.seller_name,
-      selectedPiece?.zone_geographique,
-      "Tunisie"
-    ].filter(Boolean);
 
-    return parts.join(", ");
-  }, [selectedPiece, selectedPieceVendor]);
-  const selectedPieceLocationMapUrl = useMemo(
-    () => (selectedPieceLocationQuery ? buildGoogleMapsEmbedUrl(selectedPieceLocationQuery) : ""),
-    [selectedPieceLocationQuery]
-  );
-  const selectedPieceLocationSearchUrl = useMemo(
-    () => (selectedPieceLocationQuery ? buildGoogleMapsSearchUrl(selectedPieceLocationQuery) : ""),
-    [selectedPieceLocationQuery]
-  );
-  const selectedPieceVendorMapUrl = useMemo(
-    () => (selectedPieceVendor ? buildVendorGoogleMapsEmbedUrl(selectedPieceVendor) : ""),
-    [selectedPieceVendor]
-  );
-  const selectedPieceVendorSearchUrl = useMemo(
-    () => (selectedPieceVendor ? buildVendorGoogleMapsSearchUrl(selectedPieceVendor) : ""),
-    [selectedPieceVendor]
-  );
-
-  const getVendorOwnerId = (vendorOffer) => {
+  function getVendorOwnerId(vendorOffer) {
     if (!vendorOffer) {
       return null;
     }
@@ -1064,7 +1150,24 @@ const CataloguePieces = () => {
     return ownerIdCandidates
       .map((value) => Number.parseInt(value, 10))
       .find((value) => Number.isFinite(value) && value > 0) || null;
-  };
+  }
+
+  function resolveOwnerIdForStore(vendorOffer) {
+    return (
+      getVendorOwnerId(vendorOffer) ||
+      getVendorOwnerId(selectedPieceVendor) ||
+      getVendorOwnerId(selectedPieceVendorOffers[0]) ||
+      getVendorOwnerId(selectedPieceVendorOffers[0]?.vendeur) ||
+      getVendorOwnerId(selectedPiece)
+    );
+  }
+
+  const selectedPieceOwnerId = resolveOwnerIdForStore(selectedPieceVendor || selectedPiece);
+  const canContactSelectedPieceVendor = Boolean(
+    selectedPiece
+    && selectedPieceOwnerId
+    && Number(user?.id) !== Number(selectedPieceOwnerId)
+  );
 
   const handlePresentationChange = (event) => {
     const { name, value } = event.target;
@@ -1177,28 +1280,53 @@ const CataloguePieces = () => {
     setCreateError("");
     setCreateSuccess("");
     setNewPiece(createEmptyPieceForm());
+    setIsForSale(false);
     setShowCreateModal(true);
   };
 
-  const openEditPieceModal = (piece) => {
-    setEditingPieceId(piece.id);
+  const openEditPieceModal = async (piece) => {
+    const pieceId = Number(piece?.id);
+    if (!Number.isInteger(pieceId) || pieceId <= 0) {
+      setCreateError("Impossible de charger cette piece pour modification.");
+      return;
+    }
+
+    let targetPiece = piece;
+    if (!targetPiece?.nom || !targetPiece?.reference) {
+      try {
+        const response = await getPieceById(pieceId);
+        targetPiece = response?.data?.data ?? response?.data ?? targetPiece;
+      } catch (_error) {
+        // Keep the local snapshot if the refresh fails.
+      }
+    }
+
+    if (!targetPiece) {
+      setCreateError("Impossible de charger cette piece pour modification.");
+      return;
+    }
+
+    setEditingPieceId(pieceId);
     setCreateError("");
     setCreateSuccess("");
     setNewPiece({
-      nom: piece.nom || "",
-      reference: piece.reference || "",
-      description: piece.description || "",
-      prix_unitaire: piece.prix_unitaire !== undefined && piece.prix_unitaire !== null ? String(piece.prix_unitaire) : "",
-      stock: piece.stock !== undefined && piece.stock !== null ? String(piece.stock) : "0",
-      condition: piece.condition || "Neuf",
-      zone_geographique: piece.zone_geographique || "",
-      marque: piece.marque || "",
-      modele: piece.modele || "",
-      categorie: piece.categorie || "",
+      nom: targetPiece.nom || "",
+      reference: targetPiece.reference || "",
+      description: targetPiece.description || "",
+      prix_unitaire: targetPiece.prix_unitaire !== undefined && targetPiece.prix_unitaire !== null ? String(targetPiece.prix_unitaire) : "",
+      stock: targetPiece.stock !== undefined && targetPiece.stock !== null ? String(targetPiece.stock) : "0",
+      condition: targetPiece.condition || "Neuf",
+      zone_geographique: targetPiece.zone_geographique || "",
+      marque: targetPiece.marque || "",
+      modele: targetPiece.modele || "",
+      categorie: targetPiece.categorie || "",
       photo_piece: null,
-      latitude: piece.latitude || null,
-      longitude: piece.longitude || null
+      latitude: targetPiece.latitude || null,
+      longitude: targetPiece.longitude || null
     });
+    // Initialize sale flag based on stock
+    const parsedStock = Number(targetPiece.stock || 0);
+    setIsForSale(Number.isFinite(parsedStock) && parsedStock > 0);
     setSelectedPiece(null);
     setShowCreateModal(true);
   };
@@ -1211,7 +1339,13 @@ const CataloguePieces = () => {
   };
 
   const syncPiecesList = () => {
-    setAppliedFilters((prev) => ({ ...prev }));
+    // Réinitialiser à la page 1 et forcer un refresh complet
+    setPage(1);
+    // Déclencher un refresh en changeant appliedFilters
+    setAppliedFilters((prev) => ({
+      ...prev,
+      _refreshToken: Date.now() // Force React à voir un changement
+    }));
   };
 
   const handleSubmitPiece = async (event) => {
@@ -1248,29 +1382,43 @@ const CataloguePieces = () => {
         return;
       }
 
-      const formData = new FormData();
-      formData.append("nom", normalizedNom);
-      formData.append("reference", normalizedReference);
-      formData.append("description", String(newPiece.description || "").trim());
-      formData.append("prix_unitaire", String(parsedPrice));
-      formData.append("stock", String(parsedStock));
-      formData.append("condition", newPiece.condition || "Neuf");
-      formData.append("zone_geographique", String(newPiece.zone_geographique || "").trim());
-      formData.append("marque", String(newPiece.marque || "").trim());
-      formData.append("modele", String(newPiece.modele || "").trim());
-      formData.append("categorie", String(newPiece.categorie || "").trim());
-      
-      if (newPiece.latitude) formData.append("latitude", newPiece.latitude);
-      if (newPiece.longitude) formData.append("longitude", newPiece.longitude);
-
-      if (newPiece.photo_piece) {
-        formData.append("photo_piece", newPiece.photo_piece);
-      }
-
       if (editingPieceId) {
-        await updatePiece(editingPieceId, formData);
+        // The update endpoint expects a JSON body (no multipart). Build a plain payload.
+        const payload = {
+          nom: normalizedNom,
+          reference: normalizedReference,
+          description: String(newPiece.description || "").trim(),
+          prix_unitaire: parsedPrice,
+          stock: parsedStock,
+          condition: newPiece.condition || "Neuf",
+          zone_geographique: String(newPiece.zone_geographique || "").trim(),
+          marque: String(newPiece.marque || "").trim(),
+          modele: String(newPiece.modele || "").trim(),
+          categorie: String(newPiece.categorie || "").trim()
+        };
+
+        await updatePiece(editingPieceId, payload);
         setCreateSuccess("Piece modifiee avec succes.");
       } else {
+        const formData = new FormData();
+        formData.append("nom", normalizedNom);
+        formData.append("reference", normalizedReference);
+        formData.append("description", String(newPiece.description || "").trim());
+        formData.append("prix_unitaire", String(parsedPrice));
+        formData.append("stock", String(parsedStock));
+        formData.append("condition", newPiece.condition || "Neuf");
+        formData.append("zone_geographique", String(newPiece.zone_geographique || "").trim());
+        formData.append("marque", String(newPiece.marque || "").trim());
+        formData.append("modele", String(newPiece.modele || "").trim());
+        formData.append("categorie", String(newPiece.categorie || "").trim());
+
+        if (newPiece.latitude) formData.append("latitude", newPiece.latitude);
+        if (newPiece.longitude) formData.append("longitude", newPiece.longitude);
+
+        if (newPiece.photo_piece) {
+          formData.append("photo_piece", newPiece.photo_piece);
+        }
+
         await createPiece(formData);
         setCreateSuccess("Piece ajoutee avec succes.");
       }
@@ -1278,7 +1426,28 @@ const CataloguePieces = () => {
       setNewPiece(createEmptyPieceForm());
       setEditingPieceId(null);
       setPage(1);
+      
+      // Réinitialiser les filtres de recherche pour voir la nouvelle pièce
+      setFilters((prev) => ({
+        ...prev,
+        search: ""
+      }));
+      setAppliedFilters((prev) => ({
+        ...prev,
+        search: ""
+      }));
+      
+      // Forcer l'affichage en scope "private" pour voir les pièces du vendeur
+      if (canManagePieces) {
+        setCatalogScope("private");
+      }
+      
       syncPiecesList();
+      
+      // Fermer la modale après 1.5 secondes
+      setTimeout(() => {
+        setShowCreateModal(false);
+      }, 1500);
     } catch (err) {
       try {
         const errorResponse = err.response?.data;
@@ -1335,16 +1504,6 @@ const CataloguePieces = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const resolveOwnerIdForStore = (vendorOffer) => {
-    return (
-      getVendorOwnerId(vendorOffer) ||
-      getVendorOwnerId(selectedPieceVendor) ||
-      getVendorOwnerId(selectedPieceVendorOffers[0]) ||
-      getVendorOwnerId(selectedPieceVendorOffers[0]?.vendeur) ||
-      getVendorOwnerId(selectedPiece)
-    );
-  };
-
   const handleOpenVendorStore = async (vendorOffer = selectedPieceVendorOffers[0]?.vendeur || selectedPieceVendorOffers[0] || selectedPiece) => {
     const ownerId = resolveOwnerIdForStore(vendorOffer);
 
@@ -1369,10 +1528,20 @@ const CataloguePieces = () => {
 
   const handleContactVendorChat = async () => {
     const sellerUserId = resolveOwnerIdForStore(selectedPieceVendor || selectedPiece);
+    // determine stock for the specific seller offer or fallback to piece stock
+    const vendorOfferForSeller = (Array.isArray(selectedPiece?.offers) ? selectedPiece.offers : []).find((off) => {
+      try {
+        return Number(resolveOwnerIdForStore(off)) === Number(sellerUserId);
+      } catch (e) {
+        return false;
+      }
+    }) || null;
+    const stockForSeller = Number(vendorOfferForSeller?.stock ?? selectedPiece?.stock ?? 0);
+    const allowedRolesForChat = ["automobiliste", "vendeur", "garage", "admin"];
     const targetMessagesPath = chatRouteByRole[user?.role] || "/login";
 
-    if (user?.role !== "automobiliste") {
-      navigate(targetMessagesPath);
+    if (!user?.role || !allowedRolesForChat.includes(user.role)) {
+      navigate("/login");
       return;
     }
 
@@ -1381,10 +1550,17 @@ const CataloguePieces = () => {
       return;
     }
 
+    // If the item is out of stock for this seller, ask the user to confirm contacting anyway
+    if (stockForSeller <= 0) {
+      const proceed = window.confirm("Attention : cette pièce semble hors stock chez ce vendeur. Voulez-vous malgré tout le contacter ?");
+      if (!proceed) return;
+    }
+
     try {
       setError("");
+      const conversationType = user?.role === "garage" ? "garage_vendeur" : "automobiliste_vendeur";
       const response = await startChatConversation({
-        conversationType: "automobiliste_vendeur",
+        conversationType,
         vendeurId: Number(sellerUserId),
         historyLimit: 50
       });
@@ -1406,21 +1582,26 @@ const CataloguePieces = () => {
       return;
     }
 
-    setSelectedPiece(piece);
-    setLocationFocusToken(Date.now());
+    openPieceDetails(piece);
   };
 
-  useEffect(() => {
-    if (!selectedPiece || !locationFocusToken) {
+  const openPieceDetails = async (piece) => {
+    if (!piece?.id) {
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      vendorLocationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
+    setSelectedPiece(piece);
 
-    return () => window.clearTimeout(timer);
-  }, [selectedPiece, locationFocusToken]);
+    try {
+      const response = await getPieceById(piece.id);
+      const refreshedPiece = response?.data?.data ?? response?.data ?? null;
+      if (refreshedPiece) {
+        setSelectedPiece(refreshedPiece);
+      }
+    } catch (_error) {
+      // Keep the local snapshot if the refresh fails.
+    }
+  };
 
   const handleExitVendorStore = () => {
     setIsStoreView(false);
@@ -1467,15 +1648,17 @@ const CataloguePieces = () => {
               >
                 Pieces Vendeur
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("presentation")}
-                className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
-                  activeTab === "presentation" ? "bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] text-white shadow-md shadow-blue-900/15" : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Presentation
-              </button>
+              {!isGarageCataloguePage && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("presentation")}
+                  className={`rounded-xl px-3 py-2 text-lg font-extrabold transition ${
+                    activeTab === "presentation" ? "bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] text-white shadow-md shadow-blue-900/15" : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Presentation
+                </button>
+              )}
             </div>
           )}
 
@@ -1596,7 +1779,7 @@ const CataloguePieces = () => {
                             <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2">
                               <p className="text-xs font-bold uppercase tracking-wide text-amber-700">Offre la moins chère</p>
                               <p className="text-3xl font-black text-amber-700">{Number(cheapest?.prix_unitaire || 0).toFixed(2)} DT</p>
-                              <p className="text-sm text-slate-600">Vendeur: {cheapest?.seller_store_name || cheapest?.seller_name || "Vendeur"}</p>
+                              <p className="text-sm text-slate-600">Vendeur: {getPieceVendorDisplayName(cheapest)}</p>
                             </div>
 
                             <div className="mt-3 flex items-center justify-between">
@@ -1611,20 +1794,24 @@ const CataloguePieces = () => {
                             >
                               Comparer les vendeurs
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPieceLocation(cheapest)}
-                              className="mt-2 flex w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300"
-                            >
-                              Localisation piece auto
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openComparisonPage(cheapest)}
-                              className="mt-2 w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
-                            >
-                              Ouvrir page complète
-                            </button>
+                            
+                            <div className="mt-2 grid gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openPieceDetails(cheapest)}
+                                className="w-full rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
+                              >
+                                Détails
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => openComparisonPage(cheapest)}
+                                className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300"
+                              >
+                                Ouvrir page complète
+                              </button>
+                            </div>
                           </div>
                         </article>
                       );
@@ -1634,7 +1821,7 @@ const CataloguePieces = () => {
 
                       return (
                         <article key={piece.id} className="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_34px_rgba(15,23,42,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_40px_rgba(15,23,42,0.12)]">
-                          <button type="button" className="w-full" onClick={() => setSelectedPiece(piece)}>
+                          <button type="button" className="w-full" onClick={() => openPieceDetails(piece)}>
                             <img src={imageSrc} alt={piece.nom} className="h-52 w-full object-cover" />
                           </button>
 
@@ -1646,8 +1833,7 @@ const CataloguePieces = () => {
                             <div className="mt-3 flex items-center justify-between">
                               <p className="text-3xl font-black text-blue-700">{Number(piece.prix_unitaire).toFixed(2)} DT</p>
                               <div className="flex items-center gap-3 text-2xl text-slate-400">
-                                <button type="button" aria-label="Favori">♡</button>
-                                <button type="button" aria-label="Partager">↗</button>
+                               
                               </div>
                             </div>
 
@@ -1657,20 +1843,14 @@ const CataloguePieces = () => {
                               </span>
                               <button
                                 type="button"
-                                onClick={() => setSelectedPiece(piece)}
+                                onClick={() => openPieceDetails(piece)}
                                 className="rounded-xl border border-blue-200 bg-white px-3 py-1 text-sm font-bold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
                               >
                                 Details
                               </button>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPieceLocation(piece)}
-                              className="mt-3 flex w-full items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300"
-                            >
-                              Localisation piece auto
-                            </button>
+                            
                           </div>
                         </article>
                       );
@@ -1708,7 +1888,7 @@ const CataloguePieces = () => {
             </>
           )}
 
-          {activeTab === "presentation" && (
+          {!isGarageCataloguePage && activeTab === "presentation" && (
             <div className="space-y-5">
               {canManagePieces && !isStoreView && (
                 <form onSubmit={handlePresentationSave} className="rounded-3xl border border-[#ececec] bg-white p-5 shadow-[0_10px_24px_rgba(0,0,0,0.06)]">
@@ -1792,7 +1972,7 @@ const CataloguePieces = () => {
                 <h3 className="text-2xl font-black text-slate-900">Services complementaires</h3>
                 <ul className="mt-3 space-y-2 text-lg text-slate-700">
                   {storeServices.map((service) => (
-                    <li key={service}>✓ {service}</li>
+                    <li key={service}>✅ {service}</li>
                   ))}
                 </ul>
               </div>
@@ -1808,20 +1988,17 @@ const CataloguePieces = () => {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
-                La section map est volontairement desactivee pour le moment.
-              </div>
             </div>
           )}
         </div>
 
-        {activeTab === "pieces" && canManagePieces && !isStoreView && !isPublicMarketplace && (
+        {activeTab === "pieces" && canManagePieces && !isStoreView && (
           <button
             type="button"
             onClick={openCreatePieceModal}
             className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-8 py-3 text-lg font-extrabold text-white shadow-[0_16px_30px_rgba(30,64,175,0.28)]"
           >
-            ＋ Ajouter une piece
+            + Ajouter une pièce
           </button>
         )}
 
@@ -2118,125 +2295,51 @@ const CataloguePieces = () => {
                   </div>
 
                   <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
-                    <label className="mb-2 block text-lg font-semibold text-slate-800">Lieu</label>
-                    <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-4">
-                      <div>
-                        <p className="text-base text-slate-800">Ajouter une localisation</p>
-                        <p className="text-sm text-slate-500">(approximative)</p>
-                      </div>
-                      <select
-                        name="zone_geographique"
-                        value={newPiece.zone_geographique || ""}
-                        onChange={handleCreateInput}
-                        className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
-                      >
-                        <option value="">Zone</option>
-                        <option value="Nord">Nord</option>
-                        <option value="Sud">Sud</option>
-                        <option value="Est">Est</option>
-                        <option value="Ouest">Ouest</option>
-                        <option value="Centre">Centre</option>
-                      </select>
-                    </div>
-
-                    <div className="mt-4 flex gap-3">
-                      <button
-                        type="button"
-                        onClick={handleOpenMapModal}
-                        className="flex-1 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
-                      >
-                        📍 Position GPS
-                      </button>
-                      {newPiece.latitude && newPiece.longitude && (
-                        <div className="flex-1 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-xs font-semibold text-emerald-700">
-                          ✓ Lieu enregistré
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-3 space-y-2">
-                      {newPiece.latitude && (
-                        <p className="text-sm text-slate-600">📍 Latitude: {newPiece.latitude.toFixed(4)}</p>
-                      )}
-                      {newPiece.longitude && (
-                        <p className="text-sm text-slate-600">📍 Longitude: {newPiece.longitude.toFixed(4)}</p>
-                      )}
-                    </div>
-
-                    {showMapModal && (
-                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="h-4/5 w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col">
-                          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                            <h3 className="text-lg font-semibold text-slate-800">Sélectionner le lieu de la pièce</h3>
-                            <button
-                              onClick={() => setShowMapModal(false)}
-                              className="text-slate-500 hover:text-slate-700"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          
-                          <div ref={mapContainerRef} className="flex-1 w-full" style={{ minHeight: "400px" }} />
-                          
-                          <div className="flex gap-3 border-t border-slate-200 px-6 py-4">
-                            <button
-                              type="button"
-                              onClick={() => setShowMapModal(false)}
-                              className="flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                            >
-                              Annuler
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleSaveLocation}
-                              className="flex-1 rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100"
-                            >
-                              ✓ Enregistrer le lieu
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                      <iframe
-                        title="Google Maps localisation piece"
-                        src={googleMapsEmbedUrl}
-                        className="h-64 w-full border-0"
-                        loading="lazy"
-                        referrerPolicy="no-referrer-when-downgrade"
-                      />
-                    </div>
-
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-sm text-slate-600">Carte basee sur: {pieceLocationQuery}</p>
-                      <a
-                        href={googleMapsSearchUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
-                      >
-                        Ouvrir dans Google Maps
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-lg font-semibold text-slate-800">Prix Fixe</p>
                         <p className="text-sm text-slate-500">Saisissez le tarif de vente</p>
                       </div>
-                      <input
-                        type="number"
-                        name="stock"
-                        value={newPiece.stock}
-                        onChange={handleCreateInput}
-                        placeholder="Stock"
-                        min="0"
-                        step="1"
-                        className="w-24 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-base text-slate-700 outline-none focus:border-blue-300"
-                      />
+
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-full border bg-white p-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isForSale) {
+                                // enable sale, ensure stock at least 1
+                                setNewPiece((prev) => ({ ...prev, stock: String(Math.max(Number(prev.stock || 0), 1)) }));
+                              }
+                              setIsForSale(true);
+                            }}
+                            className={`px-3 py-1 rounded-full text-sm font-semibold ${isForSale ? "bg-blue-600 text-white" : "text-slate-600"}`}
+                          >
+                            En stock
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsForSale(false);
+                              setNewPiece((prev) => ({ ...prev, stock: "0" }));
+                            }}
+                            className={`ml-1 px-3 py-1 rounded-full text-sm font-semibold ${!isForSale ? "bg-rose-50 text-rose-700" : "text-slate-600"}`}
+                          >
+                            Hors stock
+                          </button>
+                        </div>
+
+                        <input
+                          type="number"
+                          name="stock"
+                          value={newPiece.stock}
+                          onChange={handleCreateInput}
+                          placeholder="Stock"
+                          min="0"
+                          step="1"
+                          disabled={!isForSale}
+                          className={`w-24 rounded-2xl border border-slate-200 ${isForSale ? "bg-white" : "bg-gray-50"} px-3 py-3 text-center text-base text-slate-700 outline-none focus:border-blue-300 disabled:opacity-60`}
+                        />
+                      </div>
                     </div>
                   </div>
                 </form>
@@ -2272,34 +2375,29 @@ const CataloguePieces = () => {
                       </span>
                       <span className="ml-3 text-xl transition-transform group-hover:translate-x-0.5">›</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleContactVendorChat}
-                      className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-white text-2xl text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
-                      aria-label="Contacter le vendeur"
-                      title="Contacter le vendeur"
-                    >
-                      💬
-                    </button>
+                    {canContactSelectedPieceVendor ? (
+                      <button
+                        type="button"
+                        onClick={handleContactVendorChat}
+                        className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 shadow-[0_8px_16px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-blue-300 hover:text-blue-700"
+                        aria-label="Contacter le vendeur"
+                        title="Contacter le vendeur"
+                      >
+                        <span>💬</span>
+                        <span>Contacter le vendeur</span>
+                      </button>
+                    ) : (
+                      <div className="hidden h-14 flex-1" aria-hidden="true" />
+                    )}
                   </div>
 
-                  {user?.role === "automobiliste" && selectedPieceLocationSearchUrl && (
-                    <a
-                      href={selectedPieceLocationSearchUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center justify-center rounded-full bg-black px-5 py-4 text-white shadow-[0_10px_18px_rgba(0,0,0,0.18)] transition hover:-translate-y-0.5 hover:bg-zinc-900"
-                    >
-                      <Navigation2 className="mr-3 h-5 w-5" />
-                      <span className="text-lg font-semibold">Itinéraires</span>
-                    </a>
-                  )}
+                  
 
                   {canEditSelectedPiece && (
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
-                        onClick={() => openEditPieceModal(selectedPiece)}
+                        onClick={() => void openEditPieceModal(selectedPiece)}
                         className="rounded-2xl border border-blue-200 bg-white px-4 py-3 text-base font-semibold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300"
                       >
                         Modifier la piece
@@ -2318,13 +2416,13 @@ const CataloguePieces = () => {
                     <div className="space-y-4 text-slate-900">
                       <div className="flex items-start gap-4">
                         <span className="mt-1 text-2xl">ⓘ</span>
-                        <p className="text-2xl font-black tracking-wide">{selectedPiece.reference}</p>
+                        <p className="text-2xl font-black tracking-wide">{selectedPiece.reference || "Référence non renseignée"}</p>
                       </div>
 
                       <div className="flex items-start gap-4">
                         <span className="mt-1 text-2xl">🏷</span>
                         <div>
-                          <p className="text-2xl font-black">{selectedPiece.nom}</p>
+                          <p className="text-2xl font-black">{selectedPiece.nom || "Pièce sans nom"}</p>
                           <p className="text-base text-slate-500">{selectedPiece.description || "Pas de description"}</p>
                         </div>
                       </div>
@@ -2352,7 +2450,7 @@ const CataloguePieces = () => {
                   <div className="overflow-hidden rounded-[26px] border border-[#e8e0d1] bg-white shadow-[0_12px_24px_rgba(0,0,0,0.05)]">
                     <img
                       src={selectedPiece.photo_url ? (selectedPiece.photo_url.startsWith("http") ? selectedPiece.photo_url : `${backendBaseUrl}${selectedPiece.photo_url}`) : getPieceImageFallback(selectedPiece)}
-                      alt={selectedPiece.nom}
+                      alt={selectedPiece.nom || "Pièce"}
                       className="h-[420px] w-full object-cover"
                     />
                   </div>
@@ -2363,106 +2461,21 @@ const CataloguePieces = () => {
                     <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3">
                       <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Prix</p>
                       <p className="text-3xl font-black text-blue-700">{Number(selectedPiece.prix_unitaire).toFixed(2)} DT</p>
-                      <p className="mt-1 text-sm text-slate-600">Stock: {selectedPiece.stock}</p>
+                      <div className="mt-1 flex items-center gap-3">
+                        <p className="text-sm text-slate-600">Stock: {Number(selectedPiece.stock ?? 0)}</p>
+                        {Number(selectedPiece.stock ?? 0) > 0 ? (
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">✅ Disponible</span>
+                        ) : (
+                          <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">⚠️ Hors stock</span>
+                        )}
+                      </div>
                     </div>
 
-                    <div ref={vendorLocationRef} className="mb-4 rounded-2xl bg-slate-50 p-4">
-                      <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Lieu</p>
-                      <p className="mt-1 text-base font-semibold text-slate-800">Localisation du vendeur</p>
-                      <button
-                        type="button"
-                        onClick={handleOpenVendorStore}
-                        className="mt-1 text-left text-sm font-semibold text-blue-700 underline decoration-blue-300 underline-offset-4 transition hover:text-blue-900"
-                      >
-                        {selectedPieceVendor?.magasin || selectedPieceVendor?.nom || selectedPieceVendor?.name || selectedPiece?.seller_store_name || selectedPiece?.seller_name || selectedPiece.zone_geographique || "Adresse du vendeur"}
-                      </button>
-                      {selectedPieceVendorOffers.length > 1 ? (
-                        <div className="mt-3 space-y-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            {selectedPieceVendorOffers.length} vendeurs pour cette reference
-                          </p>
-                          <div className="space-y-3">
-                            {selectedPieceVendorOffers.map((offer, index) => {
-                              const vendorName = offer?.seller_store_name || offer?.seller_name || offer?.vendeur_magasin || offer?.vendeur_nom || offer?.vendeur?.magasin || offer?.vendeur?.name || `Vendeur ${index + 1}`;
-                              const vendorQuery = buildVendorLocationQuery(offer?.vendeur || offer);
-                              const vendorMapUrl = vendorQuery ? buildGoogleMapsEmbedUrl(vendorQuery) : "";
-                              const vendorSearchUrl = vendorQuery ? buildGoogleMapsSearchUrl(vendorQuery) : "";
-
-                              return (
-                                <div key={offer?.id || `${vendorName}-${index}`} className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-3">
-                                  <div className="flex items-center justify-between gap-3">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenVendorStore(offer)}
-                                      className="text-left text-sm font-semibold text-blue-700 underline decoration-blue-300 underline-offset-4 transition hover:text-blue-900"
-                                    >
-                                      {vendorName}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenVendorPresentation(offer)}
-                                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
-                                    >
-                                      Presentation
-                                    </button>
-                                  </div>
-                                  <p className="mt-1 text-xs text-slate-500">{offer?.zone_geographique || offer?.zone || "Zone non renseignee"}</p>
-                                  {vendorMapUrl ? (
-                                    <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                      <iframe
-                                        title={`Localisation ${vendorName}`}
-                                        src={vendorMapUrl}
-                                        className="h-44 w-full border-0"
-                                        loading="lazy"
-                                        referrerPolicy="no-referrer-when-downgrade"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <p className="mt-2 text-sm text-slate-500">Aucune position GPS vendeur renseignée.</p>
-                                  )}
-                                  {vendorSearchUrl && (
-                                    <a
-                                      href={vendorSearchUrl}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className="mt-3 inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700"
-                                    >
-                                      Ouvrir dans Google Maps
-                                    </a>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : selectedPieceLocationMapUrl ? (
-                        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                          <iframe
-                            title="Localisation du vendeur"
-                            src={selectedPieceLocationMapUrl}
-                            className="h-56 w-full border-0"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                          />
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-sm text-slate-500">Aucune position GPS vendeur renseignée.</p>
-                      )}
-                      {selectedPieceVendorOffers.length <= 1 && selectedPieceLocationSearchUrl && (
-                        <a
-                          href={selectedPieceLocationSearchUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-3 inline-flex rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700"
-                        >
-                          Ouvrir la localisation vendeur
-                        </a>
-                      )}
-                    </div>
+                    
 
                     <div className="rounded-2xl bg-slate-50 p-4">
                       <p className="text-sm font-bold uppercase tracking-wide text-slate-500">Magasin du vendeur</p>
-                      <p className="mt-1 text-lg font-black text-slate-900">{selectedPiece.seller_store_name || selectedPiece.seller_name || vendorDisplayName}</p>
+                      <p className="mt-1 text-lg font-black text-slate-900">{getPieceVendorDisplayName(selectedPiece) || vendorDisplayName}</p>
                       <p className="text-sm text-slate-600">Email: {selectedPiece.seller_email || vendorEmail}</p>
                       <p className="text-sm text-slate-600">Telephone: {selectedPiece.seller_phone || vendorPhone}</p>
                     </div>
@@ -2486,7 +2499,7 @@ const CataloguePieces = () => {
                               .sort((a, b) => Number(a.prix_unitaire) - Number(b.prix_unitaire))
                               .map((offer, index) => (
                                 <tr key={offer.id || `${offer.reference}-${index}`} className={`border-b border-slate-100 ${index === 0 ? "bg-emerald-50" : ""}`}>
-                                  <td className="px-2 py-2 font-semibold text-slate-800">{offer.seller_store_name || offer.seller_name || "Vendeur"}</td>
+                                  <td className="px-2 py-2 font-semibold text-slate-800">{getPieceVendorDisplayName(offer)}</td>
                                   <td className="px-2 py-2 font-black text-blue-700">{Number(offer.prix_unitaire).toFixed(2)} DT {index === 0 ? "(moins cher)" : ""}</td>
                                   <td className="px-2 py-2 text-slate-700">{offer.stock}</td>
                                   <td className="px-2 py-2 text-slate-700">{offer.zone_geographique || "-"}</td>
@@ -2526,7 +2539,6 @@ const CataloguePieces = () => {
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-2xl font-black text-slate-900">Vue comparative dynamique</h3>
-                <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps réel via l'API backend.</p>
               </div>
               <button 
                 type="button" 
@@ -2574,7 +2586,7 @@ const CataloguePieces = () => {
                       <tbody>
                         {comparisonOffers.map((offer, index) => (
                           <tr key={offer.id || `${offer.vendeur_id}-${index}`} className={`border-b border-slate-100 ${index === 0 ? "bg-emerald-50" : ""}`}>
-                            <td className="px-2 py-2 font-semibold text-slate-800">{offer.vendeur_magasin || offer.vendeur_nom || offer.seller_store_name || offer.seller_name || "Vendeur"}</td>
+                            <td className="px-2 py-2 font-semibold text-slate-800">{getPieceVendorDisplayName(offer)}</td>
                             <td className="px-2 py-2 font-black text-slate-900">{Number(offer.prix_unitaire || offer.price || 0).toFixed(2)} DT {index === 0 ? "(prix minimum)" : ""}</td>
                             <td className="px-2 py-2 text-slate-700">{offer.stock ?? "-"}</td>
                             <td className="px-2 py-2 text-slate-700">{offer.zone_geographique || "-"}</td>
@@ -2597,3 +2609,4 @@ const CataloguePieces = () => {
 };
 
 export default CataloguePieces;
+

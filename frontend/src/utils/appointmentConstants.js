@@ -111,17 +111,26 @@ export const isTimeValid = (timeStr) => {
  * Parse notes JSON safely
  */
 export const parseAppointmentNotes = (notes) => {
-  if (!notes) return { vehicleId: null, services: [], remark: '', messages: [] };
+  if (!notes) return { vehicleId: null, services: [], remark: '', messages: [], isValid: true, rawText: '' };
   try {
     const parsed = typeof notes === 'string' ? JSON.parse(notes) : notes;
     return {
       vehicleId: parsed.vehicleId || null,
       services: Array.isArray(parsed.services) ? parsed.services : [],
       remark: parsed.remark || '',
-      messages: Array.isArray(parsed.messages) ? parsed.messages : []
+      messages: Array.isArray(parsed.messages) ? parsed.messages : [],
+      isValid: true,
+      rawText: typeof notes === 'string' ? notes : JSON.stringify(notes)
     };
   } catch {
-    return { vehicleId: null, services: [], remark: '', messages: [] };
+    return {
+      vehicleId: null,
+      services: [],
+      remark: typeof notes === 'string' ? notes : '',
+      messages: [],
+      isValid: false,
+      rawText: typeof notes === 'string' ? notes : JSON.stringify(notes)
+    };
   }
 };
 

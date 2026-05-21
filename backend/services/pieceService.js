@@ -130,7 +130,7 @@ const runInTransaction = async (executor) => {
 
 const getPieceForUpdate = async (client, pieceId) => {
   const result = await client.query(
-    `SELECT id, stock
+    `SELECT id, user_id, stock
      FROM pieces
      WHERE id = $1 AND deleted_at IS NULL
      FOR UPDATE`,
@@ -142,6 +142,41 @@ const getPieceForUpdate = async (client, pieceId) => {
   }
 
   return result.rows[0];
+};
+
+const getManagedPieceById = async (pieceId) => {
+  const result = await pool.query(
+    `SELECT id, user_id
+     FROM pieces
+     WHERE id = $1 AND deleted_at IS NULL`,
+    [pieceId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError('Piece non trouvee', 404, 'PIECE_NOT_FOUND');
+  }
+
+  return result.rows[0];
+};
+
+const canManagePiece = (pieceRow, actorUser = null) => {
+  if (!pieceRow) {
+    return false;
+  }
+
+  if (String(actorUser?.role || '').toLowerCase() === 'admin') {
+    return true;
+  }
+
+  const actorId = Number.parseInt(actorUser?.id, 10);
+  const ownerId = pieceRow.user_id === null || pieceRow.user_id === undefined ? null : Number.parseInt(pieceRow.user_id, 10);
+  return Number.isInteger(actorId) && actorId > 0 && ownerId !== null && ownerId === actorId;
+};
+
+const assertCanManagePiece = (pieceRow, actorUser = null) => {
+  if (!canManagePiece(pieceRow, actorUser)) {
+    throw new AppError('Acces refuse : piece appartenant a un autre vendeur', 403, 'FORBIDDEN_PIECE_OWNER');
+  }
 };
 
 const createStockMovement = async (client, payload) => {
@@ -469,6 +504,78 @@ const getPieces = async ({ page = 1, limit = 10, search = '', sortBy = 'created_
   };
 };
 
+const getMyPieces = async ({ userId, page = 1, limit = 10, search = '', sortBy = 'created_at', sortOrder = 'desc' } = {}) => {
+  const parsedUserId = Number.parseInt(userId, 10);
+  if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
+    return getPieces({ page, limit, search, sortBy, sortOrder });
+  }
+
+  const safePage = Math.max(Number.parseInt(page, 10) || 1, 1);
+  const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 10, 1), 100);
+  const offset = (safePage - 1) * safeLimit;
+  const orderByClause = buildSortClause(sortBy, sortOrder);
+  const normalizedSearch = normalizeText(search);
+  const searchSql = normalizedSearch ? ' AND (p.nom ILIKE $2 OR p.reference ILIKE $2)' : '';
+  const limitIndex = normalizedSearch ? 3 : 2;
+  const offsetIndex = normalizedSearch ? 4 : 3;
+  const searchParam = normalizedSearch ? [`%${normalizedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`] : [];
+
+  const query = `
+    SELECT
+      p.id,
+      p.user_id,
+      p.nom,
+      p.reference,
+      p.description,
+      p.photo_url,
+      p.prix_unitaire,
+      p.stock,
+      p.condition,
+      p.zone_geographique,
+      p.marque,
+      p.modele,
+      p.categorie,
+      p.created_at,
+      p.updated_at,
+      p.deleted_at,
+      u.name AS seller_name,
+      u.phone AS seller_phone,
+      u.email AS seller_email,
+      u.store_name AS seller_store_name,
+      u.store_address AS seller_store_address,
+      LOWER(r.name) AS seller_role,
+      COUNT(*) OVER() AS total_count
+    FROM pieces p
+    LEFT JOIN users u ON u.id = p.user_id
+    LEFT JOIN roles r ON r.id = u.role_id
+    WHERE p.deleted_at IS NULL
+      AND p.user_id = $1${searchSql}
+    ORDER BY ${orderByClause}
+    LIMIT $${limitIndex}
+    OFFSET $${offsetIndex}
+  `;
+
+  const params = [parsedUserId, ...searchParam, safeLimit, offset];
+  const result = await pool.query(query, params);
+  const totalItems = result.rows.length > 0 ? Number(result.rows[0].total_count) : 0;
+
+  return {
+    items: result.rows.map((row) => {
+      const mappedRow = mapPieceRow(row);
+      return {
+        ...mappedRow,
+        seller_name: getSellerDisplayName(row)
+      };
+    }),
+    pagination: {
+      page: safePage,
+      limit: safeLimit,
+      totalItems,
+      totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / safeLimit)
+    }
+  };
+};
+
 const getPieceById = async (id) => {
   const result = await pool.query(
     `SELECT p.id, p.user_id, p.nom, p.reference, p.description, p.photo_url, p.prix_unitaire, p.stock, p.condition, p.zone_geographique, p.marque, p.modele, p.categorie, p.created_at, p.updated_at, p.deleted_at,
@@ -495,19 +602,18 @@ const getPieceById = async (id) => {
   };
 };
 
-const updatePiece = async (id, payload) => {
-  const currentPiece = await pool.query(
+const updatePiece = async (id, payload, actorUser = null) => {
+  const currentPiece = await getManagedPieceById(id);
+  assertCanManagePiece(currentPiece, actorUser);
+
+  const currentDetails = await pool.query(
     `SELECT id, user_id, nom, reference, description, photo_url, prix_unitaire, stock, condition, zone_geographique, marque, modele, categorie, is_validated, deleted_at
      FROM pieces
      WHERE id = $1 AND deleted_at IS NULL`,
     [id]
   );
 
-  if (currentPiece.rows.length === 0) {
-    throw new AppError('Piece non trouvee', 404, 'PIECE_NOT_FOUND');
-  }
-
-  const current = currentPiece.rows[0];
+  const current = currentDetails.rows[0];
   const nextNom = normalizeText(payload.nom) || current.nom;
   const nextReference = normalizeText(payload.reference) || current.reference;
   const nextDescription = payload.description === undefined ? current.description : normalizeText(payload.description);
@@ -554,7 +660,10 @@ const updatePiece = async (id, payload) => {
   }
 };
 
-const deletePiece = async (id) => {
+const deletePiece = async (id, actorUser = null) => {
+  const currentPiece = await getManagedPieceById(id);
+  assertCanManagePiece(currentPiece, actorUser);
+
   const result = await pool.query(
     `UPDATE pieces
      SET deleted_at = NOW(), updated_at = NOW()
@@ -570,7 +679,7 @@ const deletePiece = async (id) => {
   return true;
 };
 
-const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
+const adjustPieceStock = async (id, payload = {}, actorUser = null) => {
   const quantityChange = Number(payload.quantity_change);
   if (!Number.isInteger(quantityChange) || quantityChange === 0) {
     throw new AppError('quantity_change doit etre un entier non nul', 400, 'INVALID_QUANTITY_CHANGE');
@@ -593,6 +702,7 @@ const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
 
   return runInTransaction(async (client) => {
     const piece = await getPieceForUpdate(client, id);
+    assertCanManagePiece(piece, actorUser);
     const stockBefore = Number(piece.stock);
     const stockAfter = stockBefore + quantityChange;
 
@@ -611,7 +721,7 @@ const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
 
     const movement = await createStockMovement(client, {
       pieceId: id,
-      userId: actorUserId,
+      userId: Number.parseInt(actorUser?.id, 10) || null,
       movementType,
       quantityChange,
       stockBefore,
@@ -626,7 +736,7 @@ const adjustPieceStock = async (id, payload = {}, actorUserId = null) => {
   });
 };
 
-const setPieceStock = async (id, payload = {}, actorUserId = null) => {
+const setPieceStock = async (id, payload = {}, actorUser = null) => {
   const nextStock = Number(payload.stock);
   if (!Number.isInteger(nextStock) || nextStock < 0) {
     throw new AppError('stock doit etre un entier positif ou nul', 400, 'INVALID_STOCK');
@@ -636,6 +746,7 @@ const setPieceStock = async (id, payload = {}, actorUserId = null) => {
 
   return runInTransaction(async (client) => {
     const piece = await getPieceForUpdate(client, id);
+    assertCanManagePiece(piece, actorUser);
     const stockBefore = Number(piece.stock);
     const quantityChange = nextStock - stockBefore;
 
@@ -654,7 +765,7 @@ const setPieceStock = async (id, payload = {}, actorUserId = null) => {
 
     const movement = await createStockMovement(client, {
       pieceId: id,
-      userId: actorUserId,
+      userId: Number.parseInt(actorUser?.id, 10) || null,
       movementType: 'SET',
       quantityChange,
       stockBefore,
@@ -669,12 +780,13 @@ const setPieceStock = async (id, payload = {}, actorUserId = null) => {
   });
 };
 
-const getPieceStockMovements = async (id, { page = 1, limit = 20 } = {}) => {
+const getPieceStockMovements = async (id, { page = 1, limit = 20 } = {}, actorUser = null) => {
   const safePage = Math.max(Number.parseInt(page, 10) || 1, 1);
   const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 20, 1), 100);
   const offset = (safePage - 1) * safeLimit;
 
-  await getPieceById(id);
+  const piece = await getManagedPieceById(id);
+  assertCanManagePiece(piece, actorUser);
 
   const result = await pool.query(
     `SELECT
@@ -711,6 +823,7 @@ const getPieceStockMovements = async (id, { page = 1, limit = 20 } = {}) => {
 module.exports = {
   createPiece,
   getPieces,
+  getMyPieces,
   getPieceById,
   updatePiece,
   deletePiece,

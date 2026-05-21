@@ -799,4 +799,3 @@ module.exports = {
   rejectPiece,
   listAuditLogs
 };
-

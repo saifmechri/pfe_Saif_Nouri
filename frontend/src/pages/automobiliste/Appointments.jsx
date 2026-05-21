@@ -1,22 +1,76 @@
-﻿import { useMemo, useState, useEffect } from "react";
+﻿import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import PlatformLayout from "../../components/PlatformLayout";
 import TopBar from "../../components/TopBar";
 import { listAppointments, updateAppointment, deleteAppointment, createAppointment } from "../../services/appointments";
 import { listGarages, getServicesByGarage } from "../../services/garage";
-import { getVehicules } from "../../services/vehicule";
 import AppointmentTable from "../../components/appointments/AppointmentTable";
 import AppointmentNotificationModal from "../../components/appointments/AppointmentNotificationModal";
 import { ArrowLeft, Plus, AlertCircle, CheckCircle } from "lucide-react";
 import { getMinAppointmentDate, isDateValid, isTimeValid, WORKING_HOURS } from "../../utils/appointmentConstants";
+import { AuthContext } from "../../context/AuthContext";
+
+const VEHICLE_BRANDS = [
+  "Audi", "BMW", "Citroën", "Dacia", "Fiat", "Ford", "Hyundai", "Kia",
+  "Mercedes", "Nissan", "Peugeot", "Renault", "Seat", "Skoda", "Toyota",
+  "Volkswagen", "Volvo"
+];
+
+const VEHICLE_MODELS_BY_BRAND = {
+  Audi: ["A1", "A3", "A4", "A6", "Q3", "Q5"],
+  BMW: ["Serie 1", "Serie 3", "Serie 5", "X1", "X3", "X5"],
+  Citroën: ["C3", "C4", "C5", "Berlingo", "Jumpy"],
+  Dacia: ["Duster", "Logan", "Sandero", "Jogger"],
+  Fiat: ["500", "Panda", "Tipo", "Doblo"],
+  Ford: ["Fiesta", "Focus", "Kuga", "Ranger"],
+  Hyundai: ["i10", "i20", "Elantra", "Tucson"],
+  Kia: ["Picanto", "Rio", "Sportage", "Sorento"],
+  Mercedes: ["A-Class", "C-Class", "E-Class", "GLA", "GLC"],
+  Nissan: ["Micra", "Qashqai", "Juke", "X-Trail"],
+  Peugeot: ["208", "2008", "308", "3008", "5008"],
+  Renault: ["Clio", "Megane", "Captur", "Kangoo", "Duster"],
+  Seat: ["Ibiza", "Leon", "Arona", "Ateca"],
+  Skoda: ["Fabia", "Octavia", "Karoq", "Kodiaq"],
+  Toyota: ["Yaris", "Corolla", "RAV4", "Hilux", "Land Cruiser"],
+  Volkswagen: ["Polo", "Golf", "Tiguan", "Passat", "T-Roc"],
+  Volvo: ["XC40", "XC60", "XC90", "S60"]
+};
+
+const splitServiceList = (value) => {
+  if (!value) return [];
+
+  return String(value)
+    .split(/[\n,;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const normalizeServiceItems = (garage) => {
+  if (!garage) return [];
+
+  const labels = [
+    ...(Array.isArray(garage.service_names) ? garage.service_names : []),
+    ...splitServiceList(garage.services_catalog),
+    ...splitServiceList(garage.store_services),
+    ...splitServiceList(garage.specialties)
+  ]
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+
+  return [...new Set(labels)].map((label) => ({
+    id: label,
+    name: label,
+    label
+  }));
+};
 
 const AutomobilisteAppointments = () => {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [appointments, setAppointments] = useState([]);
   const [garages, setGarages] = useState([]);
-  const [vehicules, setVehicules] = useState([]);
   const [availableServices, setAvailableServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -29,28 +83,21 @@ const AutomobilisteAppointments = () => {
   const [selectedServiceChoice, setSelectedServiceChoice] = useState("");
   const [form, setForm] = useState({
     garageId: "",
-    vehicleId: "",
+    vehicleBrand: "",
+    vehicleModel: "",
     appointmentDate: dayjs().format("YYYY-MM-DD"),
     appointmentTime: "",
     description: "",
     remark: ""
   });
 
+  const roleLabel = user?.role === "vendeur" ? "Vendeur" : user?.role === "admin" ? "Administrateur" : "Automobiliste";
+
   const fetchGarages = async () => {
     try {
       const res = await listGarages({ limit: 100 });
       const items = res.data?.data?.items || res.data?.data || res.data || [];
       setGarages(Array.isArray(items) ? items : []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchVehicules = async () => {
-    try {
-      const res = await getVehicules();
-      const list = res.data?.vehicules || res.data || [];
-      setVehicules(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error(err);
     }
@@ -72,7 +119,6 @@ const AutomobilisteAppointments = () => {
   };
 
   useEffect(() => {
-    fetchVehicules();
     fetchGarages();
     fetchAppointments();
   }, []);
@@ -90,19 +136,22 @@ const AutomobilisteAppointments = () => {
       return;
     }
 
+    const selectedGarage = garages.find((garage) => String(garage.id) === String(form.garageId));
+
     (async () => {
       try {
         const res = await getServicesByGarage(form.garageId);
         const items = res.data?.data?.items || res.data?.data || res.data || [];
-        setAvailableServices(Array.isArray(items) ? items : []);
+        const normalizedItems = Array.isArray(items) ? items : [];
+        setAvailableServices(normalizedItems.length > 0 ? normalizedItems : normalizeServiceItems(selectedGarage));
         setSelectedServiceChoice("");
       } catch (err) {
         console.error(err);
-        setAvailableServices([]);
+        setAvailableServices(normalizeServiceItems(selectedGarage));
         setSelectedServiceChoice("");
       }
     })();
-  }, [form.garageId]);
+  }, [form.garageId, garages]);
 
   useEffect(() => {
     try {
@@ -164,6 +213,15 @@ const AutomobilisteAppointments = () => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
+  const handleBrandChange = (event) => {
+    const { value } = event.target;
+    setForm((current) => ({
+      ...current,
+      vehicleBrand: value,
+      vehicleModel: ""
+    }));
+  };
+
   const getServiceLabel = (service) => service?.name || service?.title || service?.label || String(service);
 
   const addSelectedService = () => {
@@ -214,7 +272,8 @@ const AutomobilisteAppointments = () => {
       }
 
       const notesPayload = {
-        vehicleId: form.vehicleId || null,
+        vehicleBrand: form.vehicleBrand || null,
+        vehicleModel: form.vehicleModel || null,
         services: selectedServices,
         remark: form.remark || ""
       };
@@ -238,7 +297,8 @@ const AutomobilisteAppointments = () => {
       setMessage("✅ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
       setForm({
         garageId: "",
-        vehicleId: "",
+        vehicleBrand: "",
+        vehicleModel: "",
         appointmentDate: dayjs().format("YYYY-MM-DD"),
         appointmentTime: "",
         description: "",
@@ -289,7 +349,7 @@ const AutomobilisteAppointments = () => {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-700">Automobiliste</p>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-700">{roleLabel}</p>
                 <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900">Mes rendez-vous</h1>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   Consultez et gérez vos rendez-vous avec les garages partenaires.
@@ -305,7 +365,7 @@ const AutomobilisteAppointments = () => {
                 <h2 className="mt-2 text-2xl font-black text-slate-900">Prendre un rendez-vous</h2>
                 <p className="mt-2 text-sm text-slate-600">Choisissez un garage, un véhicule et les services souhaités.</p>
               </div>
-              <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">Automobiliste</div>
+              <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">{roleLabel}</div>
             </div>
 
             <form onSubmit={handleSubmit} className="grid gap-4 lg:grid-cols-2">
@@ -328,18 +388,37 @@ const AutomobilisteAppointments = () => {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Votre véhicule</label>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Marque de voiture *</label>
                 <select
-                  name="vehicleId"
-                  value={form.vehicleId}
-                  onChange={handleFormChange}
+                  name="vehicleBrand"
+                  value={form.vehicleBrand}
+                  onChange={handleBrandChange}
+                  required
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 >
-                  <option value="">Sélectionnez un véhicule</option>
-                  {vehicules.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.modele_voiture || vehicle.modele || `Véhicule ${vehicle.id}`}{" "}
-                      {vehicle.matricule_voiture ? `· ${vehicle.matricule_voiture}` : ""}
+                  <option value="">Sélectionnez une marque</option>
+                  {VEHICLE_BRANDS.map((brand) => (
+                    <option key={brand} value={brand}>
+                      {brand}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Modèle de voiture *</label>
+                <select
+                  name="vehicleModel"
+                  value={form.vehicleModel}
+                  onChange={handleFormChange}
+                  required
+                  disabled={!form.vehicleBrand}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                >
+                  <option value="">Sélectionnez un modèle</option>
+                  {(VEHICLE_MODELS_BY_BRAND[form.vehicleBrand] || []).map((model) => (
+                    <option key={model} value={model}>
+                      {model}
                     </option>
                   ))}
                 </select>
@@ -523,7 +602,7 @@ const AutomobilisteAppointments = () => {
         onClose={() => setNotification(null)}
         notification={notification}
         appointment={selectedAppointment}
-        userRole="automobiliste"
+        userRole={user?.role || "automobiliste"}
       />
     </PlatformLayout>
   );

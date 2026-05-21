@@ -6,7 +6,7 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { MapPin, Navigation2, Package, TrendingDown } from "lucide-react";
-import { comparePieceAcrossVendors, createPiece, deletePiece, getPieceById, getPieces, updatePiece } from "../../services/pieces";
+import { comparePieceAcrossVendors, createPiece, deletePiece, getMyPieces, getPieceById, getPieces, updatePiece } from "../../services/pieces";
 import { extractConversationAndMessages, startChatConversation } from "../../services/chat";
 import { getCompleteProfile, getCompleteProfileById, updateProfile } from "../../services/user";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -197,14 +197,21 @@ const brandLogoDomains = {
   Kia: "kia.com",
   Lada: "lada.ru",
   "Land Rover": "landrover.com",
+  Lexus: "lexus.com",
+  Mahindra: "mahindra.com",
+  Mazda: "mazda.com",
+  Mercedes: "mercedes-benz.com",
   MG: "mgmotor.eu",
   Mitsubishi: "mitsubishi-motors.com",
   Nissan: "nissan-global.com",
+  Opel: "opel.com",
   Peugeot: "peugeot.com",
+  Porsche: "porsche.com",
   Renault: "renault.com",
   "Rolls-Royce": "rolls-roycemotorcars.com",
   Seat: "seat.com",
   Skoda: "skoda-auto.com",
+  SsangYong: "kg-mobility.com",
   Suzuki: "suzuki.com",
   Tesla: "tesla.com",
   Toyota: "toyota.com",
@@ -239,11 +246,14 @@ const getBrandLogoCandidates = (marque) => {
   );
 
   const domain = brandLogoDomains[marque];
-  if (!domain) {
-    return localCandidates;
-  }
+  const remoteCandidates = domain
+    ? [
+        `https://logo.clearbit.com/${encodeURIComponent(domain)}`,
+        `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`
+      ]
+    : [];
 
-  return localCandidates;
+  return [...localCandidates, ...remoteCandidates];
 };
 
 const buildSvgDataUrl = ({ top = "#f8fafc", bottom = "#ffffff", title = "", subtitle = "", accent = "#1e293b" }) => {
@@ -512,6 +522,7 @@ const CataloguePieces = () => {
   const [createSuccess, setCreateSuccess] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [newPiece, setNewPiece] = useState(createEmptyPieceForm);
+  const [isForSale, setIsForSale] = useState(false);
 
   const [showMarquesModal, setShowMarquesModal] = useState(false);
   const [showModelesModal, setShowModelesModal] = useState(false);
@@ -641,8 +652,8 @@ const CataloguePieces = () => {
     return apiUrl.replace(/\/api\/?$/, "");
   }, []);
 
-  const canManagePieces = user?.role === "vendeur" || user?.role === "admin";
-  const canSeeStoreTabs = isStoreView || user?.role === "vendeur" || user?.role === "admin" || user?.role === "garage";
+  const canManagePieces = user?.role === "vendeur";
+  const canSeeStoreTabs = isStoreView || user?.role === "vendeur" || user?.role === "garage";
 
   // Initialize Google Map when modal opens
   useEffect(() => {
@@ -704,7 +715,9 @@ const CataloguePieces = () => {
           params.search = appliedFilters.search.trim();
         }
 
-        const res = await getPieces(params);
+        const res = canManagePieces && catalogScope === "private" && !isStoreView
+          ? await getMyPieces(params)
+          : await getPieces(params);
         const responseData = res.data?.data ?? res.data;
 
         if (Array.isArray(responseData)) {
@@ -733,7 +746,7 @@ const CataloguePieces = () => {
     };
 
     fetchPieces();
-  }, [page, appliedFilters]);
+  }, [page, appliedFilters, canManagePieces, catalogScope, isStoreView, storeOwnerId]);
 
   useEffect(() => {
     if (!canSeeStoreTabs && activeTab !== "pieces") {
@@ -883,11 +896,10 @@ const CataloguePieces = () => {
       return visibleItems.filter((item) => Number(item.user_id) === ownSellerId || item.user_id === null || item.user_id === undefined);
     }
 
-    if (canManagePieces && catalogScope === "private" && user?.role === "admin") {
-      return visibleItems.filter((item) => item.user_id === null || item.user_id === undefined);
-    }
-
     if (canManagePieces && catalogScope === "private") {
+      if (hasValidOwnSellerId) {
+        return visibleItems.filter((item) => Number(item.user_id) === ownSellerId || item.user_id === null || item.user_id === undefined);
+      }
       return [];
     }
 
@@ -990,8 +1002,7 @@ const CataloguePieces = () => {
   const canEditSelectedPiece = Boolean(
     selectedPiece
     && canManagePieces
-    && !isStoreView
-    && catalogScope === "private"
+    && !isPublicMarketplace
     && Number(selectedPiece.user_id) === ownSellerId
   );
 
@@ -1269,6 +1280,7 @@ const CataloguePieces = () => {
     setCreateError("");
     setCreateSuccess("");
     setNewPiece(createEmptyPieceForm());
+    setIsForSale(false);
     setShowCreateModal(true);
   };
 
@@ -1312,6 +1324,9 @@ const CataloguePieces = () => {
       latitude: targetPiece.latitude || null,
       longitude: targetPiece.longitude || null
     });
+    // Initialize sale flag based on stock
+    const parsedStock = Number(targetPiece.stock || 0);
+    setIsForSale(Number.isFinite(parsedStock) && parsedStock > 0);
     setSelectedPiece(null);
     setShowCreateModal(true);
   };
@@ -1513,6 +1528,15 @@ const CataloguePieces = () => {
 
   const handleContactVendorChat = async () => {
     const sellerUserId = resolveOwnerIdForStore(selectedPieceVendor || selectedPiece);
+    // determine stock for the specific seller offer or fallback to piece stock
+    const vendorOfferForSeller = (Array.isArray(selectedPiece?.offers) ? selectedPiece.offers : []).find((off) => {
+      try {
+        return Number(resolveOwnerIdForStore(off)) === Number(sellerUserId);
+      } catch (e) {
+        return false;
+      }
+    }) || null;
+    const stockForSeller = Number(vendorOfferForSeller?.stock ?? selectedPiece?.stock ?? 0);
     const allowedRolesForChat = ["automobiliste", "vendeur", "garage", "admin"];
     const targetMessagesPath = chatRouteByRole[user?.role] || "/login";
 
@@ -1524,6 +1548,12 @@ const CataloguePieces = () => {
     if (!sellerUserId) {
       setError("Impossible de trouver le vendeur pour demarrer le chat.");
       return;
+    }
+
+    // If the item is out of stock for this seller, ask the user to confirm contacting anyway
+    if (stockForSeller <= 0) {
+      const proceed = window.confirm("Attention : cette pièce semble hors stock chez ce vendeur. Voulez-vous malgré tout le contacter ?");
+      if (!proceed) return;
     }
 
     try {
@@ -1958,9 +1988,6 @@ const CataloguePieces = () => {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-slate-200 bg-white p-4 text-sm font-semibold text-slate-600 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
-                La section map est volontairement desactivee pour le moment.
-              </div>
             </div>
           )}
         </div>
@@ -1971,7 +1998,7 @@ const CataloguePieces = () => {
             onClick={openCreatePieceModal}
             className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#1e3a8a_0%,#2563eb_100%)] px-8 py-3 text-lg font-extrabold text-white shadow-[0_16px_30px_rgba(30,64,175,0.28)]"
           >
-            ï¼‹ Ajouter une piece
+            + Ajouter une pièce
           </button>
         )}
 
@@ -2273,16 +2300,46 @@ const CataloguePieces = () => {
                         <p className="text-lg font-semibold text-slate-800">Prix Fixe</p>
                         <p className="text-sm text-slate-500">Saisissez le tarif de vente</p>
                       </div>
-                      <input
-                        type="number"
-                        name="stock"
-                        value={newPiece.stock}
-                        onChange={handleCreateInput}
-                        placeholder="Stock"
-                        min="0"
-                        step="1"
-                        className="w-24 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-base text-slate-700 outline-none focus:border-blue-300"
-                      />
+
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-full border bg-white p-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isForSale) {
+                                // enable sale, ensure stock at least 1
+                                setNewPiece((prev) => ({ ...prev, stock: String(Math.max(Number(prev.stock || 0), 1)) }));
+                              }
+                              setIsForSale(true);
+                            }}
+                            className={`px-3 py-1 rounded-full text-sm font-semibold ${isForSale ? "bg-blue-600 text-white" : "text-slate-600"}`}
+                          >
+                            En stock
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsForSale(false);
+                              setNewPiece((prev) => ({ ...prev, stock: "0" }));
+                            }}
+                            className={`ml-1 px-3 py-1 rounded-full text-sm font-semibold ${!isForSale ? "bg-rose-50 text-rose-700" : "text-slate-600"}`}
+                          >
+                            Hors stock
+                          </button>
+                        </div>
+
+                        <input
+                          type="number"
+                          name="stock"
+                          value={newPiece.stock}
+                          onChange={handleCreateInput}
+                          placeholder="Stock"
+                          min="0"
+                          step="1"
+                          disabled={!isForSale}
+                          className={`w-24 rounded-2xl border border-slate-200 ${isForSale ? "bg-white" : "bg-gray-50"} px-3 py-3 text-center text-base text-slate-700 outline-none focus:border-blue-300 disabled:opacity-60`}
+                        />
+                      </div>
                     </div>
                   </div>
                 </form>
@@ -2404,7 +2461,14 @@ const CataloguePieces = () => {
                     <div className="mb-4 rounded-2xl bg-blue-50 px-4 py-3">
                       <p className="text-sm font-bold uppercase tracking-wide text-blue-700">Prix</p>
                       <p className="text-3xl font-black text-blue-700">{Number(selectedPiece.prix_unitaire).toFixed(2)} DT</p>
-                      <p className="mt-1 text-sm text-slate-600">Stock: {selectedPiece.stock}</p>
+                      <div className="mt-1 flex items-center gap-3">
+                        <p className="text-sm text-slate-600">Stock: {Number(selectedPiece.stock ?? 0)}</p>
+                        {Number(selectedPiece.stock ?? 0) > 0 ? (
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">✅ Disponible</span>
+                        ) : (
+                          <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700">⚠️ Hors stock</span>
+                        )}
+                      </div>
                     </div>
 
                     
@@ -2475,7 +2539,6 @@ const CataloguePieces = () => {
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-2xl font-black text-slate-900">Vue comparative dynamique</h3>
-                <p className="text-sm text-slate-500">Comparaison multi-vendeurs en temps réel via l'API backend.</p>
               </div>
               <button 
                 type="button" 

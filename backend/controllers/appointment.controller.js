@@ -16,7 +16,7 @@ const listAppointments = async (req, res) => {
     const status = req.query.status || null;
 
     let items = [];
-    if (role === 'automobiliste' || role === 'admin') {
+    if (role === 'automobiliste' || role === 'vendeur' || role === 'admin') {
       items = await appointmentService.listForAutomobiliste(userId, { limit, offset, status });
     } else if (role === 'garage') {
       const resolvedGarage = await findGarageIdentityByUserId(userId);
@@ -83,8 +83,8 @@ const createAppointment = async (req, res) => {
     const userId = Number(req.user.id);
     const { garageId, appointmentDate, appointmentTime, description, notes } = req.body;
 
-    if (!['automobiliste', 'admin'].includes(req.user.role)) {
-      return res.status(403).json({ success: false, message: 'Seuls les automobilistes et les administrateurs peuvent créer des rendez-vous', data: null });
+    if (!['automobiliste', 'vendeur', 'admin'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Seuls les automobilistes, vendeurs et administrateurs peuvent créer des rendez-vous', data: null });
     }
 
     const validation = validateAppointmentCreation({

@@ -159,7 +159,7 @@ router.get('/:id/reviews', listGarageReviewsValidation, validateRequest, garageR
 router.post('/', verifyToken, authorizeRoles('garage', 'admin'), createGarageValidation, validateRequest, garageController.createGarage);
 router.post('/photos/upload', verifyToken, authorizeRoles('garage', 'admin'), uploadGaragePhoto.array('photos', 9), garageController.uploadGaragePhotos);
 router.post('/:id/services', verifyToken, authorizeRoles('garage', 'admin'), createGarageServiceValidation, validateRequest, garageServiceController.createGarageService);
-router.post('/:id/reviews', verifyToken, isAutomobiliste, createGarageReviewValidation, validateRequest, garageReviewController.createGarageReview);
+router.post('/:id/reviews', verifyToken, authorizeRoles('automobiliste','vendeur','admin'), createGarageReviewValidation, validateRequest, garageReviewController.createGarageReview);
 router.put('/:id', verifyToken, authorizeRoles('garage', 'admin'), updateGarageValidation, validateRequest, garageController.updateGarage);
 router.put('/:id/services/:serviceId', verifyToken, authorizeRoles('garage', 'admin'), updateGarageServiceValidation, validateRequest, garageServiceController.updateGarageService);
 router.put('/:id/reviews/:reviewId', verifyToken, updateGarageReviewValidation, validateRequest, garageReviewController.updateGarageReview);

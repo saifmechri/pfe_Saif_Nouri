@@ -64,33 +64,53 @@ const listChatContacts = asyncHandler(async (req, res) => {
     });
   }
 
-  const itemsSource = role === 'garage'
-    ? await searchVendeurContacts({ query: q, limit })
-    : await searchAutomobilisteContacts({ query: q, limit });
+  // For garage users allow searching both vendeurs and automobilistes so
+  // existing conversation counterparts (automobilistes) appear in results.
+  let items = [];
 
-  const items = itemsSource
-    .filter((item) => Number(item.id) !== currentUserId)
-    .map((item) => {
-      if (role === 'garage') {
-        return {
-          id: Number(item.id),
-          role: 'vendeur',
-          label: item.store_name || item.name,
-          subtitle: item.email || item.store_address || '',
-          conversationType: 'garage_vendeur',
-          startPayload: { vendeurId: Number(item.id) }
-        };
-      }
+  if (role === 'garage') {
+    const [vendeurs, automobilistes] = await Promise.all([
+      searchVendeurContacts({ query: q, limit }),
+      searchAutomobilisteContacts({ query: q, limit })
+    ]);
 
-      return {
+    const mappedVendeurs = (vendeurs || [])
+      .filter((item) => Number(item.id) !== currentUserId)
+      .map((item) => ({
+        id: Number(item.id),
+        role: 'vendeur',
+        label: item.store_name || item.name,
+        subtitle: item.email || item.store_address || '',
+        conversationType: 'garage_vendeur',
+        startPayload: { vendeurId: Number(item.id) }
+      }));
+
+    const mappedAutomobilistes = (automobilistes || [])
+      .filter((item) => Number(item.id) !== currentUserId)
+      .map((item) => ({
+        id: Number(item.id),
+        role: 'automobiliste',
+        label: item.name,
+        subtitle: item.email || item.phone || '',
+        conversationType: 'automobiliste_garage',
+        startPayload: { automobilisteId: Number(item.id) }
+      }));
+
+    items = [...mappedAutomobilistes, ...mappedVendeurs];
+  } else {
+    const itemsSource = await searchAutomobilisteContacts({ query: q, limit });
+
+    items = (itemsSource || [])
+      .filter((item) => Number(item.id) !== currentUserId)
+      .map((item) => ({
         id: Number(item.id),
         role: 'automobiliste',
         label: item.name,
         subtitle: item.email || item.phone || '',
         conversationType: 'automobiliste_vendeur',
         startPayload: { automobilisteId: Number(item.id) }
-      };
-    });
+      }));
+  }
 
   return res.json({
     success: true,

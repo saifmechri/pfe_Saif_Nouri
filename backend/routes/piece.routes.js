@@ -111,6 +111,8 @@ const stockMovementsValidation = [
 ];
 
 router.get('/', listPiecesValidation, validateRequest, pieceController.getAllPieces);
+router.get('/me', verifyToken, isVendeurOrAdmin, pieceController.getMyPieces);
+router.get('/mine', verifyToken, isVendeurOrAdmin, pieceController.getMyPieces);
 router.get('/compare/vendors', pieceController.comparePiecesAcrossVendors);
 router.get('/seller-locations', pieceController.getPieceSellerLocations);
 router.get('/:id', getPieceValidation, validateRequest, pieceController.getPieceById);

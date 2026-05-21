@@ -8,7 +8,7 @@ import {
   createIntervention,
 } from "../../services/vehicule";
 import interventionsApi from "../../services/interventions";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import PlatformLayout from "../../components/PlatformLayout";
 import { listAppointments, deleteAppointment } from "../../services/appointments";
 import { Calendar, Clock, MapPin, Trash2, Plus, ChevronRight } from "lucide-react";
@@ -19,7 +19,16 @@ dayjs.locale("fr");
 
 const AutomobilisteDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("vehicules");
+
+  useEffect(() => {
+    const tab = new URLSearchParams(location.search).get("tab");
+    const allowedTabs = ["vehicules", "historique", "rendezvous"];
+    if (tab && allowedTabs.includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [location.search]);
 
   const backendBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/api\/?$/, "");
 
@@ -58,6 +67,7 @@ const AutomobilisteDashboard = () => {
     garage_nom: "",
     garage_adresse: "",
     kilometrage: "",
+    cout_total: "",
     pieces_libres: "",
   });
 
@@ -302,6 +312,7 @@ const AutomobilisteDashboard = () => {
       garage_nom: "",
       garage_adresse: "",
       kilometrage: "",
+      cout_total: "",
       pieces_libres: "",
     });
 
@@ -324,6 +335,7 @@ const AutomobilisteDashboard = () => {
       garage_nom: "",
       garage_adresse: "",
       kilometrage: "",
+      cout_total: "",
       pieces_libres: "",
     });
   };
@@ -340,15 +352,14 @@ const AutomobilisteDashboard = () => {
    * - garage_adresse: Garage location
    * - kilometrage: Vehicle mileage when maintenance done
    * - description: Detailed notes about work performed
-   * - pieces_libres: Manual free-text entry of parts used
-   *   (Example: "Filtre huile x1, Huile 5W30 x4L, Plaquettes frein x4")
-   * 
+  * - cout_total: Total cost of the intervention
+  * - pieces_libres: Manual free-text parts used
    * PROCESS:
    * 1. Validate all required fields
-   * 2. Append pieces_libres to description as "Pièce utilisée: ..."
-   * 3. Send to backend API
-   * 4. Update vehicle intervention history
-   * 5. Show success/error message to user
+  * 2. Append pieces_libres to the description when provided
+  * 3. Send to backend API
+  * 4. Update vehicle intervention history
+  * 5. Show success/error message to user
    * 
    * USAGE:
    * User fills form and clicks "Enregistrer".
@@ -363,7 +374,7 @@ const AutomobilisteDashboard = () => {
       const manualPiecesText = String(interventionFormData.pieces_libres || "").trim();
       const mergedDescription = [
         interventionFormData.description?.trim(),
-        manualPiecesText ? `Pièce utilisée: ${manualPiecesText}` : ""
+        manualPiecesText ? `Pièces utilisées: ${manualPiecesText}` : ""
       ].filter(Boolean).join("\n\n");
 
       const payload = {
@@ -373,6 +384,7 @@ const AutomobilisteDashboard = () => {
         garage_nom: interventionFormData.garage_nom || undefined,
         garage_adresse: interventionFormData.garage_adresse || undefined,
         kilometrage: interventionFormData.kilometrage !== "" ? Number(interventionFormData.kilometrage) : undefined,
+        cout_total: interventionFormData.cout_total !== "" ? Number(interventionFormData.cout_total) : undefined,
       };
 
       await createIntervention(Number(interventionFormData.vehicleId), payload);
@@ -394,7 +406,7 @@ const AutomobilisteDashboard = () => {
   };
 
   const handleEditIntervention = (vehicleId, interventionId) => {
-    navigate(`/vehicules/${vehicleId}/interventions/${interventionId}`);
+    navigate(`/vehicules/${vehicleId}/interventions/${interventionId}?edit=1`);
   };
 
   const handleDeleteIntervention = async (vehicleId, interventionId) => {
@@ -474,12 +486,7 @@ const AutomobilisteDashboard = () => {
             >
               Garages
             </button>
-            <button
-              onClick={() => navigate("/automobiliste/recommandations")}
-              className="vb-btn-primary ml-auto px-4 py-2 text-sm"
-            >
-              Recommandations dynamiques
-            </button>
+            {/* Bouton Recommandations dynamiques supprimé */}
           </div>
 
         {/* Contenu des onglets */}
@@ -814,6 +821,17 @@ const AutomobilisteDashboard = () => {
                     />
 
                     <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      name="cout_total"
+                      placeholder="Coût total"
+                      value={interventionFormData.cout_total}
+                      onChange={handleInterventionFieldChange}
+                      className="px-3 py-2 border border-gray-300 rounded"
+                    />
+
+                    <input
                       type="text"
                       name="garage_nom"
                       placeholder="Nom du garage"
@@ -842,7 +860,7 @@ const AutomobilisteDashboard = () => {
 
                     <div className="md:col-span-2 border border-gray-200 rounded p-3 bg-white">
                       <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-gray-700">Quelle est la pièce utilisée ?</span>
+                        <span className="mb-1 block text-sm font-medium text-gray-700">Pièces utilisées</span>
                         <textarea
                           name="pieces_libres"
                           value={interventionFormData.pieces_libres}
@@ -930,7 +948,7 @@ const AutomobilisteDashboard = () => {
                                 <p><span className="font-semibold">Date :</span> {intervention.date_intervention || "-"}</p>
                                 <p><span className="font-semibold">Type :</span> {intervention.type || "-"}</p>
                                 <p><span className="font-semibold">Kilométrage :</span> {intervention.kilometrage ?? "-"}</p>
-                                <p><span className="font-semibold">Coût total :</span> {intervention.cout_total ?? "0"} TND</p>
+                                <p><span className="font-semibold">Coût total :</span> {Number(intervention.cout_total) > 0 ? `${intervention.cout_total} TND` : "—"}</p>
                               </div>
 
                               {(intervention.garage_nom || intervention.garage_adresse) && (

@@ -132,6 +132,19 @@ const parseOptionalStringList = (value, fieldName) => {
   return [...new Set(normalizedItems)];
 };
 
+const parseBrandList = (value) => {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  const items = String(value)
+    .split(/[\n,;]+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  return [...new Set(items)];
+};
+
 const buildExactTextMatchClause = (columnName, values, params) => {
   if (!values || values.length === 0) {
     return null;
@@ -148,6 +161,29 @@ const buildExactTextMatchClause = (columnName, values, params) => {
     ) AS normalized_items
     WHERE normalized_item = ANY(${valuesParam}::text[])
   ) > 0`;
+};
+
+const buildGarageBrandMatchClause = (brandNames, params) => {
+  if (!brandNames || brandNames.length === 0) {
+    return null;
+  }
+
+  params.push(brandNames);
+  const valuesParam = `$${params.length}`;
+
+  return `(
+    EXISTS (
+      SELECT 1
+      FROM garage_vehicle_brands gv
+      WHERE gv.garage_id = g.id
+        AND LOWER(gv.brand_name) = ANY(${valuesParam}::text[])
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM regexp_split_to_table(COALESCE(g.vehicle_brands, ''), E'[\\n,;]+') AS legacy_brand
+      WHERE LOWER(BTRIM(legacy_brand)) = ANY(${valuesParam}::text[])
+    )
+  )`;
 };
 
 const resolveOwnerUserId = (req, providedUserId) => {
@@ -359,7 +395,7 @@ const listGarages = asyncHandler(async (req, res) => {
     whereClauses.push(`g.rating <= $${params.length}`);
   }
 
-  const brandClause = buildExactTextMatchClause('g.vehicle_brands', brandNames, params);
+  const brandClause = buildGarageBrandMatchClause(brandNames, params);
   if (brandClause) {
     whereClauses.push(brandClause);
   }
@@ -816,13 +852,21 @@ const getFilterOptions = asyncHandler(async (req, res) => {
 
   // Récupérer les marques distinctes depuis vehicle_brands dans garages
   const brandsResult = await pool.query(`
-    SELECT DISTINCT TRIM(brand) AS brand
+    SELECT DISTINCT brand
     FROM (
-      SELECT UNNEST(STRING_TO_ARRAY(g.vehicle_brands, ',')) AS brand
+      SELECT TRIM(gv.brand_name) AS brand
+      FROM garage_vehicle_brands gv
+      WHERE gv.brand_name IS NOT NULL AND gv.brand_name <> ''
+
+      UNION
+
+      SELECT TRIM(brand) AS brand
       FROM garages g
-      WHERE g.vehicle_brands IS NOT NULL AND g.vehicle_brands != ''
-    ) subquery
-    WHERE brand != ''
+      CROSS JOIN LATERAL regexp_split_to_table(COALESCE(g.vehicle_brands, ''), E'[\\n,;]+') AS brand
+      WHERE g.vehicle_brands IS NOT NULL AND g.vehicle_brands <> ''
+        AND TRIM(brand) <> ''
+    ) normalized_brands
+    WHERE brand IS NOT NULL AND brand <> ''
     ORDER BY brand ASC
   `);
 

@@ -6,7 +6,7 @@ Ce document répertorie toutes les interfaces (pages) du projet, les fichiers fr
 
 | L’acteur | Rôle |
 |---|---|
-| Automobiliste | L’automobiliste a la possibilité de :<br>• S’authentifier<br>• Gérer son profil<br>• Ajouter / modifier / supprimer un véhicule<br>• Enregistrer les interventions et réparations<br>• Consulter l’historique d’entretien<br>• Recevoir des recommandations d’entretien automatiques<br>• Rechercher des pièces<br>• Comparer les prix entre vendeurs<br>• Contacter un vendeur via chat<br>• Rechercher des garages proches via géolocalisation<br>• Consulter les services et avis des garages<br>• Réserver un rendez-vous<br>• Consulter et gérer ses rendez-vous<br>• Recevoir des notifications (messages, alertes entretien, confirmation RDV) |
+| Automobiliste | L’automobiliste a la possibilité de :<br>• S’authentifier<br>• Gérer son profil<br>• Ajouter / modifier / supprimer un véhicule<br>• Enregistrer les interventions et réparations<br>• Consulter l’historique d’entretien<br>• Rechercher des pièces<br>• Comparer les prix entre vendeurs<br>• Contacter un vendeur via chat<br>• Rechercher des garages proches via géolocalisation<br>• Consulter les services et avis des garages<br>• Réserver un rendez-vous<br>• Consulter et gérer ses rendez-vous<br>• Recevoir des notifications (messages, alertes entretien, confirmation RDV) |
 | Agent Garage | Le garage a la possibilité de :<br>• S’authentifier<br>• Gérer son profil<br>• Gérer ses services<br>• Recevoir des demandes de rendez-vous<br>• Valider ou refuser un rendez-vous<br>• Répondre aux messages des automobilistes<br>• Consulter les avis reçus<br>• Consulter son tableau de bord |
 | Vendeur de pièces | Le vendeur a la possibilité de :<br>• S’authentifier<br>• Gérer son mot de passe depuis le profil<br>• Gérer son profil<br>• Ajouter / modifier / supprimer des pièces<br>• Gérer le stock<br>• Répondre via chat<br>• Consulter son tableau de bord |
 | Administrateur | L’administrateur a la possibilité de :<br>• S’authentifier<br>• Consulter son tableau de bord<br>• Supprimer des comptes<br>• Gérer les signalements<br>• Consulter les statistiques de la plateforme<br>• Consulter les logs d’activité<br>• Superviser les réservations |
@@ -257,25 +257,23 @@ Affiche la liste des rendez-vous pour le garage et permet d'agir (confirmer, ann
 
 ## Frontend
 * src/pages/automobiliste/Dashboard.jsx
-* Uses: PlatformLayout, components for appointments, recommendations, garages
-* Services: src/services/recommendation.js, src/services/appointments.js, src/services/garage.js
+* Uses: PlatformLayout, components for appointments, garages
+* Services: src/services/appointments.js, src/services/garage.js
 
 ## Backend
-* routes: backend/routes/recommendations.js, backend/routes/appointments.js, backend/routes/garages.js
-* controllers: backend/controllers/recommendationController.js, appointment.controller.js, garage.controller.js
+* routes: backend/routes/appointments.js, backend/routes/garages.js
+* controllers: appointment.controller.js, garage.controller.js
 
 ## Base de données
 * users
-* recommendations
 * appointments
 
 ## APIs
-* GET /api/recommendations
 * GET /api/appointments
 * GET /api/garages
 
 ## Description
-Tableau de bord pour l'automobiliste : recommandations, accès rapide aux garages, rendez-vous et messages.
+Tableau de bord pour l'automobiliste : accès rapide aux garages, rendez-vous et messages.
 
 ---
 
@@ -399,30 +397,7 @@ Historique des interventions et réparations pour un véhicule donné.
 
 ---
 
-# Interface Automobiliste Recommendations
 
-## Frontend
-* src/pages/automobiliste/Recommendations.jsx
-* src/pages/automobiliste/RecommendationsAssistant.jsx
-* Services: src/services/recommendation.js
-
-## Backend
-* routes: backend/routes/recommendations.js
-* controllers: backend/controllers/recommendationController.js
-
-## Base de données
-* recommendations
-* users
-* vehicles
-
-## APIs
-* GET /api/recommendations
-* POST /api/recommendations/feedback
-
-## Description
-Affiche recommandations d'entretien et maintenance adaptées à l'utilisateur et à son véhicule.
-
----
 
 # Interface Vendeur Catalogue Pieces
 

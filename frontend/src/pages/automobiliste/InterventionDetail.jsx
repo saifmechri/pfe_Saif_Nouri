@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Pencil, Save, X } from 'lucide-react';
 import interventionsApi from '../../services/interventions';
 import { getPieces } from '../../services/pieces';
@@ -14,6 +14,7 @@ const extractPieces = (response) => {
 const InterventionDetail = () => {
   const { vehicleId, id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [item, setItem] = useState(null);
   const [availablePieces, setAvailablePieces] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ const InterventionDetail = () => {
         garage_nom: data.garage_nom || '',
         garage_adresse: data.garage_adresse || '',
         kilometrage: data.kilometrage || '',
-        cout_total: data.cout_total || ''
+        cout_total: Number(data.cout_total) > 0 ? data.cout_total : ''
       });
     } catch (err) {
       setError(err?.response?.data?.message || err.message || 'Erreur');
@@ -66,6 +67,13 @@ const InterventionDetail = () => {
     loadAvailablePieces();
   }, [vehicleId, id]);
 
+  useEffect(() => {
+    if (searchParams.get('edit') === '1') {
+      resetFormFromItem();
+      setEditing(true);
+    }
+  }, [searchParams, item]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((s) => ({ ...s, [name]: value }));
@@ -80,7 +88,7 @@ const InterventionDetail = () => {
       garage_nom: item.garage_nom || '',
       garage_adresse: item.garage_adresse || '',
       kilometrage: item.kilometrage || '',
-      cout_total: item.cout_total || ''
+      cout_total: Number(item.cout_total) > 0 ? item.cout_total : ''
     });
   };
 
@@ -200,7 +208,7 @@ const InterventionDetail = () => {
     <div className="min-h-[70vh] bg-[#f4f7fc] p-4 md:p-8">
       <div className="mx-auto max-w-5xl space-y-4">
         <Link
-          to={`/vehicules/${vehicleId}/history`}
+          to="/automobiliste?tab=historique"
           className="inline-flex items-center gap-2 rounded-lg border border-[#d6deeb] bg-white px-3 py-2 text-sm font-semibold text-[#153563] hover:bg-[#f3f7ff]"
         >
           <ArrowLeft size={16} />
@@ -263,7 +271,9 @@ const InterventionDetail = () => {
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Coût total</p>
-                <p className="mt-2 text-lg font-semibold text-[#102848]">{item.cout_total ? `${item.cout_total} TND` : '—'}</p>
+                <p className="mt-2 text-lg font-semibold text-[#102848]">
+                  {Number(item.cout_total) > 0 ? `${item.cout_total} TND` : '—'}
+                </p>
               </div>
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">

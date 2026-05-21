@@ -273,7 +273,7 @@ const Navbar = () => {
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             <article className="rounded-lg border border-blue-100 bg-blue-50/60 p-4">
               <h3 className="text-lg font-bold text-[#1a2b4b]">Automobiliste</h3>
-              <p className="mt-2 text-sm text-[#476184]">Suivez vos interventions et recevez des recommandations dynamiques.</p>
+              <p className="mt-2 text-sm text-[#476184]">Suivez vos interventions et recevez des suggestions de maintenance.</p>
             </article>
             <article className="rounded-lg border border-slate-200 bg-white p-4">
               <h3 className="text-lg font-bold text-[#1a2b4b]">Garage</h3>
@@ -305,9 +305,9 @@ const Navbar = () => {
           </div>
         </section>
 
-        <section className="vb-card bg-[linear-gradient(135deg,#1a2b4b_0%,#1d4ed8_100%)] p-8 text-center text-white">
+          <section className="vb-card bg-[linear-gradient(135deg,#1a2b4b_0%,#1d4ed8_100%)] p-8 text-center text-white">
           <h2 className="text-3xl font-extrabold">Prêt a accelerer votre gestion automobile ?</h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm text-blue-100">Centralisez vehicules, interventions, stocks et recommandations dans une seule plateforme.</p>
+          <p className="mx-auto mt-3 max-w-2xl text-sm text-blue-100">Centralisez véhicules, interventions et stocks dans une seule plateforme.</p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             {!isAuthenticated ? (
               <>

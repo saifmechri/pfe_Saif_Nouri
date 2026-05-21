@@ -6,7 +6,6 @@ import Register from "../pages/auth/Register";
 import AdminLogin from "../pages/auth/AdminLogin";
 import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
-import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
 import GaragesPage from "../pages/automobiliste/Garages";
 import AutomobilisteAppointments from "../pages/automobiliste/Appointments";
 import AppointmentDetail from "../pages/AppointmentDetail";
@@ -53,14 +52,7 @@ const AppRouter = () => {
         />
 
         {/* Tableaux de bord protégés par rôle */}
-        <Route
-          path="/automobiliste/recommandations"
-          element={
-            <ProtectedRoute allowedRoles={["automobiliste", "admin"]}>
-              <AutomobilisteRecommendations />
-            </ProtectedRoute>
-          }
-        />
+        {/* Recommandations dynamiques supprimées */}
         <Route
           path="/automobiliste/garages"
           element={
@@ -70,9 +62,25 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/vendeur/garages"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur", "admin"]}>
+              <GaragesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/automobiliste/appointments"
           element={
-            <ProtectedRoute allowedRoles={["automobiliste", "admin"]}>
+            <ProtectedRoute allowedRoles={["automobiliste", "vendeur", "admin"]}>
+              <AutomobilisteAppointments />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/vendeur/appointments"
+          element={
+            <ProtectedRoute allowedRoles={["vendeur", "admin"]}>
               <AutomobilisteAppointments />
             </ProtectedRoute>
           }

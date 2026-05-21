@@ -1,7 +1,7 @@
 ﻿// CENTRAL ROUTE REGISTRY
 // This file loads and registers all backend API routes.
 
-let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, recommendationRoutes, garageRoutes, chatRoutes;
+let authRoutes, vehiculeRoutes, interventionRoutes, pieceRoutes, garageRoutes, chatRoutes;
 let notificationRoutes, appointmentRoutes, maintenanceAlertRoutes, maintenanceRoutes, reportRoutes;
 let adminRoutes;
 let publicRoutes;
@@ -30,11 +30,6 @@ try {
   console.error('[routes/index] Error loading pieces:', e.message);
 }
 
-try {
-  recommendationRoutes = require('./recommendations');
-} catch (e) {
-  console.error('[routes/index] Error loading recommendations:', e.message);
-}
 
 try {
   publicRoutes = require('./public');
@@ -110,10 +105,7 @@ const registerRoutes = (app) => {
     if (debug) console.log('[registerRoutes] Mounting /api/public');
     app.use('/api/public', publicRoutes);
   }
-  if (recommendationRoutes) {
-    if (debug) console.log('[registerRoutes] Mounting /api/recommendations');
-    app.use('/api/recommendations', recommendationRoutes);
-  }
+  // Dynamic recommendations API removed
   if (garageRoutes) {
     if (debug) console.log('[registerRoutes] Mounting /api/garages');
     app.use('/api/garages', garageRoutes);

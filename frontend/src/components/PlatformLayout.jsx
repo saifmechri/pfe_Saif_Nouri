@@ -23,6 +23,35 @@ const PlatformLayout = ({ children }) => {
     return roleDashboardMap[user.role] || "/dashboard";
   }, [user?.role]);
 
+  const currentPageLabel = useMemo(() => {
+    const path = location.pathname;
+
+    if (user?.role === "garage") {
+      if (path === "/garage" || path.startsWith("/garage/") === false && path.includes("/garage")) {
+        return "Tableau de bord";
+      }
+      if (path.startsWith("/garage/appointments")) {
+        return "Recevoir un rendez-vous";
+      }
+      if (path.startsWith("/garage/catalogue")) {
+        return "Catalogue pièces";
+      }
+      if (path.startsWith("/garage/messages")) {
+        return "Messagerie";
+      }
+      if (path.startsWith("/appointments/")) {
+        return "Détail rendez-vous";
+      }
+      return "Page garage";
+    }
+
+    if (path === dashboardPath) {
+      return "Tableau de bord";
+    }
+
+    return "";
+  }, [dashboardPath, location.pathname, user?.role]);
+
   useEffect(() => {
     closeSidebar();
   }, [location.pathname]);
@@ -71,7 +100,7 @@ const PlatformLayout = ({ children }) => {
     }
 
     if (user?.role === "garage") {
-      items.push({ label: "Présentation garage", to: "/garage?panel=presentation" });
+      items.push({ label: "Recevoir un rendez-vous", to: "/garage/appointments" });
       items.push({ label: "Catalogue pièces", to: "/garage/catalogue" });
     }
 
@@ -80,6 +109,7 @@ const PlatformLayout = ({ children }) => {
 
   if (user?.role === "vendeur") {
     // Messagerie accessible via navbar/chat modal — removed from sidebar
+    navItems.push({ label: "Catalogue pièces", to: "/vendeur/catalogue" });
   }
 
   return (
@@ -106,6 +136,11 @@ const PlatformLayout = ({ children }) => {
           <div className="mt-1 text-xs uppercase tracking-[0.12em] text-blue-200/80">
             {user?.role === "admin" ? "Espace administration" : (user?.role || "compte")}
           </div>
+          {user?.role === "garage" && currentPageLabel && (
+            <div className="mt-2 rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white/90">
+              Page actuelle : {currentPageLabel}
+            </div>
+          )}
           {user?.role === "admin" && (
             <p className="mt-3 text-sm leading-6 text-white/75">
               Supervision des contenus, modération et audit centralisés.

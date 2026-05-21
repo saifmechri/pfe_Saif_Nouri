@@ -1,8 +1,8 @@
 ﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, Pencil, Eye } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
-import { getPieces } from "../../services/pieces";
+import { deletePiece, getMyPieces, setPieceStock } from "../../services/pieces";
 import { getCompleteProfile, updateProfile } from "../../services/user";
 
 const getPayload = (response) => response?.data?.data ?? response?.data;
@@ -43,9 +43,7 @@ const VendeurDashboard = () => {
     setPiecesError("");
 
     try {
-      const response = await getPieces({
-        userId: parsedOwnerId,
-        includeUnvalidated: "true",
+      const response = await getMyPieces({
         limit: 100,
         page: 1,
         sortBy: "created_at",
@@ -142,8 +140,7 @@ const VendeurDashboard = () => {
     if (!selectedPieceToDelete) return;
     setDeleting(true);
     try {
-      // Appel API pour supprimer la pièce (à adapter selon votre API)
-      await fetch(`/api/pieces/${selectedPieceToDelete.id}`, { method: 'DELETE' });
+      await deletePiece(selectedPieceToDelete.id);
       setSellerPieces(sellerPieces.filter(p => p.id !== selectedPieceToDelete.id));
       setShowDeleteModal(false);
       setSelectedPieceToDelete(null);
@@ -174,10 +171,6 @@ const VendeurDashboard = () => {
           <div className="rounded-2xl border border-[#e8eef8] bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 shadow-sm hover:shadow-md transition">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2"> En rupture</p>
             <p className="text-3xl font-bold text-yellow-600">{sellerPieces.filter((piece) => Number(piece.stock) <= 0).length}</p>
-          </div>
-          <div className="rounded-2xl border border-[#e8eef8] bg-gradient-to-br from-purple-50 to-purple-100 p-6 shadow-sm hover:shadow-md transition">
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6b7fa8] mb-2"> Vues totales</p>
-            <p className="text-3xl font-bold text-purple-600">{sellerPieces.reduce((acc, piece) => acc + Number(piece.vues || 0), 0)}</p>
           </div>
         </div>
 
@@ -324,7 +317,6 @@ const VendeurDashboard = () => {
                         <th className="px-4 py-3 font-semibold text-[#1a355e]">Nom pièce</th>
                         <th className="px-4 py-3 font-semibold text-[#1a355e]"> Prix</th>
                         <th className="px-4 py-3 font-semibold text-[#1a355e]">Stock</th>
-                        <th className="px-4 py-3 font-semibold text-[#1a355e]">Vues</th>
                         <th className="px-4 py-3 font-semibold text-[#1a355e]">Statut</th>
                         <th className="px-4 py-3 font-semibold text-[#1a355e]">Actions</th>
                       </tr>
@@ -341,7 +333,6 @@ const VendeurDashboard = () => {
                             </td>
                             <td className="px-4 py-3 font-semibold text-[#1d4ed8]">{Number(piece.prix_unitaire || 0).toFixed(2)} DT</td>
                             <td className="px-4 py-3 font-semibold">{Number(piece.stock || 0)}</td>
-                            <td className="px-4 py-3 text-purple-600 font-semibold">{Number(piece.vues || 0)}</td>
                             <td className="px-4 py-3">
                               <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
                                 isInStock 
@@ -362,13 +353,6 @@ const VendeurDashboard = () => {
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => navigate(`/vendeur/catalogue?pieceId=${piece.id}&view=true`)}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-[#d2dceb] bg-white px-3 py-1 text-xs font-semibold text-[#16375f] hover:bg-[#f5f8fe] transition"
-                                >
-                                  <Eye size={14} /> Voir
-                                </button>
-                                <button
-                                  type="button"
                                   onClick={() => {
                                     setSelectedPieceToDelete(piece);
                                     setShowDeleteModal(true);
@@ -376,6 +360,26 @@ const VendeurDashboard = () => {
                                   className="inline-flex items-center gap-1 rounded-lg border border-[#f5d5d5] bg-[#ffe8e8] px-3 py-1 text-xs font-semibold text-[#c41e3a] hover:bg-[#ffd9d9] transition"
                                 >
                                   <Trash2 size={14} /> Suppr.
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    // Optimistic toggle: if currently in stock (>0) set to 0, else set to 1
+                                    const current = Number(piece.stock || 0);
+                                    const target = current > 0 ? 0 : 1;
+                                    try {
+                                      // update UI optimistically
+                                      setSellerPieces((prev) => prev.map((p) => (p.id === piece.id ? { ...p, stock: target } : p)));
+                                      await setPieceStock(piece.id, { stock: target });
+                                    } catch (err) {
+                                      // revert on error and show simple alert
+                                      setSellerPieces((prev) => prev.map((p) => (p.id === piece.id ? { ...p, stock: current } : p)));
+                                      alert(err?.response?.data?.message || "Erreur lors de la mise à jour du stock");
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-[#e6f0e9] bg-[#f3fff4] px-3 py-1 text-xs font-semibold text-[#166534] hover:bg-[#e6fff0] transition"
+                                >
+                                  {Number(piece.stock || 0) > 0 ? "Mettre hors stock" : "Remettre en stock"}
                                 </button>
                               </div>
                             </td>

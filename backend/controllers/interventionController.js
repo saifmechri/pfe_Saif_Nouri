@@ -191,6 +191,7 @@ exports.createIntervention = async (req, res) => {
     garage_nom,
     garage_adresse,
     kilometrage,
+    cout_total,
     pieces
   } = req.body || {};
 
@@ -235,7 +236,7 @@ exports.createIntervention = async (req, res) => {
          cout_total,
          updated_at
        )
-       VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, 0, NOW())
+       VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, NOW())
        RETURNING id`,
       [
         vehicleId,
@@ -244,7 +245,8 @@ exports.createIntervention = async (req, res) => {
         description || null,
         garage_nom || null,
         garage_adresse || null,
-        parsedKilometrage
+        parsedKilometrage,
+        Number.isFinite(Number(cout_total)) && Number(cout_total) >= 0 ? Number(cout_total) : 0
       ]
     );
 
@@ -287,7 +289,9 @@ exports.createIntervention = async (req, res) => {
       }
     }
 
-    await recalculateInterventionTotal(interventionId, client);
+    if (Array.isArray(pieces) && pieces.length > 0) {
+      await recalculateInterventionTotal(interventionId, client);
+    }
     await client.query('COMMIT');
 
     await maintenanceService.syncMaintenanceState(vehicleId).catch((error) => {
@@ -425,6 +429,7 @@ exports.updateIntervention = async (req, res) => {
     garage_nom,
     garage_adresse,
     kilometrage
+    , cout_total
   } = req.body || {};
 
   if (!Number.isFinite(interventionId) || interventionId <= 0) {
@@ -467,8 +472,9 @@ exports.updateIntervention = async (req, res) => {
          garage_nom = $4,
          garage_adresse = $5,
          kilometrage = $6,
+         cout_total = $7,
          updated_at = NOW()
-       WHERE id = $7`,
+       WHERE id = $8`,
       [
         date_intervention || current.date_intervention,
         type || current.type,
@@ -476,6 +482,9 @@ exports.updateIntervention = async (req, res) => {
         garage_nom !== undefined ? garage_nom : current.garage_nom,
         garage_adresse !== undefined ? garage_adresse : current.garage_adresse,
         kilometrage !== undefined ? parsedKilometrage : current.kilometrage,
+        cout_total !== undefined && Number.isFinite(Number(cout_total)) && Number(cout_total) >= 0
+          ? Number(cout_total)
+          : current.cout_total,
         interventionId
       ]
     );

@@ -9,6 +9,11 @@ const formatDate = (value) => {
   return dt.toLocaleDateString('fr-FR');
 };
 
+const formatMoney = (value) => {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount > 0 ? `${amount} TND` : '—';
+};
+
 const VehicleHistory = () => {
   const { vehicleId } = useParams();
   const [items, setItems] = useState([]);
@@ -58,6 +63,7 @@ const VehicleHistory = () => {
                 <div className="text-right">
                   <div>{it.garage_nom || '—'}</div>
                   <div className="text-sm text-gray-600">{it.kilometrage ? `${it.kilometrage} km` : ''}</div>
+                  <div className="text-sm text-gray-600">Coût total : {formatMoney(it.cout_total)}</div>
                 </div>
               </div>
               <div className="mt-2">{it.description}</div>
@@ -70,7 +76,9 @@ const VehicleHistory = () => {
                         key={piece.id || `${piece.reference || piece.nom}-${piece.quantite}`}
                         className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
                       >
-                        {piece.nom || piece.reference || 'Pièce'}{piece.quantite ? ` x${piece.quantite}` : ''}
+                        {piece.nom || piece.reference || 'Pièce'}
+                        {piece.InterventionPiece?.quantite || piece.quantite ? ` x${piece.InterventionPiece?.quantite || piece.quantite}` : ''}
+                        {formatMoney(piece.InterventionPiece?.prix_unitaire_applique || piece.prix_unitaire)}
                       </span>
                     ))
                   ) : (

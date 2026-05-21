@@ -32,7 +32,8 @@ const formatTime = (value) => {
 const humanRole = {
   automobiliste: "Automobiliste",
   garage: "Garage",
-  vendeur: "Vendeur"
+  vendeur: "Vendeur",
+  admin: "Administrateur"
 };
 
 const ChatCenter = () => {

@@ -57,6 +57,48 @@ const garageBrands = [
   "Toyota", "Volkswagen", "Volvo"
 ].sort((a, b) => a.localeCompare(b));
 
+const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const parseVehicleBrands = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return [];
+  }
+
+  const directParts = raw
+    .split(/\r?\n|,|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (directParts.length > 1) {
+    return Array.from(new Set(directParts));
+  }
+
+  const normalizedRaw = raw.replace(/\s+/g, " ");
+  const matchedBrands = garageBrands
+    .filter((brand) => normalizedRaw.toLowerCase().includes(brand.toLowerCase()))
+    .sort((a, b) => b.length - a.length);
+
+  if (matchedBrands.length > 0) {
+    return Array.from(new Set(matchedBrands));
+  }
+
+  const regex = new RegExp(garageBrands.map((brand) => escapeRegex(brand)).sort((a, b) => b.length - a.length).join("|"), "gi");
+  const fallbackMatches = Array.from(
+    new Set(
+      (normalizedRaw.match(regex) || [])
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (fallbackMatches.length > 0) {
+    return fallbackMatches;
+  }
+
+  return directParts.length === 1 ? directParts : [raw];
+};
+
 const garageSpecialtyCatalog = [
   {
     name: "Mécanique générale",
@@ -367,11 +409,14 @@ const getBrandLogoCandidates = (brand) => {
   );
 
   const domain = brandLogoDomains[brand];
-  if (!domain) {
-    return [...localCandidates, buildMarqueImage(brand)];
-  }
+  const remoteCandidates = domain
+    ? [
+        `https://logo.clearbit.com/${encodeURIComponent(domain)}`,
+        `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`
+      ]
+    : [];
 
-  return [...localCandidates, buildMarqueImage(brand)];
+  return [...localCandidates, ...remoteCandidates, buildMarqueImage(brand)];
 };
 
 const splitBySeparators = (value) =>
@@ -885,7 +930,7 @@ const GarageDashboard = () => {
       setGarageForm(normalizeGarageForm(payload));
       clearLocalPhotoSelection();
 
-      const parsedBrands = splitBySeparators(payload?.vehicle_brands);
+      const parsedBrands = parseVehicleBrands(payload?.vehicle_brands);
       setSelectedBrands(parsedBrands.filter((brand) => garageBrands.includes(brand)));
 
       const parsedSpecialties = splitBySeparators(payload?.specialties);
@@ -979,6 +1024,15 @@ const GarageDashboard = () => {
     }));
   };
 
+  const handleTravelEnabledChange = (enabled) => {
+    setDoesTravel(enabled);
+
+    if (!enabled) {
+      setTravelSchedule(createDefaultSchedule());
+      setSelectedDeplacement("");
+    }
+  };
+
   const handleSaveGarage = async (event) => {
     event.preventDefault();
     setError("");
@@ -1012,7 +1066,7 @@ const GarageDashboard = () => {
         keywords: garageForm.keywords || null,
         photo_urls: mergedPhotoUrls.length > 0 ? mergedPhotoUrls.join("\n") : null,
         work_hours: serializeScheduleText(workSchedule),
-        travel_hours: doesTravel ? serializeScheduleText(travelSchedule) : null,
+        travel_hours: travelSchedule.some((row) => row.enabled) ? serializeScheduleText(travelSchedule) : null,
         vehicle_brands: selectedBrands.length > 0 ? selectedBrands.join("\n") : garageForm.vehicle_brands || null,
         latitude: garageForm.latitude === "" ? null : Number(garageForm.latitude),
         longitude: garageForm.longitude === "" ? null : Number(garageForm.longitude),
@@ -1229,6 +1283,11 @@ const GarageDashboard = () => {
     garage?.services_catalog || garageForm.services_catalog || myProfile?.store_services,
     ["Aucun service complémentaire renseigné"]
   );
+  const hasTravelSchedule = Boolean(doesTravel || travelSchedule.some((item) => item.enabled));
+  const displayGarageBrands = useMemo(
+    () => Array.from(new Set(garageBrands.flatMap((brand) => parseVehicleBrands(brand)).filter(Boolean))),
+    []
+  );
 
   const toggleSelection = (value, setter) => {
     setter((current) =>
@@ -1319,7 +1378,7 @@ const GarageDashboard = () => {
                   <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">×</button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
-                  {garageBrands.map((brand) => {
+                  {displayGarageBrands.map((brand) => {
                     const active = selectedBrands.includes(brand);
                     const logoCandidates = getBrandLogoCandidates(brand);
                     const logoUrl = logoCandidates[0] || "";
@@ -1732,11 +1791,53 @@ const GarageDashboard = () => {
                       </div>
 
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
-                        <div className="mb-2 flex items-center justify-between">
-                          <p className="text-sm font-semibold text-[#334155]">Déplacement</p>
-                          <button type="button" onClick={() => setShowDeplacementModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir</button>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement</p>
+                          <label className="inline-flex items-center gap-2 rounded-full border border-[#dbe2ec] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155]">
+                            <input
+                              type="checkbox"
+                              checked={travelSchedule.some((row) => row.enabled)}
+                              onChange={(event) => handleTravelEnabledChange(event.target.checked)}
+                              className="h-4 w-4 accent-blue-500"
+                            />
+                            Activer
+                          </label>
                         </div>
-                        <p className="text-xs font-semibold text-[#334155]">Sélection actuelle: {selectedDeplacement || "-"}</p>
+
+                        {!travelSchedule.some((row) => row.enabled) ? (
+                          <p className="text-xs text-[#6d7482]">Aucun horaire de déplacement renseigné.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {travelSchedule.map((row, index) => (
+                              <div key={row.day} className="grid grid-cols-[30px_1fr_110px_110px] items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={row.enabled}
+                                  onChange={(event) => {
+                                    updateScheduleRow(setTravelSchedule, index, { enabled: event.target.checked });
+                                    setDoesTravel(true);
+                                  }}
+                                  className="h-6 w-6 accent-blue-500"
+                                />
+                                <span className="text-2xl font-semibold text-[#1f2937]">{row.day}</span>
+                                <input
+                                  type="time"
+                                  value={row.start}
+                                  onChange={(event) => updateScheduleRow(setTravelSchedule, index, { start: event.target.value })}
+                                  disabled={!row.enabled}
+                                  className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
+                                />
+                                <input
+                                  type="time"
+                                  value={row.end}
+                                  onChange={(event) => updateScheduleRow(setTravelSchedule, index, { end: event.target.value })}
+                                  disabled={!row.enabled}
+                                  className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
@@ -1889,55 +1990,7 @@ const GarageDashboard = () => {
                     </div>
                   )}
 
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
-                    <h3 className="text-2xl font-black text-slate-900">Indicateurs en temps réel</h3>
-                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">Total services</p>
-                        <p className="text-3xl font-black text-slate-900">{services.length}</p>
-                      </div>
-                      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-center">
-                        <p className="text-xs uppercase tracking-wide text-blue-700">Services actifs</p>
-                        <p className="text-3xl font-black text-blue-700">{activeServicesCount}</p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">Avis publiés</p>
-                        <p className="text-3xl font-black text-slate-900">{reviewSummary.reviews_count}</p>
-                      </div>
-                    </div>
-                    <div className="mt-4 rounded-2xl border border-blue-100 bg-[linear-gradient(135deg,rgba(239,246,255,1)_0%,rgba(219,234,254,0.8)_100%)] p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
-                            Réception de RDV
-                          </p>
-                          <h4 className="mt-1 text-lg font-black text-slate-900">
-                            Recevoir RDV
-                          </h4>
-                          <p className="mt-1 text-sm text-slate-600">
-                            Ouvre l’interface pour recevoir, valider ou refuser les demandes de rendez-vous.
-                          </p>
-                        </div>
-                        <Link
-                          to="/garage/appointments"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-                        >
-                          Recevoir RDV
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Appointments panel: receive and handle incoming requests */}
-                  {hasGarageProfile && (
-                    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
-                      <h3 className="text-2xl font-black text-slate-900">Demandes de rendez-vous</h3>
-                      <div className="mt-4">
-                        <GarageDashboardAppointments garageId={garage.id} />
-                      </div>
-                    </div>
-                  )}
+                  {/* Removed: Indicateurs en temps réel and Demandes de rendez-vous for garage presentation per request */}
 
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <h3 className="text-2xl font-black text-slate-900">Spécialités</h3>

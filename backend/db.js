@@ -185,12 +185,23 @@ const initDatabase = async () => {
       adresse VARCHAR(255),
       telephone VARCHAR(50),
       email VARCHAR(255),
+      vehicle_brands TEXT,
       latitude DOUBLE PRECISION,
       longitude DOUBLE PRECISION,
       rating NUMERIC(3, 2) DEFAULT 3.5,
       is_open BOOLEAN DEFAULT true,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS garage_vehicle_brands (
+      id BIGSERIAL PRIMARY KEY,
+      garage_id BIGINT NOT NULL REFERENCES garages(id) ON DELETE CASCADE,
+      brand_name VARCHAR(100) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (garage_id, brand_name)
     )
   `);
 
@@ -241,9 +252,47 @@ const initDatabase = async () => {
   await pool.query('ALTER TABLE intervention_pieces ADD COLUMN IF NOT EXISTS piece_id BIGINT');
 
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS is_open BOOLEAN DEFAULT true');
+  await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS vehicle_brands TEXT');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query('ALTER TABLE garages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
   await pool.query("ALTER TABLE garages ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'en_attente'");
+
+  await pool.query('ALTER TABLE garage_vehicle_brands ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+  await pool.query(`
+    INSERT INTO garage_vehicle_brands (garage_id, brand_name)
+    SELECT g.id, TRIM(brand)
+    FROM garages g
+    CROSS JOIN LATERAL regexp_split_to_table(COALESCE(g.vehicle_brands, ''), E'[\\n,;]+') AS brand
+    WHERE g.vehicle_brands IS NOT NULL
+      AND TRIM(brand) <> ''
+    ON CONFLICT (garage_id, brand_name) DO NOTHING
+  `);
+
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION sync_garage_vehicle_brands()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      DELETE FROM garage_vehicle_brands WHERE garage_id = NEW.id;
+
+      INSERT INTO garage_vehicle_brands (garage_id, brand_name)
+      SELECT NEW.id, TRIM(brand)
+      FROM regexp_split_to_table(COALESCE(NEW.vehicle_brands, ''), E'[\\n,;]+') AS brand
+      WHERE TRIM(brand) <> ''
+      ON CONFLICT (garage_id, brand_name) DO NOTHING;
+
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+  await pool.query('DROP TRIGGER IF EXISTS trg_sync_garage_vehicle_brands ON garages');
+  await pool.query(`
+    CREATE TRIGGER trg_sync_garage_vehicle_brands
+    AFTER INSERT OR UPDATE OF vehicle_brands ON garages
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_garage_vehicle_brands()
+  `);
 
   await pool.query('UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL');
   await pool.query('UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE updated_at IS NULL');

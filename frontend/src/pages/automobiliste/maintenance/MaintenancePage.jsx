@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
+import PlatformLayout from '../../../components/PlatformLayout';
 import { getMaintenanceDashboard, getMaintenanceRecommendations } from '../../../services/maintenance';
 import AlertCard from './AlertCard';
 import MaintenanceCalendar from './MaintenanceCalendar';
@@ -178,61 +179,63 @@ const MaintenancePage = () => {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(219,234,254,0.8),transparent_35%),linear-gradient(180deg,#f8fafc_0%,#eef4fb_100%)] text-slate-900">
-      <div className="absolute left-[-8rem] top-[-6rem] h-72 w-72 rounded-full bg-blue-300/20 blur-3xl" />
-      <div className="absolute right-[-5rem] top-[8rem] h-64 w-64 rounded-full bg-teal-300/20 blur-3xl" />
+    <PlatformLayout>
+      <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(219,234,254,0.8),transparent_35%),linear-gradient(180deg,#f8fafc_0%,#eef4fb_100%)] text-slate-900">
+        <div className="absolute left-[-8rem] top-[-6rem] h-72 w-72 rounded-full bg-blue-300/20 blur-3xl" />
+        <div className="absolute right-[-5rem] top-[8rem] h-64 w-64 rounded-full bg-teal-300/20 blur-3xl" />
 
-      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
-        <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-blue-700 shadow-sm backdrop-blur">
-              <Sparkles className="h-4 w-4" />
-              Auto Bot - Alertes & Maintenance
-            </p>
-            <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
-              Suivi intelligent de l’entretien automobile
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-              Vue consolidée des alertes urgentes, de l’état kilométrique, du planning des entretiens et des garages recommandés selon la situation réelle du véhicule.
-            </p>
+        <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
+          <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-white/80 px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-blue-700 shadow-sm backdrop-blur">
+                <Sparkles className="h-4 w-4" />
+                Auto Bot - Alertes & Maintenance
+              </p>
+              <h1 className="mt-4 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+                Suivi intelligent de l’entretien automobile
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
+                Vue consolidée des alertes urgentes, de l’état kilométrique, du planning des entretiens et des garages recommandés selon la situation réelle du véhicule.
+              </p>
+            </div>
+
+            <div className="rounded-[28px] border border-slate-200 bg-white/80 px-5 py-4 shadow-sm backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Véhicule actif</p>
+              <p className="mt-1 text-xl font-black text-slate-950">{dashboard?.vehicle?.modele_voiture || 'Véhicule sélectionné'}</p>
+              <p className="mt-1 text-sm font-medium text-slate-600">{dashboard?.vehicle?.matricule_voiture || 'Matricule non renseigné'}</p>
+              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Dernière révision {formatDate(dashboard?.lastIntervention?.date)}</p>
+            </div>
           </div>
 
-          <div className="rounded-[28px] border border-slate-200 bg-white/80 px-5 py-4 shadow-sm backdrop-blur">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Véhicule actif</p>
-            <p className="mt-1 text-xl font-black text-slate-950">{dashboard?.vehicle?.modele_voiture || 'Véhicule sélectionné'}</p>
-            <p className="mt-1 text-sm font-medium text-slate-600">{dashboard?.vehicle?.matricule_voiture || 'Matricule non renseigné'}</p>
-            <p className="mt-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Dernière révision {formatDate(dashboard?.lastIntervention?.date)}</p>
-          </div>
-        </div>
+          {recommendationError && (
+            <div className="mb-6 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+              {recommendationError}
+            </div>
+          )}
 
-        {recommendationError && (
-          <div className="mb-6 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-            {recommendationError}
-          </div>
-        )}
-
-        <div className="space-y-6">
-          <AlertCard
-            vehicle={dashboard?.vehicle}
-            urgency={dashboard?.urgency}
-            mileage={dashboard?.mileage}
-            temporal={dashboard?.temporal}
-            lastIntervention={dashboard?.lastIntervention}
-          />
-
-          <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
-            <MaintenanceCalendar
-              items={nextInterventions}
-              selectedDate={selectedDate}
-              onSelectDate={setSelectedDate}
-              title="Planning des entretiens"
+          <div className="space-y-6">
+            <AlertCard
+              vehicle={dashboard?.vehicle}
+              urgency={dashboard?.urgency}
+              mileage={dashboard?.mileage}
+              temporal={dashboard?.temporal}
+              lastIntervention={dashboard?.lastIntervention}
             />
 
-            <RecommendedGarages garages={garageCards} onReserve={handleReserveGarage} />
+            <div className="grid gap-6 xl:grid-cols-[1.35fr_0.95fr]">
+              <MaintenanceCalendar
+                items={nextInterventions}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                title="Planning des entretiens"
+              />
+
+              <RecommendedGarages garages={garageCards} onReserve={handleReserveGarage} />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </PlatformLayout>
   );
 };
 

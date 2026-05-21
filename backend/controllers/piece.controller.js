@@ -95,6 +95,22 @@ const getAllPieces = asyncHandler(async (req, res) => {
   });
 });
 
+const getMyPieces = asyncHandler(async (req, res) => {
+  const pieces = await pieceService.getMyPieces({
+    userId: req.user?.id,
+    page: req.query.page,
+    limit: req.query.limit,
+    search: req.query.search,
+    sortBy: req.query.sortBy,
+    sortOrder: req.query.sortOrder
+  });
+
+  return sendApiResponse(res, {
+    message: 'Liste de vos pieces recuperee avec succes',
+    data: pieces
+  });
+});
+
 const getPieceById = asyncHandler(async (req, res) => {
   const pieceId = Number.parseInt(req.params.id, 10);
   if (!Number.isFinite(pieceId) || pieceId <= 0) {
@@ -115,7 +131,7 @@ const updatePiece = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  const piece = await pieceService.updatePiece(pieceId, req.body || {});
+  const piece = await pieceService.updatePiece(pieceId, req.body || {}, req.user);
 
   return sendApiResponse(res, {
     message: 'Piece mise a jour avec succes',
@@ -129,7 +145,7 @@ const deletePiece = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  await pieceService.deletePiece(pieceId);
+  await pieceService.deletePiece(pieceId, req.user);
 
   return sendApiResponse(res, {
     message: 'Piece supprimee avec succes',
@@ -143,7 +159,7 @@ const adjustPieceStock = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  const result = await pieceService.adjustPieceStock(pieceId, req.body || {}, req.user?.id || null);
+  const result = await pieceService.adjustPieceStock(pieceId, req.body || {}, req.user);
 
   return sendApiResponse(res, {
     message: 'Stock ajuste avec succes',
@@ -182,7 +198,7 @@ const setPieceStock = asyncHandler(async (req, res) => {
     throw new AppError('Identifiant de piece invalide', 400, 'INVALID_PIECE_ID');
   }
 
-  const result = await pieceService.setPieceStock(pieceId, req.body || {}, req.user?.id || null);
+  const result = await pieceService.setPieceStock(pieceId, req.body || {}, req.user);
 
   return sendApiResponse(res, {
     message: 'Stock defini avec succes',
@@ -199,7 +215,7 @@ const getPieceStockMovements = asyncHandler(async (req, res) => {
   const movements = await pieceService.getPieceStockMovements(pieceId, {
     page: req.query.page,
     limit: req.query.limit
-  });
+  }, req.user);
 
   return sendApiResponse(res, {
     message: 'Historique de stock recupere avec succes',
@@ -210,6 +226,7 @@ const getPieceStockMovements = asyncHandler(async (req, res) => {
 module.exports = {
   createPiece,
   getAllPieces,
+  getMyPieces,
   getPieceById,
   updatePiece,
   deletePiece,

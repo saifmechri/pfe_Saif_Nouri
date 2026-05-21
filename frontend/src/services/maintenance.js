@@ -1,5 +1,4 @@
 ﻿import API from './api';
-import { getDynamicRecommendations } from './recommendation';
 
 const buildNoCacheParams = (params = {}) => ({
   ...params,
@@ -12,16 +11,7 @@ export const getMaintenanceDashboard = async (vehicleId) => {
 };
 
 export const getMaintenanceRecommendations = async (vehicleId, params = {}) => {
-  const response = await getDynamicRecommendations({
-    vehicleId,
-    sortBy: 'score',
-    order: 'desc',
-    limit: 6,
-    garageLimit: 4,
-    _: Date.now(),
-    ...params,
-  });
-
-  return response.data?.data ?? response.data ?? [];
+  // Dynamic recommendations feature removed — return empty list for compatibility.
+  return [];
 };
 

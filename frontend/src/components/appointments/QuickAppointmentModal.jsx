@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import { X, Plus, Loader, CheckCircle, AlertCircle } from "lucide-react";
@@ -8,9 +8,36 @@ import { getMinAppointmentDate, isDateValid, isTimeValid, WORKING_HOURS } from "
 
 dayjs.locale("fr");
 
+const VEHICLE_BRANDS = [
+  "Audi", "BMW", "Citroën", "Dacia", "Fiat", "Ford", "Hyundai", "Kia",
+  "Mercedes", "Nissan", "Peugeot", "Renault", "Seat", "Skoda", "Toyota",
+  "Volkswagen", "Volvo"
+];
+
+const VEHICLE_MODELS_BY_BRAND = {
+  Audi: ["A1", "A3", "A4", "A6", "Q3", "Q5"],
+  BMW: ["Serie 1", "Serie 3", "Serie 5", "X1", "X3", "X5"],
+  Citroën: ["C3", "C4", "C5", "Berlingo", "Jumpy"],
+  Dacia: ["Duster", "Logan", "Sandero", "Jogger"],
+  Fiat: ["500", "Panda", "Tipo", "Doblo"],
+  Ford: ["Fiesta", "Focus", "Kuga", "Ranger"],
+  Hyundai: ["i10", "i20", "Elantra", "Tucson"],
+  Kia: ["Picanto", "Rio", "Sportage", "Sorento"],
+  Mercedes: ["A-Class", "C-Class", "E-Class", "GLA", "GLC"],
+  Nissan: ["Micra", "Qashqai", "Juke", "X-Trail"],
+  Peugeot: ["208", "2008", "308", "3008", "5008"],
+  Renault: ["Clio", "Megane", "Captur", "Kangoo", "Duster"],
+  Seat: ["Ibiza", "Leon", "Arona", "Ateca"],
+  Skoda: ["Fabia", "Octavia", "Karoq", "Kodiaq"],
+  Toyota: ["Yaris", "Corolla", "RAV4", "Hilux", "Land Cruiser"],
+  Volkswagen: ["Polo", "Golf", "Tiguan", "Passat", "T-Roc"],
+  Volvo: ["XC40", "XC60", "XC90", "S60"]
+};
+
 const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppointmentCreated = null }) => {
   const [form, setForm] = useState({
-    vehicleId: "",
+    vehicleBrand: "",
+    vehicleModel: "",
     appointmentDate: dayjs().format("YYYY-MM-DD"),
     appointmentTime: "",
     description: "",
@@ -23,11 +50,14 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
   const [messageType, setMessageType] = useState(""); // "success", "error", or ""
   const minDate = getMinAppointmentDate();
 
+  const getServiceLabel = (service) => service?.name || service?.title || service?.label || String(service);
+
   useEffect(() => {
     if (isOpen && garage) {
       // Reset form when opening for new garage
       setForm({
-        vehicleId: "",
+        vehicleBrand: "",
+        vehicleModel: "",
         appointmentDate: dayjs().format("YYYY-MM-DD"),
         appointmentTime: "",
         description: "",
@@ -56,11 +86,21 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
     setMessage("");
   };
 
-  const toggleService = (serviceId) => {
+  const handleBrandChange = (e) => {
+    const { value } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      vehicleBrand: value,
+      vehicleModel: ""
+    }));
+    setMessage("");
+  };
+
+  const toggleService = (service) => {
+    const serviceLabel = getServiceLabel(service);
     setSelectedServices((prev) => {
-      const id = String(serviceId);
-      if (prev.includes(id)) return prev.filter((s) => s !== id);
-      return [...prev, id];
+      if (prev.includes(serviceLabel)) return prev.filter((s) => s !== serviceLabel);
+      return [...prev, serviceLabel];
     });
   };
 
@@ -87,7 +127,8 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
       }
 
       const notesPayload = {
-        vehicleId: form.vehicleId || null,
+        vehicleBrand: form.vehicleBrand || null,
+        vehicleModel: form.vehicleModel || null,
         services: selectedServices,
         remark: form.remark || ""
       };
@@ -101,12 +142,13 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
       });
 
       setMessageType("success");
-      setMessage("✓ Rendez-vous réservé avec succès! Le garage répondra dans les 24 heures.");
+      setMessage("✅ Rendez-vous réservé avec succès! Le garage répondra dans les 24 heures.");
       
       // Reset form and close after delay
       setTimeout(() => {
         setForm({
-          vehicleId: "",
+          vehicleBrand: "",
+          vehicleModel: "",
           appointmentDate: dayjs().format("YYYY-MM-DD"),
           appointmentTime: "",
           description: "",
@@ -154,20 +196,32 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Vehicle Selection */}
+          {/* Vehicle Brand / Model */}
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700">Votre véhicule</label>
+            <label className="mb-2 block text-sm font-semibold text-slate-700">Marque du véhicule</label>
             <select
-              name="vehicleId"
-              value={form.vehicleId}
-              onChange={handleChange}
+              name="vehicleBrand"
+              value={form.vehicleBrand}
+              onChange={handleBrandChange}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
             >
-              <option value="">Sélectionnez un véhicule (optionnel)</option>
-              {vehicules.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.modele_voiture || v.modele || `Véhicule ${v.id}`} {v.matricule_voiture ? `· ${v.matricule_voiture}` : ""}
-                </option>
+              <option value="">Sélectionnez une marque (optionnel)</option>
+              {VEHICLE_BRANDS.map((brand) => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
+            </select>
+
+            <label className="mb-2 mt-4 block text-sm font-semibold text-slate-700">Modèle du véhicule</label>
+            <select
+              name="vehicleModel"
+              value={form.vehicleModel}
+              onChange={handleChange}
+              disabled={!form.vehicleBrand}
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 transition hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+            >
+              <option value="">Sélectionnez un modèle (optionnel)</option>
+              {(VEHICLE_MODELS_BY_BRAND[form.vehicleBrand] || []).map((model) => (
+                <option key={model} value={model}>{model}</option>
               ))}
             </select>
           </div>
@@ -181,9 +235,9 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
                   <button
                     key={s.id || s.name}
                     type="button"
-                    onClick={() => toggleService(s.id || s.name)}
+                    onClick={() => toggleService(s)}
                     className={`rounded-lg border p-3 text-center text-xs font-medium transition ${
-                      selectedServices.includes(String(s.id || s.name))
+                      selectedServices.includes(getServiceLabel(s))
                         ? "border-amber-400 bg-amber-50 text-amber-700 ring-2 ring-amber-200"
                         : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                     }`}
@@ -309,3 +363,5 @@ const QuickAppointmentModal = ({ isOpen, onClose, garage, vehicules = [], onAppo
 };
 
 export default QuickAppointmentModal;
+
+

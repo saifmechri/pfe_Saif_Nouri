@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const DEFAULT_KM_RECOMMENDED = 5000;
 const DEFAULT_DAYS_RECOMMENDED = 180;
@@ -95,3 +95,5 @@ const calculateNextRevisionForVehicle = async (vehicleId) => {
 module.exports = {
   calculateNextRevisionForVehicle
 };
+
+

@@ -1,4 +1,4 @@
-const notificationService = require('../services/notificationService');
+﻿const notificationService = require('../services/notificationService');
 
 const listNotifications = async (req, res) => {
   try {
@@ -67,3 +67,5 @@ module.exports = {
   markAll,
   removeNotification
 };
+
+

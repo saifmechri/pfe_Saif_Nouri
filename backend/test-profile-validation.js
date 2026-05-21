@@ -1,4 +1,4 @@
-const http = require('http');
+﻿const http = require('http');
 
 // Test admin login
 const adminLoginData = JSON.stringify({
@@ -34,12 +34,12 @@ const req = http.request(options, (res) => {
       
       if (parsed.data && parsed.data.token) {
         const token = parsed.data.token;
-        console.log('\n✓ Admin token received:', token.substring(0, 20) + '...');
+        console.log('\n✅ Admin token received:', token.substring(0, 20) + '...');
         
         // Now test listing pending users
         testListPendingUsers(token);
       } else {
-        console.log('✗ No token in response');
+        console.log('âœ— No token in response');
       }
     } catch (e) {
       console.log('Raw response:', data);
@@ -83,7 +83,7 @@ function testListPendingUsers(token) {
         console.log('Response:', JSON.stringify(parsed, null, 2));
         
         if (parsed.data && parsed.data.items) {
-          console.log(`\n✓ Found ${parsed.data.items.length} pending users`);
+          console.log(`\n✅ Found ${parsed.data.items.length} pending users`);
           console.log('\n=== Profile Validation Task Status ===');
           console.log('TRUE - Profile validation is WORKING!');
           process.exit(0);
@@ -100,3 +100,5 @@ function testListPendingUsers(token) {
 
   req2.end();
 }
+
+

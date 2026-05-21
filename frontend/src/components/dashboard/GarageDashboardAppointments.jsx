@@ -1,10 +1,11 @@
-import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import { Calendar, Clock, CheckCircle2, XCircle, Clock3, ChevronRight } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import { Link } from "react-router-dom";
 import { listAppointments, updateAppointment } from "../../services/appointments";
 import { getCompleteProfileById } from "../../services/user";
+import { formatAppointmentDate } from "../../utils/appointmentConstants";
 dayjs.locale("fr");
 
 const GarageDashboardAppointments = ({ garageId }) => {
@@ -144,7 +145,7 @@ const GarageDashboardAppointments = ({ garageId }) => {
                   </p>
                   <div className="mt-2 flex items-center gap-2 text-sm text-slate-700">
                     <Calendar className="h-4 w-4" />
-                    {dayjs(apt.appointment_date).format("dddd D MMMM YYYY")}
+                    {formatAppointmentDate(apt.appointment_date)}
                   </div>
                   {apt.appointment_time && (
                     <div className="flex items-center gap-2 text-sm text-slate-700 mt-1">
@@ -226,16 +227,16 @@ const GarageDashboardAppointments = ({ garageId }) => {
                         }`}
                       >
                         {apt.status === "confirmed"
-                          ? "✓ Confirmé"
+                          ? "✅ Confirmé"
                           : apt.status === "cancelled"
-                          ? "✕ Annulé"
+                          ? "❌ Annulé"
                           : "⏳ En attente"}
                       </span>
                     </div>
                     <div className="mt-2 flex flex-col gap-1 text-sm text-slate-700">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        {dayjs(apt.appointment_date).format("dddd D MMMM YYYY")}
+                        {formatAppointmentDate(apt.appointment_date)}
                       </div>
                       {apt.appointment_time && (
                         <div className="flex items-center gap-2">
@@ -286,3 +287,5 @@ const GarageDashboardAppointments = ({ garageId }) => {
 };
 
 export default GarageDashboardAppointments;
+
+

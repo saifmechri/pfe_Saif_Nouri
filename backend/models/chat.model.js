@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const BASE_CONVERSATION_SELECT = `
   SELECT
@@ -42,6 +42,19 @@ const findConversationByParticipants = async ({ conversationType, automobilisteU
          AND c.garage_id = $2
        LIMIT 1`,
       [automobilisteUserId, garageId]
+    );
+
+    return result.rows[0] || null;
+  }
+
+  if (conversationType === 'garage_vendeur') {
+    const result = await pool.query(
+      `${BASE_CONVERSATION_SELECT}
+       WHERE c.conversation_type = 'garage_vendeur'
+         AND c.garage_id = $1
+         AND c.vendeur_user_id = $2
+       LIMIT 1`,
+      [garageId, vendeurUserId]
     );
 
     return result.rows[0] || null;
@@ -106,10 +119,24 @@ const listConversationsForGarageUser = async (garageUserId, limit, offset) => {
   return result.rows;
 };
 
+const listConversationsForGarageVendeur = async (garageUserId, limit, offset) => {
+  const result = await pool.query(
+    `${BASE_CONVERSATION_SELECT}
+     WHERE c.conversation_type = 'garage_vendeur'
+       AND g.user_id = $1
+     ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
+     LIMIT $2
+     OFFSET $3`,
+    [garageUserId, limit, offset]
+  );
+
+  return result.rows;
+};
+
 const listConversationsForVendeur = async (vendeurUserId, limit, offset) => {
   const result = await pool.query(
     `${BASE_CONVERSATION_SELECT}
-     WHERE c.conversation_type = 'automobiliste_vendeur'
+     WHERE c.conversation_type IN ('automobiliste_vendeur', 'garage_vendeur')
        AND c.vendeur_user_id = $1
      ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
      LIMIT $2
@@ -321,6 +348,7 @@ module.exports = {
   createConversation,
   listConversationsForAutomobiliste,
   listConversationsForGarageUser,
+  listConversationsForGarageVendeur,
   listConversationsForVendeur,
   listConversationsForAdmin,
   createMessage,
@@ -331,3 +359,5 @@ module.exports = {
   searchVendeurContacts,
   searchAutomobilisteContacts
 };
+
+

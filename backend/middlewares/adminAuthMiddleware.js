@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+﻿const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET || 'jwt_secret_key';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin123@gmail.com';
 
@@ -24,3 +24,5 @@ const verifyAdminToken = (req, res, next) => {
 };
 
 module.exports = { verifyAdminToken };
+
+

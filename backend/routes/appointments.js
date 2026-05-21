@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middlewares/authMiddleware');
 const appointmentController = require('../controllers/appointment.controller');
@@ -19,3 +19,5 @@ router.patch('/:id', verifyToken, appointmentController.updateAppointment);
 router.delete('/:id', verifyToken, appointmentController.deleteAppointment);
 
 module.exports = router;
+
+

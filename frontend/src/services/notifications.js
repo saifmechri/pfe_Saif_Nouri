@@ -1,4 +1,4 @@
-import API from "./api";
+﻿import API from "./api";
 
 export const fetchNotifications = (params = {}) => {
   return API.get("/notifications", { params });
@@ -15,3 +15,5 @@ export const markAllNotificationsAsRead = () => {
 export const deleteNotification = (notificationId) => {
   return API.delete(`/notifications/${notificationId}`);
 };
+
+

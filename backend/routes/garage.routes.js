@@ -1,7 +1,7 @@
-const express = require('express');
+﻿const express = require('express');
 const { body, param, query } = require('express-validator');
 const { verifyToken } = require('../middlewares/authMiddleware');
-const { checkRole, isAutomobiliste } = require('../middlewares/roleMiddleware');
+const { authorizeRoles, isAutomobiliste } = require('../middlewares/roleMiddleware');
 const { validateRequest } = require('../middlewares/validateRequest');
 const garageController = require('../controllers/garage.controller');
 const availabilityController = require('../controllers/availability.controller');
@@ -148,26 +148,28 @@ const matchGaragesValidation = [
 
 router.get('/filter-options', garageController.getFilterOptions);
 router.get('/', listGaragesValidation, validateRequest, garageController.listGarages);
-router.get('/me', verifyToken, checkRole('garage', 'admin'), garageController.getMyGarage);
-router.get('/me/services', verifyToken, checkRole('garage', 'admin'), garageServiceController.listMyGarageServices);
-router.get('/me/reviews', verifyToken, checkRole('garage', 'admin'), garageReviewController.listMyGarageReviews);
+router.get('/me', verifyToken, authorizeRoles('garage', 'admin'), garageController.getMyGarage);
+router.get('/me/services', verifyToken, authorizeRoles('garage', 'admin'), garageServiceController.listMyGarageServices);
+router.get('/me/reviews', verifyToken, authorizeRoles('garage', 'admin'), garageReviewController.listMyGarageReviews);
 router.get('/:id', garageIdValidation, validateRequest, garageController.getGarageById);
 router.get('/:id/availability', garageIdValidation, validateRequest, availabilityController.getAvailability);
 router.get('/:id/services', listGarageServicesValidation, validateRequest, garageServiceController.listGarageServices);
 router.get('/:id/reviews', listGarageReviewsValidation, validateRequest, garageReviewController.listGarageReviews);
 
-router.post('/', verifyToken, checkRole('garage', 'admin'), createGarageValidation, validateRequest, garageController.createGarage);
-router.post('/photos/upload', verifyToken, checkRole('garage', 'admin'), uploadGaragePhoto.array('photos', 9), garageController.uploadGaragePhotos);
-router.post('/:id/services', verifyToken, checkRole('garage', 'admin'), createGarageServiceValidation, validateRequest, garageServiceController.createGarageService);
-router.post('/:id/reviews', verifyToken, isAutomobiliste, createGarageReviewValidation, validateRequest, garageReviewController.createGarageReview);
-router.put('/:id', verifyToken, checkRole('garage', 'admin'), updateGarageValidation, validateRequest, garageController.updateGarage);
-router.put('/:id/services/:serviceId', verifyToken, checkRole('garage', 'admin'), updateGarageServiceValidation, validateRequest, garageServiceController.updateGarageService);
+router.post('/', verifyToken, authorizeRoles('garage', 'admin'), createGarageValidation, validateRequest, garageController.createGarage);
+router.post('/photos/upload', verifyToken, authorizeRoles('garage', 'admin'), uploadGaragePhoto.array('photos', 9), garageController.uploadGaragePhotos);
+router.post('/:id/services', verifyToken, authorizeRoles('garage', 'admin'), createGarageServiceValidation, validateRequest, garageServiceController.createGarageService);
+router.post('/:id/reviews', verifyToken, authorizeRoles('automobiliste','vendeur','admin'), createGarageReviewValidation, validateRequest, garageReviewController.createGarageReview);
+router.put('/:id', verifyToken, authorizeRoles('garage', 'admin'), updateGarageValidation, validateRequest, garageController.updateGarage);
+router.put('/:id/services/:serviceId', verifyToken, authorizeRoles('garage', 'admin'), updateGarageServiceValidation, validateRequest, garageServiceController.updateGarageService);
 router.put('/:id/reviews/:reviewId', verifyToken, updateGarageReviewValidation, validateRequest, garageReviewController.updateGarageReview);
-router.delete('/:id', verifyToken, checkRole('garage', 'admin'), garageIdValidation, validateRequest, garageController.deleteGarage);
-router.delete('/:id/services/:serviceId', verifyToken, checkRole('garage', 'admin'), [...garageIdValidation, ...serviceIdValidation], validateRequest, garageServiceController.deleteGarageService);
+router.delete('/:id', verifyToken, authorizeRoles('garage', 'admin'), garageIdValidation, validateRequest, garageController.deleteGarage);
+router.delete('/:id/services/:serviceId', verifyToken, authorizeRoles('garage', 'admin'), [...garageIdValidation, ...serviceIdValidation], validateRequest, garageServiceController.deleteGarageService);
 router.delete('/:id/reviews/:reviewId', verifyToken, reviewIdValidation, [...garageIdValidation, ...reviewIdValidation], validateRequest, garageReviewController.deleteGarageReview);
 
 // Matching garages for a vehicle
 router.get('/match/:vehicleId', matchGaragesValidation, validateRequest, verifyToken, garageMatchingController.matchGarages);
 
 module.exports = router;
+
+

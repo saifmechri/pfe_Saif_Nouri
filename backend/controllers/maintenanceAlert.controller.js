@@ -1,4 +1,4 @@
-const maintenanceAlertService = require('../services/maintenanceAlertService');
+﻿const maintenanceAlertService = require('../services/maintenanceAlertService');
 
 const listAlerts = async (req, res) => {
   try {
@@ -107,3 +107,5 @@ module.exports = {
   deleteAlert,
   checkDueAlerts
 };
+
+

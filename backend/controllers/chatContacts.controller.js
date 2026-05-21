@@ -1,4 +1,4 @@
-const { asyncHandler } = require('../middlewares/asyncHandler');
+﻿const { asyncHandler } = require('../middlewares/asyncHandler');
 const {
   searchGarageContacts,
   searchVendeurContacts,
@@ -64,18 +64,53 @@ const listChatContacts = asyncHandler(async (req, res) => {
     });
   }
 
-  const automobilistes = await searchAutomobilisteContacts({ query: q, limit });
+  // For garage users allow searching both vendeurs and automobilistes so
+  // existing conversation counterparts (automobilistes) appear in results.
+  let items = [];
 
-  const items = automobilistes
-    .filter((item) => Number(item.id) !== currentUserId)
-    .map((item) => ({
-      id: Number(item.id),
-      role: 'automobiliste',
-      label: item.name,
-      subtitle: item.email || item.phone || '',
-      conversationType: role === 'garage' ? 'automobiliste_garage' : 'automobiliste_vendeur',
-      startPayload: { automobilisteId: Number(item.id) }
-    }));
+  if (role === 'garage') {
+    const [vendeurs, automobilistes] = await Promise.all([
+      searchVendeurContacts({ query: q, limit }),
+      searchAutomobilisteContacts({ query: q, limit })
+    ]);
+
+    const mappedVendeurs = (vendeurs || [])
+      .filter((item) => Number(item.id) !== currentUserId)
+      .map((item) => ({
+        id: Number(item.id),
+        role: 'vendeur',
+        label: item.store_name || item.name,
+        subtitle: item.email || item.store_address || '',
+        conversationType: 'garage_vendeur',
+        startPayload: { vendeurId: Number(item.id) }
+      }));
+
+    const mappedAutomobilistes = (automobilistes || [])
+      .filter((item) => Number(item.id) !== currentUserId)
+      .map((item) => ({
+        id: Number(item.id),
+        role: 'automobiliste',
+        label: item.name,
+        subtitle: item.email || item.phone || '',
+        conversationType: 'automobiliste_garage',
+        startPayload: { automobilisteId: Number(item.id) }
+      }));
+
+    items = [...mappedAutomobilistes, ...mappedVendeurs];
+  } else {
+    const itemsSource = await searchAutomobilisteContacts({ query: q, limit });
+
+    items = (itemsSource || [])
+      .filter((item) => Number(item.id) !== currentUserId)
+      .map((item) => ({
+        id: Number(item.id),
+        role: 'automobiliste',
+        label: item.name,
+        subtitle: item.email || item.phone || '',
+        conversationType: 'automobiliste_vendeur',
+        startPayload: { automobilisteId: Number(item.id) }
+      }));
+  }
 
   return res.json({
     success: true,
@@ -89,3 +124,5 @@ const listChatContacts = asyncHandler(async (req, res) => {
 module.exports = {
   listChatContacts
 };
+
+

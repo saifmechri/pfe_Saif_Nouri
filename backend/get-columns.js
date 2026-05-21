@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const { pool } = require('./db');
 
 (async () => {
@@ -15,3 +15,5 @@ const { pool } = require('./db');
     pool.end();
   }
 })();
+
+

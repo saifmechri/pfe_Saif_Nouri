@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+﻿import { useEffect, useState, useMemo } from "react";
 import { Calendar, Clock, Plus, ChevronRight, Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
@@ -127,7 +127,7 @@ const AutomobilisteDashboardAppointments = () => {
                         }`}
                       >
                         {apt.status === "confirmed"
-                          ? "✓ Confirmé"
+                          ? "✅ Confirmé"
                           : "⏳ En attente"}
                       </span>
                     </div>
@@ -206,9 +206,9 @@ const AutomobilisteDashboardAppointments = () => {
                       }`}
                     >
                       {apt.status === "confirmed"
-                        ? "✓ Confirmé"
+                        ? "✅ Confirmé"
                         : apt.status === "cancelled"
-                        ? "✕ Annulé"
+                        ? "❌ Annulé"
                         : "⏳ En attente"}
                     </span>
                   </div>
@@ -268,3 +268,5 @@ const AutomobilisteDashboardAppointments = () => {
 };
 
 export default AutomobilisteDashboardAppointments;
+
+

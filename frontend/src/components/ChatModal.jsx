@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { MessageCircle, X, Send, Search, Loader } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
 import {
@@ -539,9 +539,18 @@ const ChatModal = ({ isOpen, onClose }) => {
             </div>
           </div>
         )}
+
+        {selectedConversation && (
+          <div className="border-t border-slate-200 px-5 py-3 text-xs text-slate-500">
+            {selectedConversation.counterpart?.phone && <p>Téléphone: {selectedConversation.counterpart.phone}</p>}
+            {selectedConversation.counterpart?.email && <p>Email: {selectedConversation.counterpart.email}</p>}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default ChatModal;
+
+

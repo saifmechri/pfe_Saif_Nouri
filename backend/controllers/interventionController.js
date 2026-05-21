@@ -1,9 +1,24 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 const { validationResult } = require('express-validator');
+const maintenanceService = require('../services/maintenanceService');
 
 const allowedInterventionTypes = ['révision', 'réparation', 'vidange', 'autre'];
 
 const isMissingColumnError = (error) => error && error.code === '42703';
+
+const getVehicleMileage = async (vehicleId, client = pool) => {
+  const result = await client.query(
+    'SELECT kilometrage_voiture FROM vehicules WHERE id = $1',
+    [vehicleId]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const mileage = Number(result.rows[0].kilometrage_voiture);
+  return Number.isFinite(mileage) ? mileage : 0;
+};
 
 // Convertit une valeur en entier positif (ou retourne fallback).
 const parsePositiveInt = (value, fallback = null) => {
@@ -176,6 +191,7 @@ exports.createIntervention = async (req, res) => {
     garage_nom,
     garage_adresse,
     kilometrage,
+    cout_total,
     pieces
   } = req.body || {};
 
@@ -199,6 +215,13 @@ exports.createIntervention = async (req, res) => {
       return res.status(403).json({ message: 'Accès interdit à ce véhicule' });
     }
 
+    const currentMileage = await getVehicleMileage(vehicleId, client);
+    if (parsedKilometrage !== null && currentMileage !== null && parsedKilometrage < currentMileage) {
+      return res.status(400).json({
+        message: 'Le kilométrage de la nouvelle intervention doit être supérieur ou égal au kilométrage actuel du véhicule'
+      });
+    }
+
     await client.query('BEGIN');
 
     const insertInterventionResult = await client.query(
@@ -213,7 +236,7 @@ exports.createIntervention = async (req, res) => {
          cout_total,
          updated_at
        )
-       VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, 0, NOW())
+       VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, NOW())
        RETURNING id`,
       [
         vehicleId,
@@ -222,7 +245,8 @@ exports.createIntervention = async (req, res) => {
         description || null,
         garage_nom || null,
         garage_adresse || null,
-        parsedKilometrage
+        parsedKilometrage,
+        Number.isFinite(Number(cout_total)) && Number(cout_total) >= 0 ? Number(cout_total) : 0
       ]
     );
 
@@ -265,8 +289,14 @@ exports.createIntervention = async (req, res) => {
       }
     }
 
-    await recalculateInterventionTotal(interventionId, client);
+    if (Array.isArray(pieces) && pieces.length > 0) {
+      await recalculateInterventionTotal(interventionId, client);
+    }
     await client.query('COMMIT');
+
+    await maintenanceService.syncMaintenanceState(vehicleId).catch((error) => {
+      console.error('Failed to sync maintenance state after intervention creation:', error);
+    });
 
     const responsePayload = await getInterventionWithPiecesById(interventionId);
     return res.status(201).json(responsePayload);
@@ -399,6 +429,7 @@ exports.updateIntervention = async (req, res) => {
     garage_nom,
     garage_adresse,
     kilometrage
+    , cout_total
   } = req.body || {};
 
   if (!Number.isFinite(interventionId) || interventionId <= 0) {
@@ -425,6 +456,13 @@ exports.updateIntervention = async (req, res) => {
       return res.status(403).json({ message: 'Accès interdit' });
     }
 
+    const currentMileage = await getVehicleMileage(current.vehicle_id);
+    if (parsedKilometrage !== null && currentMileage !== null && parsedKilometrage < currentMileage) {
+      return res.status(400).json({
+        message: 'Le kilométrage de l’intervention ne peut pas être inférieur au kilométrage actuel du véhicule'
+      });
+    }
+
     await pool.query(
       `UPDATE interventions
        SET
@@ -434,8 +472,9 @@ exports.updateIntervention = async (req, res) => {
          garage_nom = $4,
          garage_adresse = $5,
          kilometrage = $6,
+         cout_total = $7,
          updated_at = NOW()
-       WHERE id = $7`,
+       WHERE id = $8`,
       [
         date_intervention || current.date_intervention,
         type || current.type,
@@ -443,11 +482,19 @@ exports.updateIntervention = async (req, res) => {
         garage_nom !== undefined ? garage_nom : current.garage_nom,
         garage_adresse !== undefined ? garage_adresse : current.garage_adresse,
         kilometrage !== undefined ? parsedKilometrage : current.kilometrage,
+        cout_total !== undefined && Number.isFinite(Number(cout_total)) && Number(cout_total) >= 0
+          ? Number(cout_total)
+          : current.cout_total,
         interventionId
       ]
     );
 
     const updated = await getInterventionWithPiecesById(interventionId);
+
+    await maintenanceService.syncMaintenanceState(current.vehicle_id).catch((error) => {
+      console.error('Failed to sync maintenance state after intervention update:', error);
+    });
+
     return res.json(updated);
   } catch (error) {
     console.error(error);
@@ -475,6 +522,11 @@ exports.deleteIntervention = async (req, res) => {
     }
 
     await pool.query('DELETE FROM interventions WHERE id = $1', [interventionId]);
+
+    await maintenanceService.syncMaintenanceState(current.vehicle_id).catch((error) => {
+      console.error('Failed to sync maintenance state after intervention deletion:', error);
+    });
+
     return res.json({ message: 'Intervention supprimée' });
   } catch (error) {
     console.error(error);
@@ -551,6 +603,10 @@ exports.addPieceToIntervention = async (req, res) => {
     await recalculateInterventionTotal(interventionId, client);
     await client.query('COMMIT');
 
+    await maintenanceService.syncMaintenanceState(intervention.vehicle_id).catch((error) => {
+      console.error('Failed to sync maintenance state after adding a piece:', error);
+    });
+
     const updated = await getInterventionWithPiecesById(interventionId);
     return res.json(updated);
   } catch (error) {
@@ -596,6 +652,10 @@ exports.removePieceFromIntervention = async (req, res) => {
     await recalculateInterventionTotal(interventionId, client);
     await client.query('COMMIT');
 
+    await maintenanceService.syncMaintenanceState(intervention.vehicle_id).catch((error) => {
+      console.error('Failed to sync maintenance state after removing a piece:', error);
+    });
+
     const updated = await getInterventionWithPiecesById(interventionId);
     return res.json(updated);
   } catch (error) {
@@ -606,3 +666,5 @@ exports.removePieceFromIntervention = async (req, res) => {
     client.release();
   }
 };
+
+

@@ -1,10 +1,43 @@
-import { Clock, User, Phone, FileText, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+﻿import { Clock, User, Phone, FileText, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import "dayjs/locale/fr";
+import { parseAppointmentNotes } from "../../utils/appointmentConstants";
 
 dayjs.extend(localizedFormat);
 dayjs.locale("fr");
+
+const parseAppointmentDateTime = (request) => {
+  const dateValue = request?.appointment_date || request?.appointmentDate || request?.date || "";
+  const timeValue = request?.appointment_time || request?.appointmentTime || "";
+
+  const candidates = [];
+
+  if (dateValue) {
+    candidates.push(dateValue);
+
+    if (typeof dateValue === "string") {
+      const datePart = dateValue.split("T")[0];
+      if (datePart && datePart !== dateValue) {
+        candidates.push(datePart);
+      }
+
+      if (timeValue) {
+        candidates.push(`${datePart || dateValue.split(" ")[0]}T${timeValue}`);
+        candidates.push(`${datePart || dateValue.split(" ")[0]} ${timeValue}`);
+      }
+    }
+  }
+
+  for (const candidate of candidates) {
+    const parsed = dayjs(candidate);
+    if (parsed.isValid()) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
 
 const GarageRequestsPanel = ({
   requests = [],
@@ -103,11 +136,10 @@ const GarageRequestsPanel = ({
           </div>
         ) : (
           filteredRequests.map((request) => {
+            const parsedNotes = parseAppointmentNotes(request.notes);
             const statusInfo = getStatusInfo(request.status);
             const StatusIcon = statusInfo.icon;
-            const appointmentDateTime = dayjs(
-              `${request.appointment_date}T${request.appointment_time || "12:00"}`
-            );
+            const appointmentDateTime = parseAppointmentDateTime(request);
             const isUpcoming = appointmentDateTime.isAfter(dayjs());
             const isPending = request.status === "pending";
 
@@ -156,7 +188,7 @@ const GarageRequestsPanel = ({
                     <div className="rounded-lg bg-slate-50 p-3">
                       <p className="text-xs font-bold uppercase tracking-wide text-slate-600">📅 Date</p>
                       <p className="mt-1 font-medium text-slate-900">
-                        {appointmentDateTime.format("D MMMM YYYY")}
+                        {appointmentDateTime ? appointmentDateTime.format("D MMMM YYYY") : "Date inconnue"}
                       </p>
                     </div>
                     {request.appointment_time && (
@@ -199,9 +231,19 @@ const GarageRequestsPanel = ({
                         <FileText className="h-3 w-3" />
                         Notes
                       </p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-blue-900">
-                        {request.notes}
-                      </p>
+                      <div className="mt-2 text-sm text-blue-900">
+                        {parsedNotes.remark ? (
+                          <p className="whitespace-pre-wrap font-medium">{parsedNotes.remark}</p>
+                        ) : (
+                          <p className="italic text-blue-700">Aucune remarque renseignée</p>
+                        )}
+
+                        {!parsedNotes.isValid && (
+                          <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+                            Le contenu des notes n’est pas au format JSON attendu. Affichage de secours activé.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 
@@ -230,8 +272,8 @@ const GarageRequestsPanel = ({
                     <div className={`border-t ${statusInfo.bg} pt-4`}>
                       <p className={`text-sm font-medium ${statusInfo.color}`}>
                         {request.status === "confirmed"
-                          ? "✓ Rendez-vous confirmé"
-                          : "✕ Rendez-vous annulé"}
+                          ? "✅ Rendez-vous confirmé"
+                          : "❌ Rendez-vous annulé"}
                       </p>
                     </div>
                   )}
@@ -246,3 +288,5 @@ const GarageRequestsPanel = ({
 };
 
 export default GarageRequestsPanel;
+
+

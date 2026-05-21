@@ -1,32 +1,53 @@
-const { asyncHandler } = require('../middlewares/asyncHandler');
+﻿const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
 const { AppError } = require('../utils/appError');
 const maintenanceService = require('../services/maintenanceService');
-const { pool } = require('../db');
 
-const getNextRevision = asyncHandler(async (req, res) => {
-  const vehicleId = Number(req.params.vehicleId);
-  
+const normalizeServiceError = (error) => {
+  if (error && error.code === 'FORBIDDEN') {
+    return new AppError('Acces refuse : non proprietaire', 403, 'FORBIDDEN');
+  }
+
+  return error;
+};
+
+const getMaintenanceDashboard = asyncHandler(async (req, res) => {
+  const vehicleId = Number(req.query.vehicleId);
+
   if (!Number.isInteger(vehicleId) || vehicleId <= 0) {
     throw new AppError('vehicleId invalide', 400, 'INVALID_VEHICLE_ID');
   }
 
-  // Verify vehicle exists and user is authorized
-  const vehicleResult = await pool.query('SELECT id, user_id FROM vehicules WHERE id = $1', [vehicleId]);
-  if (vehicleResult.rows.length === 0) {
+  let dashboard;
+  try {
+    dashboard = await maintenanceService.buildMaintenanceDashboard(vehicleId, req.user);
+  } catch (error) {
+    throw normalizeServiceError(error);
+  }
+
+  if (!dashboard) {
     throw new AppError('Vehicule introuvable', 404, 'VEHICLE_NOT_FOUND');
   }
 
-  const vehicle = vehicleResult.rows[0];
-  const currentUserId = Number(req.user?.id);
-  const role = req.user?.role;
+  return sendApiResponse(res, {
+    message: 'Tableau de bord maintenance calcule',
+    data: dashboard
+  });
+});
 
-  // Only automobiliste owner, garage, or admin can view
-  if (!(role === 'admin' || Number(vehicle.user_id) === currentUserId || role === 'garage')) {
-    throw new AppError('Acces refuse : non proprietaire', 403, 'FORBIDDEN');
+const getNextRevision = asyncHandler(async (req, res) => {
+  const vehicleId = Number(req.params.vehicleId);
+
+  if (!Number.isInteger(vehicleId) || vehicleId <= 0) {
+    throw new AppError('vehicleId invalide', 400, 'INVALID_VEHICLE_ID');
   }
 
-  const revisionData = await maintenanceService.calculateNextRevision(vehicleId);
+  let revisionData;
+  try {
+    revisionData = await maintenanceService.calculateNextRevision(vehicleId, req.user);
+  } catch (error) {
+    throw normalizeServiceError(error);
+  }
 
   if (!revisionData) {
     return sendApiResponse(res, {
@@ -42,5 +63,8 @@ const getNextRevision = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  getMaintenanceDashboard,
   getNextRevision
 };
+
+

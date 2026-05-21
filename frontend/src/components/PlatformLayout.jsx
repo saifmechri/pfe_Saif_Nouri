@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+﻿import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import ChatModal from "./ChatModal";
@@ -22,6 +22,35 @@ const PlatformLayout = ({ children }) => {
     if (!user?.role) return "/dashboard";
     return roleDashboardMap[user.role] || "/dashboard";
   }, [user?.role]);
+
+  const currentPageLabel = useMemo(() => {
+    const path = location.pathname;
+
+    if (user?.role === "garage") {
+      if (path === "/garage" || path.startsWith("/garage/") === false && path.includes("/garage")) {
+        return "Tableau de bord";
+      }
+      if (path.startsWith("/garage/appointments")) {
+        return "Recevoir un rendez-vous";
+      }
+      if (path.startsWith("/garage/catalogue")) {
+        return "Catalogue pièces";
+      }
+      if (path.startsWith("/garage/messages")) {
+        return "Messagerie";
+      }
+      if (path.startsWith("/appointments/")) {
+        return "Détail rendez-vous";
+      }
+      return "Page garage";
+    }
+
+    if (path === dashboardPath) {
+      return "Tableau de bord";
+    }
+
+    return "";
+  }, [dashboardPath, location.pathname, user?.role]);
 
   useEffect(() => {
     closeSidebar();
@@ -47,28 +76,40 @@ const PlatformLayout = ({ children }) => {
     navigate("/login", { replace: true });
   };
 
-  const navItems = [
-    { label: "Accueil", to: "/" },
-    { label: "Mon profil", to: "/profil" },
-    { label: "Tableau de bord", to: dashboardPath },
-    { label: "Catalogue pièces", to: "/vendeur/catalogue" }
-  ];
+  const navItems = (() => {
+    // Build a base set of items visible to most users
+    const items = [
+      { label: "Accueil", to: "/" },
+      { label: "Mon profil", to: "/profil" },
+      { label: "Tableau de bord", to: dashboardPath },
+    ];
 
-  if (user?.role === "automobiliste" || user?.role === "vendeur") {
-    navItems.push({ label: "Recommandations", to: "/automobiliste/recommandations" });
-    navItems.push({ label: "Garages", to: "/automobiliste/garages" });
-  }
+    // Admin keeps the same shared shell, with actions handled from admin pages only.
+    if (user?.role === "admin") {
+      items.push({ label: "Catalogue pièces", to: "/admin/catalogue" });
+      items.push({ label: "Garages", to: "/admin/garages" });
+      items.push({ label: "Messagerie", to: "/admin/messages" });
+      return items;
+    }
 
-  if (user?.role === "garage") {
-    navItems.push({ label: "Gestion garage", to: "/garage" });
-  }
+    if (user?.role === "automobiliste") {
+      // For automobiliste keep only essential links (Garages, Messagerie and Catalogue pièces).
+      items.push({ label: "Garages", to: "/automobiliste/garages" });
+      items.push({ label: "Messagerie", to: "/automobiliste/messages" });
+      items.push({ label: "Catalogue pièces", to: "/automobiliste/catalogue" });
+    }
 
-  if (user?.role === "admin") {
-    navItems.push({ label: "Garages", to: "/automobiliste/garages" });
-  }
+    if (user?.role === "garage") {
+      items.push({ label: "Recevoir un rendez-vous", to: "/garage/appointments" });
+      items.push({ label: "Catalogue pièces", to: "/garage/catalogue" });
+    }
+
+    return items;
+  })();
 
   if (user?.role === "vendeur") {
     // Messagerie accessible via navbar/chat modal — removed from sidebar
+    navItems.push({ label: "Catalogue pièces", to: "/vendeur/catalogue" });
   }
 
   return (
@@ -92,12 +133,25 @@ const PlatformLayout = ({ children }) => {
         <div className="rounded-lg border border-white/20 bg-white/5 px-4 py-4">
           <div className="text-[1.25rem] font-extrabold tracking-wide">AutoBot</div>
           <div className="mt-2 text-sm text-white/80">{user?.name || "Utilisateur"}</div>
-          <div className="mt-1 text-xs uppercase tracking-[0.12em] text-blue-200/80">{user?.role || "compte"}</div>
+          <div className="mt-1 text-xs uppercase tracking-[0.12em] text-blue-200/80">
+            {user?.role === "admin" ? "Espace administration" : (user?.role || "compte")}
+          </div>
+          {user?.role === "garage" && currentPageLabel && (
+            <div className="mt-2 rounded-md border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white/90">
+              Page actuelle : {currentPageLabel}
+            </div>
+          )}
+          {user?.role === "admin" && (
+            <p className="mt-3 text-sm leading-6 text-white/75">
+              Supervision des contenus, modération et audit centralisés.
+            </p>
+          )}
         </div>
 
         <nav className="flex flex-col gap-2">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+            const targetPath = item.to.split("?")[0];
+            const isActive = location.pathname === targetPath || location.pathname.startsWith(`${targetPath}/`);
             return (
               <Link
                 key={`${item.to}-${item.label}`}
@@ -137,3 +191,5 @@ const PlatformLayout = ({ children }) => {
 };
 
 export default PlatformLayout;
+
+

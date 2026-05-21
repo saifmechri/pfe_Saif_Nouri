@@ -1,21 +1,17 @@
-const { AppError } = require("../utils/appError");
+﻿const { AppError } = require("../utils/appError");
 const { hasRole: userHasRole } = require("../models/user.model");
 
 /**
- * Middleware de vérification de rôle utilisateur
- * Vérifie si l'utilisateur authentifié possède un des rôles autorisés
- * 
+ * Middleware de vérification de rôle utilisateur.
+ * Vérifie si l'utilisateur authentifié possède un des rôles autorisés.
+ *
  * @param {...string} allowedRoles - Liste des rôles autorisés
  * @returns {Function} Middleware Express
- * 
+ *
  * @example
- * // Autoriser plusieurs rôles
- * router.get('/route', verifyToken, checkRole('admin', 'garage'), handler);
- * 
- * // Autoriser un seul rôle
- * router.post('/admin-only', verifyToken, checkRole('admin'), handler);
+ * router.get('/route', verifyToken, authorizeRoles('admin', 'garage'), handler);
  */
-const checkRole = (...allowedRoles) => {
+const authorizeRoles = (...allowedRoles) => {
   return async (req, res, next) => {
     try {
       const userRole = req.user?.role;
@@ -36,36 +32,39 @@ const checkRole = (...allowedRoles) => {
   };
 };
 
+// Alias conservé pour compatibilité avec l'existant.
+const checkRole = (...allowedRoles) => authorizeRoles(...allowedRoles);
+
 /**
  * Middleware pré-configuré : Seuls les administrateurs
  * @type {Function}
  */
-const isAdmin = checkRole('admin');
+const isAdmin = authorizeRoles('admin');
 
 /**
  * Middleware pré-configuré : Professionnels (garages, vendeurs) et admins
  * @type {Function}
  */
-const isProfessional = checkRole('garage', 'vendeur', 'admin');
+const isProfessional = authorizeRoles('garage', 'vendeur', 'admin');
 
 /**
  * Middleware pré-configuré : Seulement les automobilistes
  * @type {Function}
  */
-const isAutomobiliste = checkRole('automobiliste');
+const isAutomobiliste = authorizeRoles('automobiliste', 'admin');
 
 /**
  * Middleware pré-configuré : Seulement les garages
  * @type {Function}
  */
-const isGarage = checkRole('garage');
+const isGarage = authorizeRoles('garage', 'admin');
 
 /**
  * Middleware pré-configuré : Seulement les vendeurs
  * @type {Function}
  */
-const isVendeur = checkRole('vendeur');
-const isVendeurOrAdmin = checkRole('vendeur', 'admin');
+const isVendeur = authorizeRoles('vendeur', 'admin');
+const isVendeurOrAdmin = authorizeRoles('vendeur', 'admin');
 
 /**
  * Fonction helper pour vérifier si un utilisateur a un rôle spécifique
@@ -91,6 +90,7 @@ const hasRole = async (userId, roleName) => {
 };
 
 module.exports = { 
+  authorizeRoles,
   checkRole, 
   isAdmin, 
   isProfessional, 
@@ -100,3 +100,5 @@ module.exports = {
   isVendeurOrAdmin,
   hasRole
 };
+
+

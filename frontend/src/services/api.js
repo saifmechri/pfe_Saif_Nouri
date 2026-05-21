@@ -1,4 +1,4 @@
-import axios from "axios";
+﻿import axios from "axios";
 
 const resolvedApiBaseUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000/api").replace(/\/$/, "");
 
@@ -43,3 +43,4 @@ API.interceptors.response.use(
 );
 
 export default API;
+

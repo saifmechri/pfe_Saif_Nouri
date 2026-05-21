@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const createIntervention = async ({ vehicleId, dateIntervention, type, description, garageNom, garageAdresse, kilometrage, coutTotal, kmRecommande, joursRecommandes }) => {
   const result = await pool.query(
@@ -61,3 +61,5 @@ module.exports = {
   updateIntervention,
   deleteIntervention
 };
+
+

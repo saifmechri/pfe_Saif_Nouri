@@ -5,7 +5,6 @@ const cors = require("cors");
 const path = require("path");
 
 const { registerRoutes } = require("./routes");
-const recommendationRoutes = require("./routes/recommendations");
 const { initDatabase, testConnection } = require("./db");
 const { errorHandler } = require("./middlewares/errorHandler");
 
@@ -32,7 +31,7 @@ app.get("/", (req, res) => {
 });
 
 registerRoutes(app);
-app.use("/api/recommandations", recommendationRoutes);
+// Dynamic recommendations API removed; routes are unregistered.
 
 // Gestion globale des erreurs applicatives (AppError et erreurs inattendues)
 app.use(errorHandler);
@@ -57,3 +56,4 @@ const startServer = async () => {
 };
 
 startServer();
+

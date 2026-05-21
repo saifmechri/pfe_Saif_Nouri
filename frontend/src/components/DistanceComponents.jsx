@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { MapPin } from "lucide-react";
 import { formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
@@ -55,3 +55,5 @@ export const DistanceCard = ({ distance }) => {
 };
 
 export default DistanceBadge;
+
+

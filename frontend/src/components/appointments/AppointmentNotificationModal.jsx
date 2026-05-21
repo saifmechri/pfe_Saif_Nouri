@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { X, CheckCircle, AlertCircle, Info, Calendar } from "lucide-react";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import "dayjs/locale/fr";
 import { updateAppointment } from "../../services/appointments";
+import { formatAppointmentDate } from "../../utils/appointmentConstants";
 
 dayjs.extend(localizedFormat);
 dayjs.locale("fr");
@@ -246,7 +247,7 @@ const AppointmentNotificationModal = ({ isOpen, onClose, notification, appointme
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <p className="font-semibold text-slate-700">Date</p>
-                <p className="text-slate-600">{dayjs(appointment.appointment_date).format("D MMMM YYYY")}</p>
+                <p className="text-slate-600">{formatAppointmentDate(appointment.appointment_date)}</p>
               </div>
               {appointment.appointment_time && (
                 <div>
@@ -261,8 +262,8 @@ const AppointmentNotificationModal = ({ isOpen, onClose, notification, appointme
                   appointment.status === "cancelled" ? "text-rose-600" :
                   "text-amber-600"
                 }`}>
-                  {appointment.status === "confirmed" ? "✓ Confirmé" :
-                   appointment.status === "cancelled" ? "✕ Annulé" :
+                  {appointment.status === "confirmed" ? "✅ Confirmé" :
+                   appointment.status === "cancelled" ? "❌ Annulé" :
                    appointment.status === "proposed" ? "📅 Proposition" :
                    "⏳ En attente"}
                 </p>
@@ -285,14 +286,14 @@ const AppointmentNotificationModal = ({ isOpen, onClose, notification, appointme
                     disabled={loading}
                     className="flex-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
                   >
-                    ✓ Accepter
+                    ✅ Accepter
                   </button>
                   <button
                     onClick={() => handleDecision("reject")}
                     disabled={loading}
                     className="flex-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                   >
-                    ✕ Refuser
+                    ❌ Refuser
                   </button>
                 </div>
                 <button
@@ -334,3 +335,5 @@ const AppointmentNotificationModal = ({ isOpen, onClose, notification, appointme
 };
 
 export default AppointmentNotificationModal;
+
+

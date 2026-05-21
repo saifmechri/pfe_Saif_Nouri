@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Calcule la distance entre deux points géographiques en kilomètres (Haversine formula)
  * @param {number} lat1 - Latitude du point 1
  * @param {number} lon1 - Longitude du point 1
@@ -56,3 +56,5 @@ export const getDistanceLabel = (distance) => {
   if (distance <= 30) return "À proximité";
   return "Loin";
 };
+
+

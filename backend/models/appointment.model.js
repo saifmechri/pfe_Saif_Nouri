@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const createAppointment = async ({ automobilisteUserId, garageId, appointmentDate, appointmentTime, description, notes, status = 'pending' }) => {
   const result = await pool.query(
@@ -81,3 +81,5 @@ module.exports = {
   updateAppointment,
   deleteAppointment
 };
+
+

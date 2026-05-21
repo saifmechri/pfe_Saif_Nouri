@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import { fetchNotifications, markNotificationAsRead, deleteNotification } from "../services/notifications";
 
 /**
@@ -73,3 +73,5 @@ export const useNotifications = (pollingInterval = 10000) => {
 };
 
 export default useNotifications;
+
+

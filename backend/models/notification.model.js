@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 const createNotification = async ({ userId, actorUserId = null, type, referenceId = null, title = null, body = null, metadata = null }) => {
   const result = await pool.query(
@@ -40,3 +40,5 @@ module.exports = {
   markAllNotificationsRead,
   deleteNotification
 };
+
+

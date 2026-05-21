@@ -1,4 +1,4 @@
-const jwt = require("jsonwebtoken");
+﻿const jwt = require("jsonwebtoken");
 const { findUserForAuthById } = require("../models/user.model");
 
 const SECRET = process.env.JWT_SECRET || "jwt_secret_key";
@@ -48,9 +48,31 @@ const verifyToken = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, SECRET);
+
+    // Admin token fallback: allow platform access even if no DB user id is embedded.
+    if (decoded?.admin === true && (!decoded?.id || Number.isNaN(Number(decoded.id)))) {
+      req.user = {
+        id: null,
+        name: 'Administrateur',
+        email: decoded.email || null,
+        role: 'admin'
+      };
+      return next();
+    }
+
     const user = await fetchUserForToken(decoded.id);
 
     if (user.rows.length === 0) {
+      if (decoded?.admin === true) {
+        req.user = {
+          id: decoded.id || null,
+          name: 'Administrateur',
+          email: decoded.email || null,
+          role: 'admin'
+        };
+        return next();
+      }
+
       throw new AppError('Utilisateur non trouve', 401, 'USER_NOT_FOUND');
     }
 
@@ -106,3 +128,5 @@ const verifyToken = async (req, res, next) => {
 };
 
 module.exports = { verifyToken };
+
+

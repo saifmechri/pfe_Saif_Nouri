@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Appointment Validation Utilities
  * Validates appointment data for business logic constraints
  */
@@ -210,3 +210,5 @@ module.exports = {
   validateAppointmentCreation,
   validateAppointmentUpdate
 };
+
+

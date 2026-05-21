@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, Check, CheckCheck, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { AuthContext } from "../context/AuthContext";
@@ -55,7 +55,8 @@ const formatNotificationDate = (rawDate) => {
 const chatRouteByRole = {
   automobiliste: "/automobiliste/messages",
   garage: "/garage/messages",
-  vendeur: "/vendeur/messages"
+  vendeur: "/vendeur/messages",
+  admin: "/automobiliste/messages"
 };
 
 const NotificationBell = () => {
@@ -336,3 +337,5 @@ const NotificationBell = () => {
 };
 
 export default NotificationBell;
+
+

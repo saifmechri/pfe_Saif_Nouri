@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 
 const Unauthorized = () => {
   return (
@@ -15,3 +15,4 @@ const Unauthorized = () => {
 };
 
 export default Unauthorized;
+

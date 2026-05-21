@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, Package, TriangleAlert, Trash2, BarChart3, Users, CalendarRange, Award } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
@@ -15,7 +16,8 @@ import {
   approvePiece,
   rejectPiece,
   getDashboardStats,
-  getAuditLogs
+  getAuditLogs,
+  getReportStats
 } from "../../services/admin";
 import {
   Bar,
@@ -44,6 +46,7 @@ const INITIAL_COUNTS = {
 const CHART_COLORS = ["#2563eb", "#7c3aed", "#f59e0b", "#10b981", "#ef4444", "#14b8a6"];
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("stats");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({ type: null, id: null });
@@ -151,11 +154,12 @@ const AdminDashboard = () => {
     setError("");
 
     try {
-      const [statsResponse, garagesResponse, piecesResponse, reportsResponse] = await Promise.all([
+      const [statsResponse, garagesResponse, piecesResponse, reportsResponse, reportStatsResponse] = await Promise.all([
         getDashboardStats(),
         getGarages(),
         getPieces(),
-        getPendingReports()
+        getPendingReports(),
+        getReportStats()
       ]);
 
       const statsData = statsResponse?.data?.data || statsResponse?.data || null;
@@ -164,6 +168,7 @@ const AdminDashboard = () => {
       const garagesList = garagesResponse?.data?.data?.items || garagesResponse?.data?.items || garagesResponse?.data || [];
       const piecesList = piecesResponse?.data?.data?.items || piecesResponse?.data?.items || piecesResponse?.data || [];
       const reportsList = reportsResponse?.data?.data || reportsResponse?.data || [];
+      const reportStats = reportStatsResponse?.data?.data || reportStatsResponse?.data || {};
 
       setGarages(Array.isArray(garagesList) ? garagesList : []);
       setPieces(Array.isArray(piecesList) ? piecesList : []);
@@ -172,13 +177,26 @@ const AdminDashboard = () => {
         totalGarages: Array.isArray(garagesList) ? garagesList.length : 0,
         totalPieces: Array.isArray(piecesList) ? piecesList.length : 0,
         pendingReports: Array.isArray(reportsList) ? reportsList.length : 0,
-        resolvedReports: Array.isArray(reportsList) ? reportsList.filter((item) => item.status === "resolved").length : 0,
+        resolvedReports: Number(reportStats.resolved || 0),
         totalUsers: Number(statsData?.users?.totalUsers || 0),
         totalAppointments: Number(statsData?.appointments?.totalAppointments || 0),
         pendingAppointments: Number(statsData?.appointments?.pendingAppointments || 0)
       });
     } catch (fetchError) {
-      setError(fetchError?.response?.data?.message || "Impossible de charger le tableau de bord admin.");
+      const status = fetchError?.response?.status;
+      const message = fetchError?.response?.data?.message;
+
+      if (status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("admin_session");
+        setError("Votre session a expiré. Veuillez vous reconnecter pour continuer.");
+        // Redirection vers login admin après 2 secondes
+        setTimeout(() => {
+          navigate("/admin/login");
+        }, 2000);
+      } else {
+        setError(message || "Impossible de charger le tableau de bord admin.");
+      }
     } finally {
       setLoading(false);
     }
@@ -624,7 +642,7 @@ const AdminDashboard = () => {
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-xl font-black text-[#13243f]">Gestion des pièces</h2>
-                  <p className="mt-1 text-sm text-[#66758d]">Toutes les pièces ajoutées par les vendeurs.</p>
+                  <p className="mt-1 text-sm text-[#66758d]">Toutes les pièces publiées sur la plateforme.</p>
                 </div>
                 <span className="inline-flex items-center rounded-full bg-purple-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-purple-700">
                   {pieces.length} pièces
@@ -692,6 +710,11 @@ const AdminDashboard = () => {
                                 {actionLoading.type === "piece" && actionLoading.id === piece.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                 Refuser
                               </button>
+                            </div>
+                          )}
+                          {piece.is_validated !== false && (
+                            <div className="mt-2 inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">
+                              Validée
                             </div>
                           )}
                         </td>
@@ -783,3 +806,5 @@ const AdminDashboard = () => {
 };
 
 export default AdminDashboard;
+
+

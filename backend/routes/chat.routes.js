@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 
 const { verifyToken } = require('../middlewares/authMiddleware');
 const { listChatContacts } = require('../controllers/chatContacts.controller');
@@ -20,3 +20,5 @@ router.get('/conversations/:conversationId/messages', verifyToken, listChatMessa
 router.post('/conversations/:conversationId/messages', verifyToken, createChatMessage);
 
 module.exports = router;
+
+

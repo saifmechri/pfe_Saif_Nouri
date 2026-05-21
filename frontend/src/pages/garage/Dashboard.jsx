@@ -1,6 +1,6 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Bell, ChevronDown, ChevronRight, Clock3, Heart, Home, ImagePlus, Lock, MapPin, Menu, MinusCircle, PlusCircle, Search, Settings, Truck, Wrench } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
@@ -15,6 +15,7 @@ import {
   updateGarageReview,
   updateGarageService
 } from "../../services/garage";
+import { getCompleteProfile, updateProfile } from "../../services/user";
 import GarageDashboardAppointments from "../../components/dashboard/GarageDashboardAppointments";
 import { calculateDistance, formatDistance, getDistanceColor, getDistanceLabel } from "../../utils/distanceCalculator";
 
@@ -55,6 +56,48 @@ const garageBrands = [
   "Peugeot", "Porsche", "Renault", "Seat", "Skoda", "SsangYong", "Suzuki", "Tesla",
   "Toyota", "Volkswagen", "Volvo"
 ].sort((a, b) => a.localeCompare(b));
+
+const escapeRegex = (value) => String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const parseVehicleBrands = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return [];
+  }
+
+  const directParts = raw
+    .split(/\r?\n|,|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (directParts.length > 1) {
+    return Array.from(new Set(directParts));
+  }
+
+  const normalizedRaw = raw.replace(/\s+/g, " ");
+  const matchedBrands = garageBrands
+    .filter((brand) => normalizedRaw.toLowerCase().includes(brand.toLowerCase()))
+    .sort((a, b) => b.length - a.length);
+
+  if (matchedBrands.length > 0) {
+    return Array.from(new Set(matchedBrands));
+  }
+
+  const regex = new RegExp(garageBrands.map((brand) => escapeRegex(brand)).sort((a, b) => b.length - a.length).join("|"), "gi");
+  const fallbackMatches = Array.from(
+    new Set(
+      (normalizedRaw.match(regex) || [])
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+
+  if (fallbackMatches.length > 0) {
+    return fallbackMatches;
+  }
+
+  return directParts.length === 1 ? directParts : [raw];
+};
 
 const garageSpecialtyCatalog = [
   {
@@ -366,12 +409,14 @@ const getBrandLogoCandidates = (brand) => {
   );
 
   const domain = brandLogoDomains[brand];
-  if (!domain) {
-    return [...localCandidates, buildMarqueImage(brand)];
-  }
+  const remoteCandidates = domain
+    ? [
+        `https://logo.clearbit.com/${encodeURIComponent(domain)}`,
+        `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`
+      ]
+    : [];
 
-  const encodedDomain = encodeURIComponent(domain);
-  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`, buildMarqueImage(brand)];
+  return [...localCandidates, ...remoteCandidates, buildMarqueImage(brand)];
 };
 
 const splitBySeparators = (value) =>
@@ -379,6 +424,15 @@ const splitBySeparators = (value) =>
     .split(/\r?\n|,|;/)
     .map((item) => item.trim())
     .filter(Boolean);
+
+const splitLines = (value, fallback = []) => {
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return lines.length > 0 ? lines : fallback;
+};
 
 const createDefaultSchedule = () =>
   openingDays.map((day) => ({
@@ -433,6 +487,7 @@ const serializeScheduleText = (schedule) =>
 const GarageDashboard = () => {
   const [activePanel, setActivePanel] = useState("garage");
   const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
 
   const { user } = useContext(AuthContext);
 
@@ -487,6 +542,23 @@ const GarageDashboard = () => {
 
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [myProfile, setMyProfile] = useState(null);
+  const [presentationForm, setPresentationForm] = useState({
+    store_name: "",
+    store_address: "",
+    store_description: ""
+  });
+  const [presentationSaving, setPresentationSaving] = useState(false);
+  const [presentationMessage, setPresentationMessage] = useState("");
+  const [presentationError, setPresentationError] = useState("");
+
+  useEffect(() => {
+    const requestedPanel = searchParams.get("panel");
+    if (requestedPanel === "garage" || requestedPanel === "presentation") {
+      setActivePanel(requestedPanel);
+    }
+  }, [searchParams]);
 
   const hasGarageProfile = Boolean(garage?.id);
 
@@ -601,6 +673,78 @@ const GarageDashboard = () => {
     });
   };
 
+  const createMapMarker = ({ map, position, title, draggable = false, accentColor = null }) => {
+    const markerApi = window.google?.maps?.marker;
+    const AdvancedMarkerElement = markerApi?.AdvancedMarkerElement;
+
+    if (AdvancedMarkerElement) {
+      const advancedOptions = {
+        map,
+        position,
+        title,
+        gmpDraggable: draggable
+      };
+
+      if (accentColor && markerApi?.PinElement) {
+        const pin = new markerApi.PinElement({
+          background: accentColor,
+          borderColor: "#ffffff",
+          glyphColor: "#ffffff"
+        });
+        advancedOptions.content = pin.element;
+      }
+
+      return new AdvancedMarkerElement(advancedOptions);
+    }
+
+    return new window.google.maps.Marker({
+      map,
+      position,
+      title,
+      draggable,
+      ...(accentColor
+        ? {
+            icon: {
+              path: window.google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: accentColor,
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 2
+            }
+          }
+        : {})
+    });
+  };
+
+  const setMarkerMap = (marker, map) => {
+    if (!marker) return;
+    if (typeof marker.setMap === "function") {
+      marker.setMap(map);
+      return;
+    }
+    marker.map = map;
+  };
+
+  const setMarkerPosition = (marker, position) => {
+    if (!marker) return;
+    if (typeof marker.setPosition === "function") {
+      marker.setPosition(position);
+      return;
+    }
+    marker.position = position;
+  };
+
+  const readMarkerPosition = (marker) => {
+    if (!marker) return null;
+
+    if (typeof marker.getPosition === "function") {
+      return marker.getPosition();
+    }
+
+    return marker.position || null;
+  };
+
   const syncGoogleMapMarkers = () => {
     const map = googleMapRef.current;
     if (!map || !window.google?.maps) {
@@ -614,16 +758,24 @@ const GarageDashboard = () => {
       const position = { lat: garageLat, lng: garageLng };
 
       if (!garageMarkerRef.current) {
-        garageMarkerRef.current = new window.google.maps.Marker({
-          position,
+        garageMarkerRef.current = createMapMarker({
           map,
+          position,
           draggable: true,
           title: "Position du garage"
         });
 
         garageMarkerRef.current.addListener("dragend", () => {
-          const nextLat = Number(garageMarkerRef.current.getPosition().lat().toFixed(6));
-          const nextLng = Number(garageMarkerRef.current.getPosition().lng().toFixed(6));
+          const markerPosition = readMarkerPosition(garageMarkerRef.current);
+          const nextLatValue = typeof markerPosition?.lat === "function" ? markerPosition.lat() : markerPosition?.lat;
+          const nextLngValue = typeof markerPosition?.lng === "function" ? markerPosition.lng() : markerPosition?.lng;
+
+          if (!Number.isFinite(nextLatValue) || !Number.isFinite(nextLngValue)) {
+            return;
+          }
+
+          const nextLat = Number(nextLatValue.toFixed(6));
+          const nextLng = Number(nextLngValue.toFixed(6));
           setGarageForm((prev) => ({
             ...prev,
             latitude: nextLat,
@@ -631,36 +783,29 @@ const GarageDashboard = () => {
           }));
         });
       } else {
-        garageMarkerRef.current.setPosition(position);
-        garageMarkerRef.current.setMap(map);
+        setMarkerPosition(garageMarkerRef.current, position);
+        setMarkerMap(garageMarkerRef.current, map);
       }
     } else if (garageMarkerRef.current) {
-      garageMarkerRef.current.setMap(null);
+      setMarkerMap(garageMarkerRef.current, null);
     }
 
     if (userPosition) {
       const userPositionObject = { lat: Number(userPosition[0]), lng: Number(userPosition[1]) };
 
       if (!userMarkerRef.current) {
-        userMarkerRef.current = new window.google.maps.Marker({
-          position: userPositionObject,
+        userMarkerRef.current = createMapMarker({
           map,
+          position: userPositionObject,
           title: "Ma localisation",
-          icon: {
-            path: window.google.maps.SymbolPath.CIRCLE,
-            scale: 8,
-            fillColor: "#f59e0b",
-            fillOpacity: 1,
-            strokeColor: "#ffffff",
-            strokeWeight: 2
-          }
+          accentColor: "#f59e0b"
         });
       } else {
-        userMarkerRef.current.setPosition(userPositionObject);
-        userMarkerRef.current.setMap(map);
+        setMarkerPosition(userMarkerRef.current, userPositionObject);
+        setMarkerMap(userMarkerRef.current, map);
       }
     } else if (userMarkerRef.current) {
-      userMarkerRef.current.setMap(null);
+      setMarkerMap(userMarkerRef.current, null);
     }
 
     if (Number.isFinite(garageLat) && Number.isFinite(garageLng)) {
@@ -670,10 +815,10 @@ const GarageDashboard = () => {
     }
   };
 
-  const activeServicesCount = useMemo(
-    () => services.filter((service) => service.is_active).length,
-    [services]
-  );
+  const activeServicesCount = useMemo(() => {
+    const isActive = (value) => value === true || value === 1 || value === "1" || value === "true";
+    return services.filter((service) => isActive(service?.is_active)).length;
+  }, [services]);
 
   const visibleServices = useMemo(() => {
     if (!chipFilters.onlyActiveServices) {
@@ -692,6 +837,41 @@ const GarageDashboard = () => {
       loadMyReviews();
     }
   }, [hasGarageProfile]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProfile = async () => {
+      setProfileLoading(true);
+      try {
+        const response = await getCompleteProfile();
+        const profile = response?.data?.data?.user || response?.data?.user || null;
+        if (!isMounted) {
+          return;
+        }
+
+        setMyProfile(profile);
+        setPresentationForm({
+          store_name: profile?.store_name || "",
+          store_address: profile?.store_address || "",
+          store_description: profile?.store_description || ""
+        });
+      } catch (_err) {
+        if (isMounted) {
+          setMyProfile(null);
+        }
+      } finally {
+        if (isMounted) {
+          setProfileLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -750,7 +930,7 @@ const GarageDashboard = () => {
       setGarageForm(normalizeGarageForm(payload));
       clearLocalPhotoSelection();
 
-      const parsedBrands = splitBySeparators(payload?.vehicle_brands);
+      const parsedBrands = parseVehicleBrands(payload?.vehicle_brands);
       setSelectedBrands(parsedBrands.filter((brand) => garageBrands.includes(brand)));
 
       const parsedSpecialties = splitBySeparators(payload?.specialties);
@@ -780,7 +960,10 @@ const GarageDashboard = () => {
 
       if (isNotFound) {
         setGarage(null);
-        setGarageForm(emptyGarageForm);
+        setGarageForm({
+          ...emptyGarageForm,
+          name: user?.role === "admin" ? `Garage ${user?.name || user?.email || "administrateur"}` : ""
+        });
         clearLocalPhotoSelection();
       } else {
         setError(getApiErrorMessage(err, "Erreur lors du chargement du profil garage."));
@@ -813,10 +996,11 @@ const GarageDashboard = () => {
       const items = Array.isArray(payload?.items) ? payload.items : [];
       setReviews(items);
 
-      if (items.length === 0) {
+      const publishedItems = items.filter((item) => item?.is_published === true);
+      if (publishedItems.length === 0) {
         setReviewSummary({ reviews_count: 0, average_rating: 0, min_rating: 0, max_rating: 0 });
       } else {
-        const ratings = items.map((item) => Number(item.rating || 0));
+        const ratings = publishedItems.map((item) => Number(item.rating || 0));
         const sum = ratings.reduce((acc, value) => acc + value, 0);
         setReviewSummary({
           reviews_count: ratings.length,
@@ -840,12 +1024,28 @@ const GarageDashboard = () => {
     }));
   };
 
+  const handleTravelEnabledChange = (enabled) => {
+    setDoesTravel(enabled);
+
+    if (!enabled) {
+      setTravelSchedule(createDefaultSchedule());
+      setSelectedDeplacement("");
+    }
+  };
+
   const handleSaveGarage = async (event) => {
     event.preventDefault();
     setError("");
     setSuccessMessage("");
 
     try {
+      const garageName = garageForm.name.trim() || (user?.role === "admin" ? `Garage ${user?.name || user?.email || "administrateur"}` : "");
+
+      if (!garageName) {
+        setError("Le nom du garage est obligatoire.");
+        return;
+      }
+
       let uploadedPhotoUrls = [];
       if (localPhotoFiles.length > 0) {
         const uploadResponse = await uploadGaragePhotos(localPhotoFiles);
@@ -856,7 +1056,7 @@ const GarageDashboard = () => {
       const mergedPhotoUrls = [...existingPhotoUrls, ...uploadedPhotoUrls].slice(0, 9);
 
       const payload = {
-        name: garageForm.name,
+        name: garageName,
         description: garageForm.description || null,
         adresse: garageForm.adresse || null,
         telephone: garageForm.telephone || null,
@@ -866,7 +1066,7 @@ const GarageDashboard = () => {
         keywords: garageForm.keywords || null,
         photo_urls: mergedPhotoUrls.length > 0 ? mergedPhotoUrls.join("\n") : null,
         work_hours: serializeScheduleText(workSchedule),
-        travel_hours: doesTravel ? serializeScheduleText(travelSchedule) : null,
+        travel_hours: travelSchedule.some((row) => row.enabled) ? serializeScheduleText(travelSchedule) : null,
         vehicle_brands: selectedBrands.length > 0 ? selectedBrands.join("\n") : garageForm.vehicle_brands || null,
         latitude: garageForm.latitude === "" ? null : Number(garageForm.latitude),
         longitude: garageForm.longitude === "" ? null : Number(garageForm.longitude),
@@ -899,10 +1099,12 @@ const GarageDashboard = () => {
         setUserPosition([lat, lon]);
         setMapCenter([lat, lon]);
         setGarageForm((prev) => ({ ...prev, latitude: lat, longitude: lon }));
+        setActivePanel("garage");
+        handleFocusMap();
         setIsLocating(false);
       },
       () => {
-        setError("Impossible de recuperer votre position actuelle.");
+        setError("Impossible de recuperer votre position actuelle. Autorisez la localisation du navigateur, puis reessayez.");
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -910,6 +1112,7 @@ const GarageDashboard = () => {
   };
 
   const handleFocusMap = () => {
+    setActivePanel("garage");
     if (mapContainerRef.current) {
       mapContainerRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
@@ -1035,6 +1238,57 @@ const GarageDashboard = () => {
     }
   };
 
+  const handlePresentationChange = (event) => {
+    const { name, value } = event.target;
+    setPresentationForm((prev) => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handlePresentationSave = async (event) => {
+    event.preventDefault();
+    setPresentationError("");
+    setPresentationMessage("");
+    setPresentationSaving(true);
+
+    try {
+      await updateProfile({
+        store_name: presentationForm.store_name,
+        store_address: presentationForm.store_address,
+        store_description: presentationForm.store_description
+      });
+
+      const refreshed = await getCompleteProfile();
+      const profile = refreshed?.data?.data?.user || refreshed?.data?.user || null;
+      setMyProfile(profile);
+      setPresentationMessage("Présentation enregistrée avec succès.");
+    } catch (err) {
+      setPresentationError(err?.response?.data?.message || "Erreur lors de l'enregistrement de la présentation");
+    } finally {
+      setPresentationSaving(false);
+    }
+  };
+
+  const canManagePieces = user?.role === "garage" || user?.role === "admin";
+  const isStoreView = false;
+  const storeDisplayName = myProfile?.store_name || garageForm.name || user?.name || "Garage";
+  const storeDescription = myProfile?.store_description || garageForm.description || "Spécialiste en services et entretien automobile";
+  const vendorRole = myProfile?.role || user?.role || "garage";
+  const vendorEmail = myProfile?.email || user?.email || "Non renseigné";
+  const vendorPhone = myProfile?.phone || garageForm.telephone || "Non renseigné";
+  const storeSpecialties = splitLines(garage?.specialties || garageForm.specialties || myProfile?.store_specialties, ["Aucune spécialité renseignée"]);
+  const storeHours = splitLines(garage?.work_hours || garageForm.work_hours || myProfile?.store_hours, ["Horaires non renseignés"]);
+  const storeServices = splitLines(
+    garage?.services_catalog || garageForm.services_catalog || myProfile?.store_services,
+    ["Aucun service complémentaire renseigné"]
+  );
+  const hasTravelSchedule = Boolean(doesTravel || travelSchedule.some((item) => item.enabled));
+  const displayGarageBrands = useMemo(
+    () => Array.from(new Set(garageBrands.flatMap((brand) => parseVehicleBrands(brand)).filter(Boolean))),
+    []
+  );
+
   const toggleSelection = (value, setter) => {
     setter((current) =>
       current.includes(value)
@@ -1124,7 +1378,7 @@ const GarageDashboard = () => {
                   <button type="button" onClick={() => setShowBrandsModal(false)} className="text-3xl text-slate-500">×</button>
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
-                  {garageBrands.map((brand) => {
+                  {displayGarageBrands.map((brand) => {
                     const active = selectedBrands.includes(brand);
                     const logoCandidates = getBrandLogoCandidates(brand);
                     const logoUrl = logoCandidates[0] || "";
@@ -1537,11 +1791,53 @@ const GarageDashboard = () => {
                       </div>
 
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
-                        <div className="mb-2 flex items-center justify-between">
-                          <p className="text-sm font-semibold text-[#334155]">Déplacement</p>
-                          <button type="button" onClick={() => setShowDeplacementModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir</button>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement</p>
+                          <label className="inline-flex items-center gap-2 rounded-full border border-[#dbe2ec] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155]">
+                            <input
+                              type="checkbox"
+                              checked={travelSchedule.some((row) => row.enabled)}
+                              onChange={(event) => handleTravelEnabledChange(event.target.checked)}
+                              className="h-4 w-4 accent-blue-500"
+                            />
+                            Activer
+                          </label>
                         </div>
-                        <p className="text-xs font-semibold text-[#334155]">Sélection actuelle: {selectedDeplacement || "-"}</p>
+
+                        {!travelSchedule.some((row) => row.enabled) ? (
+                          <p className="text-xs text-[#6d7482]">Aucun horaire de déplacement renseigné.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {travelSchedule.map((row, index) => (
+                              <div key={row.day} className="grid grid-cols-[30px_1fr_110px_110px] items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={row.enabled}
+                                  onChange={(event) => {
+                                    updateScheduleRow(setTravelSchedule, index, { enabled: event.target.checked });
+                                    setDoesTravel(true);
+                                  }}
+                                  className="h-6 w-6 accent-blue-500"
+                                />
+                                <span className="text-2xl font-semibold text-[#1f2937]">{row.day}</span>
+                                <input
+                                  type="time"
+                                  value={row.start}
+                                  onChange={(event) => updateScheduleRow(setTravelSchedule, index, { start: event.target.value })}
+                                  disabled={!row.enabled}
+                                  className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
+                                />
+                                <input
+                                  type="time"
+                                  value={row.end}
+                                  onChange={(event) => updateScheduleRow(setTravelSchedule, index, { end: event.target.value })}
+                                  disabled={!row.enabled}
+                                  className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
@@ -1643,9 +1939,6 @@ const GarageDashboard = () => {
                         <input name="store_name" value={presentationForm.store_name} onChange={handlePresentationChange} placeholder="Nom du garage" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300" />
                         <input name="store_address" value={presentationForm.store_address} onChange={handlePresentationChange} placeholder="Adresse" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300" />
                         <textarea name="store_description" value={presentationForm.store_description} onChange={handlePresentationChange} placeholder="Description" rows={3} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
-                        <textarea name="store_hours" value={presentationForm.store_hours} onChange={handlePresentationChange} placeholder="Horaires, une ligne par jour" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
-                        <textarea name="store_specialties" value={presentationForm.store_specialties} onChange={handlePresentationChange} placeholder="Spécialités, une ligne par item" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
-                        <textarea name="store_services" value={presentationForm.store_services} onChange={handlePresentationChange} placeholder="Services, une ligne par item" rows={4} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-700 outline-none focus:border-blue-300 sm:col-span-2" />
                       </div>
 
                       <div className="mt-4 flex justify-end">
@@ -1658,11 +1951,9 @@ const GarageDashboard = () => {
 
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <h2 className="text-4xl font-black tracking-tight text-slate-900">{storeDisplayName}</h2>
-                    <p className="mt-2 text-lg text-slate-700">Spécialiste en services et entretien automobile</p>
-                    <p className="mt-2 text-base leading-relaxed text-slate-600">
-                      {storeDescription}
-                    </p>
-                    <p className="mt-3 text-base font-semibold text-slate-700">Role: {vendorRole}</p>
+                    <p className="mt-2 text-lg text-slate-700">{storeDescription}</p>
+                    <p className="mt-3 text-base font-semibold text-slate-700">Adresse: {garage?.adresse || garageForm.adresse || myProfile?.store_address || "Non renseignée"}</p>
+                    <p className="text-base font-semibold text-slate-700">Role: {vendorRole}</p>
                     <p className="text-base font-semibold text-slate-700">Email: {vendorEmail}</p>
                     <p className="text-base font-semibold text-slate-700">Telephone: {vendorPhone}</p>
                     {profileLoading && <p className="mt-2 text-sm text-slate-500">Chargement du profil...</p>}
@@ -1699,55 +1990,7 @@ const GarageDashboard = () => {
                     </div>
                   )}
 
-                  <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
-                    <h3 className="text-2xl font-black text-slate-900">Indicateurs en temps réel</h3>
-                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">Total services</p>
-                        <p className="text-3xl font-black text-slate-900">{services.length}</p>
-                      </div>
-                      <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3 text-center">
-                        <p className="text-xs uppercase tracking-wide text-blue-700">Services actifs</p>
-                        <p className="text-3xl font-black text-blue-700">{activeServicesCount}</p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-white p-3 text-center">
-                        <p className="text-xs uppercase tracking-wide text-slate-500">Avis publiés</p>
-                        <p className="text-3xl font-black text-slate-900">{reviewSummary.reviews_count}</p>
-                      </div>
-                    </div>
-                    <div className="mt-4 rounded-2xl border border-blue-100 bg-[linear-gradient(135deg,rgba(239,246,255,1)_0%,rgba(219,234,254,0.8)_100%)] p-4">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600">
-                            Réception de RDV
-                          </p>
-                          <h4 className="mt-1 text-lg font-black text-slate-900">
-                            Recevoir RDV
-                          </h4>
-                          <p className="mt-1 text-sm text-slate-600">
-                            Ouvre l’interface pour recevoir, valider ou refuser les demandes de rendez-vous.
-                          </p>
-                        </div>
-                        <Link
-                          to="/garage/appointments"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
-                        >
-                          Recevoir RDV
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Appointments panel: receive and handle incoming requests */}
-                  {hasGarageProfile && (
-                    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
-                      <h3 className="text-2xl font-black text-slate-900">Demandes de rendez-vous</h3>
-                      <div className="mt-4">
-                        <GarageDashboardAppointments garageId={garage.id} />
-                      </div>
-                    </div>
-                  )}
+                  {/* Removed: Indicateurs en temps réel and Demandes de rendez-vous for garage presentation per request */}
 
                   <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_34px_rgba(15,23,42,0.08)]">
                     <h3 className="text-2xl font-black text-slate-900">Spécialités</h3>
@@ -1773,7 +2016,7 @@ const GarageDashboard = () => {
                     <h3 className="text-2xl font-black text-slate-900">Services complémentaires</h3>
                     <ul className="mt-3 space-y-2 text-lg text-slate-700">
                       {storeServices.map((service) => (
-                        <li key={service}>✓ {service}</li>
+                        <li key={service}>✅ {service}</li>
                       ))}
                     </ul>
                   </div>
@@ -1849,3 +2092,5 @@ const GarageDashboard = () => {
 };
 
 export default GarageDashboard;
+
+

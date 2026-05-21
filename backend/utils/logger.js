@@ -1,4 +1,4 @@
-const format = (level, message, meta) => {
+﻿const format = (level, message, meta) => {
   const timestamp = new Date().toISOString();
   if (meta === undefined) {
     return `[${timestamp}] [${level}] ${message}`;
@@ -19,3 +19,4 @@ const logger = {
 };
 
 module.exports = { logger };
+

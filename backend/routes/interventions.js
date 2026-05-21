@@ -1,9 +1,9 @@
-const express = require('express');
+﻿const express = require('express');
 const { check, param, body } = require('express-validator');
 const router = express.Router({ mergeParams: true });
 const { verifyToken } = require('../middlewares/authMiddleware');
 const { validateRequest } = require('../middlewares/validateRequest');
-const interventionController = require('../controllers/intervention.controller');
+const interventionController = require('../controllers/interventionController');
 
 // Validation chains
 const vehicleIdParam = param('vehicleId').isInt({ gt: 0 }).withMessage('vehicleId invalide');
@@ -37,14 +37,34 @@ const updateInterventionValidation = [
   validateRequest
 ];
 
+const addPieceValidation = [
+  interventionIdParam,
+  body('pieceId').isInt({ gt: 0 }).withMessage('pieceId invalide'),
+  body('quantite').optional().isInt({ min: 1 }).withMessage('quantite invalide'),
+  body('prix_unitaire').optional().isFloat({ min: 0 }).withMessage('prix_unitaire invalide'),
+  validateRequest
+];
+
+const removePieceValidation = [
+  interventionIdParam,
+  param('pieceId').isInt({ gt: 0 }).withMessage('pieceId invalide'),
+  validateRequest
+];
+
+
 // List interventions for a vehicle
-router.get('/', vehicleIdParam, validateRequest, verifyToken, interventionController.listInterventions);
+router.get('/', vehicleIdParam, validateRequest, verifyToken, interventionController.getInterventionsByVehicle);
 
 // Create a new intervention for vehicle
 router.post('/', createInterventionValidation, verifyToken, interventionController.createIntervention);
 
 // Get single intervention by id
-router.get('/:id', interventionIdParam, validateRequest, verifyToken, interventionController.getIntervention);
+router.get('/:id', interventionIdParam, validateRequest, verifyToken, interventionController.getInterventionById);
+
+// Manage pieces linked to an intervention
+
+router.post('/:id/pieces', addPieceValidation, verifyToken, interventionController.addPieceToIntervention);
+router.delete('/:id/pieces/:pieceId', removePieceValidation, verifyToken, interventionController.removePieceFromIntervention);
 
 // Update intervention
 router.patch('/:id', updateInterventionValidation, verifyToken, interventionController.updateIntervention);
@@ -53,3 +73,5 @@ router.patch('/:id', updateInterventionValidation, verifyToken, interventionCont
 router.delete('/:id', interventionIdParam, validateRequest, verifyToken, interventionController.deleteIntervention);
 
 module.exports = router;
+
+

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+﻿import { useState, useCallback, useEffect } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 import { createAppointment, updateAppointment, deleteAppointment, listAppointments } from '../services/appointments';
@@ -93,7 +93,7 @@ export const useAppointmentForm = (garageId = null, onSuccess = null) => {
           notes: JSON.stringify(notesPayload)
         });
 
-        setSuccess('✓ Rendez-vous réservé avec succès');
+        setSuccess('✅ Rendez-vous réservé avec succès');
         
         // Reset form
         setForm({
@@ -307,3 +307,5 @@ export const useGarageAppointments = () => {
     handleDecision
   };
 };
+
+

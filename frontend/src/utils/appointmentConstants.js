@@ -1,6 +1,13 @@
-/**
+﻿/**
  * Appointment Constants and Messages
  */
+
+import dayjs from 'dayjs';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+import 'dayjs/locale/fr';
+
+dayjs.extend(localizedFormat);
+dayjs.locale('fr');
 
 export const APPOINTMENT_STATUS = {
   PENDING: 'pending',
@@ -44,18 +51,12 @@ export const MIN_ADVANCE_HOURS = 2;
  * Format appointment date for display
  */
 export const formatAppointmentDate = (dateStr) => {
-  if (!dateStr) return '';
-  try {
-    const date = new Date(`${dateStr}T00:00:00`);
-    return date.toLocaleDateString('fr-FR', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  } catch {
-    return dateStr;
-  }
+  if (!dateStr) return 'Date non définie';
+
+  const parsed = dayjs(dateStr);
+  if (!parsed.isValid()) return 'Date non définie';
+
+  return parsed.format('dddd D MMMM YYYY');
 };
 
 /**
@@ -110,16 +111,26 @@ export const isTimeValid = (timeStr) => {
  * Parse notes JSON safely
  */
 export const parseAppointmentNotes = (notes) => {
-  if (!notes) return { vehicleId: null, services: [], remark: '' };
+  if (!notes) return { vehicleId: null, services: [], remark: '', messages: [], isValid: true, rawText: '' };
   try {
     const parsed = typeof notes === 'string' ? JSON.parse(notes) : notes;
     return {
       vehicleId: parsed.vehicleId || null,
       services: Array.isArray(parsed.services) ? parsed.services : [],
-      remark: parsed.remark || ''
+      remark: parsed.remark || '',
+      messages: Array.isArray(parsed.messages) ? parsed.messages : [],
+      isValid: true,
+      rawText: typeof notes === 'string' ? notes : JSON.stringify(notes)
     };
   } catch {
-    return { vehicleId: null, services: [], remark: '' };
+    return {
+      vehicleId: null,
+      services: [],
+      remark: typeof notes === 'string' ? notes : '',
+      messages: [],
+      isValid: false,
+      rawText: typeof notes === 'string' ? notes : JSON.stringify(notes)
+    };
   }
 };
 
@@ -129,10 +140,12 @@ export const parseAppointmentNotes = (notes) => {
 export const getStatusIcon = (status) => {
   switch (status) {
     case APPOINTMENT_STATUS.CONFIRMED:
-      return '✓';
+      return '✅';
     case APPOINTMENT_STATUS.CANCELLED:
-      return '✕';
+      return '❌';
     default:
-      return '⏱';
+      return 'â±';
   }
 };
+
+

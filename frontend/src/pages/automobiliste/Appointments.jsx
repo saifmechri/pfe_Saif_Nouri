@@ -1,22 +1,76 @@
-import { useMemo, useState, useEffect } from "react";
+﻿import { useContext, useMemo, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import PlatformLayout from "../../components/PlatformLayout";
 import TopBar from "../../components/TopBar";
 import { listAppointments, updateAppointment, deleteAppointment, createAppointment } from "../../services/appointments";
 import { listGarages, getServicesByGarage } from "../../services/garage";
-import { getVehicules } from "../../services/vehicule";
 import AppointmentTable from "../../components/appointments/AppointmentTable";
 import AppointmentNotificationModal from "../../components/appointments/AppointmentNotificationModal";
 import { ArrowLeft, Plus, AlertCircle, CheckCircle } from "lucide-react";
 import { getMinAppointmentDate, isDateValid, isTimeValid, WORKING_HOURS } from "../../utils/appointmentConstants";
+import { AuthContext } from "../../context/AuthContext";
+
+const VEHICLE_BRANDS = [
+  "Audi", "BMW", "Citroën", "Dacia", "Fiat", "Ford", "Hyundai", "Kia",
+  "Mercedes", "Nissan", "Peugeot", "Renault", "Seat", "Skoda", "Toyota",
+  "Volkswagen", "Volvo"
+];
+
+const VEHICLE_MODELS_BY_BRAND = {
+  Audi: ["A1", "A3", "A4", "A6", "Q3", "Q5"],
+  BMW: ["Serie 1", "Serie 3", "Serie 5", "X1", "X3", "X5"],
+  Citroën: ["C3", "C4", "C5", "Berlingo", "Jumpy"],
+  Dacia: ["Duster", "Logan", "Sandero", "Jogger"],
+  Fiat: ["500", "Panda", "Tipo", "Doblo"],
+  Ford: ["Fiesta", "Focus", "Kuga", "Ranger"],
+  Hyundai: ["i10", "i20", "Elantra", "Tucson"],
+  Kia: ["Picanto", "Rio", "Sportage", "Sorento"],
+  Mercedes: ["A-Class", "C-Class", "E-Class", "GLA", "GLC"],
+  Nissan: ["Micra", "Qashqai", "Juke", "X-Trail"],
+  Peugeot: ["208", "2008", "308", "3008", "5008"],
+  Renault: ["Clio", "Megane", "Captur", "Kangoo", "Duster"],
+  Seat: ["Ibiza", "Leon", "Arona", "Ateca"],
+  Skoda: ["Fabia", "Octavia", "Karoq", "Kodiaq"],
+  Toyota: ["Yaris", "Corolla", "RAV4", "Hilux", "Land Cruiser"],
+  Volkswagen: ["Polo", "Golf", "Tiguan", "Passat", "T-Roc"],
+  Volvo: ["XC40", "XC60", "XC90", "S60"]
+};
+
+const splitServiceList = (value) => {
+  if (!value) return [];
+
+  return String(value)
+    .split(/[\n,;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const normalizeServiceItems = (garage) => {
+  if (!garage) return [];
+
+  const labels = [
+    ...(Array.isArray(garage.service_names) ? garage.service_names : []),
+    ...splitServiceList(garage.services_catalog),
+    ...splitServiceList(garage.store_services),
+    ...splitServiceList(garage.specialties)
+  ]
+    .map((item) => String(item).trim())
+    .filter(Boolean);
+
+  return [...new Set(labels)].map((label) => ({
+    id: label,
+    name: label,
+    label
+  }));
+};
 
 const AutomobilisteAppointments = () => {
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [appointments, setAppointments] = useState([]);
   const [garages, setGarages] = useState([]);
-  const [vehicules, setVehicules] = useState([]);
   const [availableServices, setAvailableServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -26,30 +80,24 @@ const AutomobilisteAppointments = () => {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState(""); // "success" or "error"
   const [selectedServices, setSelectedServices] = useState([]);
+  const [selectedServiceChoice, setSelectedServiceChoice] = useState("");
   const [form, setForm] = useState({
     garageId: "",
-    vehicleId: "",
+    vehicleBrand: "",
+    vehicleModel: "",
     appointmentDate: dayjs().format("YYYY-MM-DD"),
     appointmentTime: "",
     description: "",
     remark: ""
   });
 
+  const roleLabel = user?.role === "vendeur" ? "Vendeur" : user?.role === "admin" ? "Administrateur" : "Automobiliste";
+
   const fetchGarages = async () => {
     try {
       const res = await listGarages({ limit: 100 });
       const items = res.data?.data?.items || res.data?.data || res.data || [];
       setGarages(Array.isArray(items) ? items : []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const fetchVehicules = async () => {
-    try {
-      const res = await getVehicules();
-      const list = res.data?.vehicules || res.data || [];
-      setVehicules(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error(err);
     }
@@ -71,7 +119,6 @@ const AutomobilisteAppointments = () => {
   };
 
   useEffect(() => {
-    fetchVehicules();
     fetchGarages();
     fetchAppointments();
   }, []);
@@ -85,20 +132,26 @@ const AutomobilisteAppointments = () => {
   useEffect(() => {
     if (!form.garageId) {
       setAvailableServices([]);
+      setSelectedServiceChoice("");
       return;
     }
+
+    const selectedGarage = garages.find((garage) => String(garage.id) === String(form.garageId));
 
     (async () => {
       try {
         const res = await getServicesByGarage(form.garageId);
         const items = res.data?.data?.items || res.data?.data || res.data || [];
-        setAvailableServices(Array.isArray(items) ? items : []);
+        const normalizedItems = Array.isArray(items) ? items : [];
+        setAvailableServices(normalizedItems.length > 0 ? normalizedItems : normalizeServiceItems(selectedGarage));
+        setSelectedServiceChoice("");
       } catch (err) {
         console.error(err);
-        setAvailableServices([]);
+        setAvailableServices(normalizeServiceItems(selectedGarage));
+        setSelectedServiceChoice("");
       }
     })();
-  }, [form.garageId]);
+  }, [form.garageId, garages]);
 
   useEffect(() => {
     try {
@@ -135,7 +188,7 @@ const AutomobilisteAppointments = () => {
       const statusLabel = status === "confirmed" ? "confirmé" : "annulé";
       setNotification({
         type: "appointment",
-        title: status === "confirmed" ? "✓ Rendez-vous confirmé" : "✕ Rendez-vous annulé",
+        title: status === "confirmed" ? "✅ Rendez-vous confirmé" : "❌ Rendez-vous annulé",
         body: `Votre rendez-vous a été ${statusLabel}.`
       });
       setSelectedAppointment(apt);
@@ -160,10 +213,34 @@ const AutomobilisteAppointments = () => {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
-  const toggleService = (serviceId) => {
+  const handleBrandChange = (event) => {
+    const { value } = event.target;
+    setForm((current) => ({
+      ...current,
+      vehicleBrand: value,
+      vehicleModel: ""
+    }));
+  };
+
+  const getServiceLabel = (service) => service?.name || service?.title || service?.label || String(service);
+
+  const addSelectedService = () => {
+    if (!selectedServiceChoice) return;
+
+    setSelectedServices((current) => (current.includes(selectedServiceChoice) ? current : [...current, selectedServiceChoice]));
+    setSelectedServiceChoice("");
+  };
+
+  const removeSelectedService = (serviceLabel) => {
+    setSelectedServices((current) => current.filter((value) => value !== serviceLabel));
+  };
+
+  const toggleService = (service) => {
+    const serviceLabel = getServiceLabel(service);
     setSelectedServices((current) => {
-      const id = String(serviceId);
-      return current.includes(id) ? current.filter((value) => value !== id) : [...current, id];
+      return current.includes(serviceLabel)
+        ? current.filter((value) => value !== serviceLabel)
+        : [...current, serviceLabel];
     });
   };
 
@@ -195,7 +272,8 @@ const AutomobilisteAppointments = () => {
       }
 
       const notesPayload = {
-        vehicleId: form.vehicleId || null,
+        vehicleBrand: form.vehicleBrand || null,
+        vehicleModel: form.vehicleModel || null,
         services: selectedServices,
         remark: form.remark || ""
       };
@@ -211,21 +289,23 @@ const AutomobilisteAppointments = () => {
       const selectedGarage = garages.find((garage) => Number(garage.id) === Number(form.garageId));
       setNotification({
         type: "appointment",
-        title: "✓ Rendez-vous réservé",
+        title: "✅ Rendez-vous réservé",
         body: `Votre demande a été envoyée à ${selectedGarage?.name || selectedGarage?.nom || "votre garage"}.`
       });
 
       setMessageType("success");
-      setMessage("✓ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
+      setMessage("✅ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
       setForm({
         garageId: "",
-        vehicleId: "",
+        vehicleBrand: "",
+        vehicleModel: "",
         appointmentDate: dayjs().format("YYYY-MM-DD"),
         appointmentTime: "",
         description: "",
         remark: ""
       });
       setSelectedServices([]);
+      setSelectedServiceChoice("");
       fetchAppointments();
     } catch (err) {
       setMessageType("error");
@@ -269,7 +349,7 @@ const AutomobilisteAppointments = () => {
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="flex-1">
-                <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-700">Automobiliste</p>
+                <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-700">{roleLabel}</p>
                 <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900">Mes rendez-vous</h1>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   Consultez et gérez vos rendez-vous avec les garages partenaires.
@@ -285,7 +365,7 @@ const AutomobilisteAppointments = () => {
                 <h2 className="mt-2 text-2xl font-black text-slate-900">Prendre un rendez-vous</h2>
                 <p className="mt-2 text-sm text-slate-600">Choisissez un garage, un véhicule et les services souhaités.</p>
               </div>
-              <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">Automobiliste</div>
+              <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">{roleLabel}</div>
             </div>
 
             <form onSubmit={handleSubmit} className="grid gap-4 lg:grid-cols-2">
@@ -308,18 +388,37 @@ const AutomobilisteAppointments = () => {
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Votre véhicule</label>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Marque de voiture *</label>
                 <select
-                  name="vehicleId"
-                  value={form.vehicleId}
-                  onChange={handleFormChange}
+                  name="vehicleBrand"
+                  value={form.vehicleBrand}
+                  onChange={handleBrandChange}
+                  required
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
                 >
-                  <option value="">Sélectionnez un véhicule</option>
-                  {vehicules.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>
-                      {vehicle.modele_voiture || vehicle.modele || `Véhicule ${vehicle.id}`}{" "}
-                      {vehicle.matricule_voiture ? `· ${vehicle.matricule_voiture}` : ""}
+                  <option value="">Sélectionnez une marque</option>
+                  {VEHICLE_BRANDS.map((brand) => (
+                    <option key={brand} value={brand}>
+                      {brand}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Modèle de voiture *</label>
+                <select
+                  name="vehicleModel"
+                  value={form.vehicleModel}
+                  onChange={handleFormChange}
+                  required
+                  disabled={!form.vehicleBrand}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                >
+                  <option value="">Sélectionnez un modèle</option>
+                  {(VEHICLE_MODELS_BY_BRAND[form.vehicleBrand] || []).map((model) => (
+                    <option key={model} value={model}>
+                      {model}
                     </option>
                   ))}
                 </select>
@@ -356,28 +455,53 @@ const AutomobilisteAppointments = () => {
               <div className="lg:col-span-2">
                 <label className="mb-1 block text-sm font-semibold text-slate-700">Services (optionnel)</label>
                 {availableServices.length > 0 ? (
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {availableServices.slice(0, 6).map((service) => {
-                      const serviceId = service.id || service.name;
-                      const active = selectedServices.includes(String(serviceId));
-                      return (
-                        <button
-                          key={serviceId}
-                          type="button"
-                          onClick={() => toggleService(serviceId)}
-                          className={`rounded-xl border px-3 py-3 text-left text-sm font-medium transition ${
-                            active
-                              ? "border-amber-400 bg-amber-50 text-amber-700"
-                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">⚙️</span>
-                            <span className="line-clamp-2">{service.name || service.title || service}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                      <select
+                        value={selectedServiceChoice}
+                        onChange={(event) => setSelectedServiceChoice(event.target.value)}
+                        className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:border-slate-300 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                      >
+                        <option value="">Choisissez un service</option>
+                        {availableServices.map((service) => {
+                          const serviceLabel = getServiceLabel(service);
+                          return (
+                            <option key={service.id || serviceLabel} value={serviceLabel}>
+                              {serviceLabel}
+                            </option>
+                          );
+                        })}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={addSelectedService}
+                        disabled={!selectedServiceChoice}
+                        className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+
+                    {selectedServices.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {selectedServices.map((serviceLabel) => (
+                          <button
+                            key={serviceLabel}
+                            type="button"
+                            onClick={() => removeSelectedService(serviceLabel)}
+                            className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-100"
+                            title="Cliquer pour retirer"
+                          >
+                            {serviceLabel} ×
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <p className="text-xs text-slate-500">
+                      Les services sélectionnés seront enregistrés dans le rendez-vous. Cliquez sur un service pour le retirer.
+                    </p>
                   </div>
                 ) : (
                   <p className="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
@@ -478,10 +602,12 @@ const AutomobilisteAppointments = () => {
         onClose={() => setNotification(null)}
         notification={notification}
         appointment={selectedAppointment}
-        userRole="automobiliste"
+        userRole={user?.role || "automobiliste"}
       />
     </PlatformLayout>
   );
 };
 
 export default AutomobilisteAppointments;
+
+

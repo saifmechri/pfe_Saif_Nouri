@@ -1,4 +1,4 @@
-const { AppError } = require('../utils/appError');
+﻿const { AppError } = require('../utils/appError');
 const { logger } = require('../utils/logger');
 
 const errorHandler = (err, _req, res, _next) => {
@@ -47,3 +47,4 @@ const errorHandler = (err, _req, res, _next) => {
 };
 
 module.exports = { errorHandler };
+

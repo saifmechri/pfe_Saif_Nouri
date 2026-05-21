@@ -1,4 +1,4 @@
-const interventionModel = require('../models/intervention.model');
+﻿const interventionModel = require('../models/intervention.model');
 
 const create = async (data) => {
   return interventionModel.createIntervention(data);
@@ -32,3 +32,5 @@ module.exports = {
   update,
   remove
 };
+
+

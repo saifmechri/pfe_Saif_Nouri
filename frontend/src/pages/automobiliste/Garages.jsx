@@ -1,9 +1,10 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+﻿import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarCheck2, Clock3, MapPin, Navigation, Share2, Star } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import GoogleMapGarages from "../../components/GoogleMapGarages";
 import QuickAppointmentModal from "../../components/appointments/QuickAppointmentModal";
+import ReportModal from "../../components/ReportModal";
 import {
   createGarageReview,
   deleteGarageReview,
@@ -140,6 +141,31 @@ const defaultFilterOptions = {
 const mergeUniqueValues = (primary = [], secondary = []) =>
   Array.from(new Set([...(Array.isArray(primary) ? primary : []), ...(Array.isArray(secondary) ? secondary : [])]));
 
+const parseVehicleBrands = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return [];
+  }
+
+  const directParts = raw
+    .split(/\r?\n|,|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (directParts.length > 1) {
+    return Array.from(new Set(directParts));
+  }
+
+  const normalizedRaw = raw.replace(/\s+/g, " ");
+  const tokens = normalizedRaw.match(/[A-Za-zÀ-ÿ0-9]+(?:\s+[A-Za-zÀ-ÿ0-9]+)*/g) || [];
+
+  if (tokens.length > 1) {
+    return Array.from(new Set(tokens.map((item) => item.trim()).filter(Boolean)));
+  }
+
+  return [raw];
+};
+
 const initialReviewForm = {
   rating: 5,
   comment: ""
@@ -190,14 +216,21 @@ const brandLogoDomains = {
   Kia: "kia.com",
   Lada: "lada.ru",
   "Land Rover": "landrover.com",
+  Lexus: "lexus.com",
+  Mahindra: "mahindra.com",
+  Mazda: "mazda.com",
+  Mercedes: "mercedes-benz.com",
   MG: "mgmotor.eu",
   Mitsubishi: "mitsubishi-motors.com",
   Nissan: "nissan-global.com",
+  Opel: "opel.com",
   Peugeot: "peugeot.com",
+  Porsche: "porsche.com",
   Renault: "renault.com",
   "Rolls-Royce": "rolls-roycemotorcars.com",
   Seat: "seat.com",
   Skoda: "skoda-auto.com",
+  SsangYong: "kg-mobility.com",
   Suzuki: "suzuki.com",
   Tesla: "tesla.com",
   Toyota: "toyota.com",
@@ -230,12 +263,14 @@ const getBrandLogoCandidates = (marque) => {
   );
 
   const domain = brandLogoDomains[marque];
-  if (!domain) {
-    return [...localCandidates, buildMarqueImage(marque)];
-  }
+  const remoteCandidates = domain
+    ? [
+        `https://logo.clearbit.com/${encodeURIComponent(domain)}`,
+        `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=128`
+      ]
+    : [];
 
-  const encodedDomain = encodeURIComponent(domain);
-  return [...localCandidates, `https://logo.clearbit.com/${encodedDomain}`, buildMarqueImage(marque)];
+  return [...localCandidates, ...remoteCandidates, buildMarqueImage(marque)];
 };
 
 const buildMarqueImage = (marque) => {
@@ -311,6 +346,12 @@ const parseScheduleText = (value) => {
   return parsed.sort((a, b) => weekOrder.indexOf(a.day) - weekOrder.indexOf(b.day));
 };
 
+const splitServiceLines = (value) =>
+  String(value || "")
+    .split(/\r?\n|,|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 const GaragesPage = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -361,6 +402,10 @@ const GaragesPage = () => {
   // Appointment modal state
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [vehicules, setVehicules] = useState([]);
+
+  // Report modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportData, setReportData] = useState({ entityType: null, entityId: null, entityName: null });
 
   const getApiErrorMessage = (err, fallback) => {
     const data = err?.response?.data;
@@ -459,6 +504,49 @@ const GaragesPage = () => {
     () => parseScheduleText(selectedGarage?.travel_hours),
     [selectedGarage?.travel_hours]
   );
+
+  const hasAnyTravelSchedule = useMemo(
+    () => garages.some((garage) => parseScheduleText(garage.travel_hours).some((item) => item.enabled)),
+    [garages]
+  );
+
+  const selectedGarageDisplayServices = useMemo(() => {
+    if (garageServices.length > 0) {
+      return {
+        source: 'published',
+        items: garageServices
+          .filter((service) => service?.name)
+          .map((service) => ({
+            id: service.id,
+            name: service.name,
+            description: service.description || 'Sans description',
+            base_price: service.base_price,
+            duration_minutes: service.duration_minutes
+          }))
+      };
+    }
+
+    const fallbackText = [
+      selectedGarage?.store_services,
+      selectedGarage?.services_catalog,
+      Array.isArray(selectedGarage?.service_names) ? selectedGarage.service_names.join('\n') : ''
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const fallbackItems = splitServiceLines(fallbackText).map((serviceName, index) => ({
+      id: `fallback-service-${selectedGarage?.id || 'garage'}-${index}`,
+      name: serviceName,
+      description: 'Service renseigné dans la présentation du garage',
+      base_price: null,
+      duration_minutes: null
+    }));
+
+    return {
+      source: fallbackItems.length > 0 ? 'presentation' : 'empty',
+      items: fallbackItems
+    };
+  }, [garageServices, selectedGarage]);
 
   const toggleSelection = (value, setter) => {
     setter((current) =>
@@ -589,13 +677,14 @@ const GaragesPage = () => {
       const items = Array.isArray(payload?.items) ? payload.items : [];
 
       const filteredItems = items.filter((garage) => {
-        const brandsText = garage.vehicle_brands || "";
+        const brandsList = parseVehicleBrands(garage.vehicle_brands);
+        const brandsText = brandsList.join(" ");
         const specialtiesText = garage.specialties || garage.store_specialties || "";
         const servicesText = garage.services_catalog || garage.store_services || "";
         const serviceNames = Array.isArray(garage.service_names) ? garage.service_names.join(" ") : "";
         const identityText = `${garage.name || ""} ${garage.adresse || ""} ${brandsText} ${specialtiesText} ${servicesText} ${serviceNames}`;
 
-        const matchesBrand = !selectedBrand || includesNormalized(brandsText, selectedBrand) || includesNormalized(identityText, selectedBrand);
+        const matchesBrand = !selectedBrand || brandsList.some((brand) => includesNormalized(brand, selectedBrand)) || includesNormalized(identityText, selectedBrand);
         const matchesSpecialties =
           selectedSpecialties.length === 0 ||
           selectedSpecialties.some((specialty) => includesNormalized(specialtiesText, specialty) || includesNormalized(serviceNames, specialty));
@@ -604,9 +693,7 @@ const GaragesPage = () => {
           selectedServices.some((service) => includesNormalized(servicesText, service) || includesNormalized(serviceNames, service));
         const travelSchedule = parseScheduleText(garage.travel_hours);
         const availableTravelDays = travelSchedule.filter((entry) => entry.enabled).map((entry) => entry.day);
-        // Déplacement is only valid as secondary filter
-        const hasOtherFilters = selectedBrand || selectedSpecialties.length > 0 || selectedServices.length > 0;
-        const matchesDeplacement = !hasOtherFilters || selectedDeplacements.length === 0 ||
+        const matchesDeplacement = selectedDeplacements.length === 0 ||
           selectedDeplacements.some((day) => availableTravelDays.includes(day));
 
         return matchesBrand && matchesSpecialties && matchesServices && matchesDeplacement;
@@ -824,7 +911,7 @@ const GaragesPage = () => {
             <div className="relative flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
                 <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-blue-700">
-                  Compte automobiliste
+                  {user?.role === 'vendeur' ? 'Compte vendeur' : user?.role === 'admin' ? 'Compte administrateur' : 'Compte automobiliste'}
                 </span>
                 <h1 className="mt-2 text-3xl font-black tracking-tight text-[#10243f] sm:text-4xl">Carte des garages</h1>
                 <p className="mt-2 max-w-3xl text-sm text-[#5b6f8f] sm:text-[15px]">
@@ -1038,11 +1125,13 @@ const GaragesPage = () => {
                   "Déplacement",
                   selectedDeplacements.length,
                   () => setShowDeplacementModal(true),
-                  selectedBrand === "" && selectedSpecialties.length === 0 && selectedServices.length === 0
+                  !hasAnyTravelSchedule
                 )}
               </div>
-              {(selectedBrand || selectedSpecialties.length > 0 || selectedServices.length > 0) && (
+              {hasAnyTravelSchedule ? (
                 <p className="text-xs text-[#617089]">Déplacement sélectionné: {selectedDeplacements.length > 0 ? selectedDeplacements.join(", ") : "Aucun jour"}</p>
+              ) : (
+                <p className="text-xs text-[#617089]">Aucun garage n'a encore renseigné d'horaire de déplacement.</p>
               )}
               </div>
 
@@ -1194,14 +1283,7 @@ const GaragesPage = () => {
                           <CalendarCheck2 className="h-4 w-4" />
                           RDV
                         </button>
-                        <button
-                          type="button"
-                          onClick={handleShareGarage}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600"
-                        >
-                          <Share2 className="h-4 w-4" />
-                          Partager
-                        </button>
+                        
                       </div>
                     </div>
 
@@ -1251,10 +1333,25 @@ const GaragesPage = () => {
                   </article>
 
                   <article className="rounded-[24px] border border-white/80 bg-white/95 p-6 space-y-4 shadow-[0_14px_35px_rgba(15,23,42,0.08)]">
-                  <div>
-                    <h2 className="text-2xl font-bold text-[#1a2b4b]">{selectedGarage?.name}</h2>
-                    <p className="mt-1 text-sm text-[#617089]">{selectedGarage?.adresse || "Adresse non precisee"}</p>
-                    <p className="mt-1 text-sm text-[#617089]">Contact: {selectedGarage?.telephone || "N/A"} • {selectedGarage?.email || "N/A"}</p>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <h2 className="text-2xl font-bold text-[#1a2b4b]">{selectedGarage?.name}</h2>
+                      <p className="mt-1 text-sm text-[#617089]">{selectedGarage?.adresse || "Adresse non precisee"}</p>
+                      <p className="mt-1 text-sm text-[#617089]">Contact: {selectedGarage?.telephone || "N/A"} • {selectedGarage?.email || "N/A"}</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setReportData({
+                          entityType: 'garage',
+                          entityId: selectedGarage?.id,
+                          entityName: selectedGarage?.name
+                        });
+                        setShowReportModal(true);
+                      }}
+                      className="flex-shrink-0 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition"
+                    >
+                      🚩 Signaler
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -1285,22 +1382,29 @@ const GaragesPage = () => {
 
                   <div>
                     <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Services disponibles</h3>
-                    {garageServices.length === 0 ? (
-                      <p className="text-sm text-[#617089]">Ce garage n'a pas encore publie de services.</p>
+                    {selectedGarageDisplayServices.items.length === 0 ? (
+                      <p className="text-sm text-[#617089]">Ce garage n'a pas encore renseigné de services.</p>
                     ) : (
-                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        {garageServices.map((service) => (
-                          <div key={service.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
-                            <p className="font-bold text-[#1a2b4b]">{service.name}</p>
-                            <p className="mt-1 text-sm text-[#617089]">{service.description || "Sans description"}</p>
-                            <p className="mt-2 text-sm text-[#334155]">
-                              {service.base_price !== null ? `${service.base_price} TND` : "Prix non precise"}
-                              {" • "}
-                              {service.duration_minutes !== null ? `${service.duration_minutes} min` : "Duree non precisee"}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                      <>
+                        <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+                          {selectedGarageDisplayServices.source === 'published'
+                            ? 'Services publiés dans le catalogue du garage.'
+                            : 'Services récupérés depuis la présentation du garage.'}
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          {selectedGarageDisplayServices.items.map((service) => (
+                            <div key={service.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
+                              <p className="font-bold text-[#1a2b4b]">{service.name}</p>
+                              <p className="mt-1 text-sm text-[#617089]">{service.description || 'Sans description'}</p>
+                              <p className="mt-2 text-sm text-[#334155]">
+                                {service.base_price !== null && service.base_price !== undefined ? `${service.base_price} TND` : 'Prix non précisé'}
+                                {' • '}
+                                {service.duration_minutes !== null && service.duration_minutes !== undefined ? `${service.duration_minutes} min` : 'Durée non précisée'}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
                   </article>
@@ -1308,7 +1412,9 @@ const GaragesPage = () => {
                   <article className="rounded-[24px] border border-white/80 bg-white/95 p-6 space-y-5 shadow-[0_14px_35px_rgba(15,23,42,0.08)]">
                   <div>
                     <h3 className="mb-3 text-lg font-bold text-[#1a2b4b]">Votre avis</h3>
-                    <form className="space-y-3" onSubmit={handleSubmitReview}>
+                    {/* Show review form only for permitted roles */}
+                    {user && ['automobiliste', 'vendeur', 'admin'].includes(user.role) ? (
+                      <form className="space-y-3" onSubmit={handleSubmitReview}>
                       <label className="block text-sm font-semibold text-[#334155]">
                         Note
                         <select name="rating" className="vb-input mt-1 w-full px-3 py-2" value={reviewForm.rating} onChange={handleReviewFieldChange}>
@@ -1344,7 +1450,16 @@ const GaragesPage = () => {
                           </button>
                         )}
                       </div>
-                    </form>
+                      </form>
+                    ) : (
+                      <div className="rounded-md border border-slate-100 bg-slate-50 p-3 text-sm text-slate-600">
+                        {user ? (
+                          <div>Seuls les automobilistes, vendeurs et administrateurs peuvent laisser un avis.</div>
+                        ) : (
+                          <div>Veuillez vous connecter pour laisser un avis.</div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -1356,12 +1471,27 @@ const GaragesPage = () => {
                         {garageReviews.map((review) => (
                           <li key={review.id} className="rounded-lg border border-[#dbe2ec] bg-white p-4">
                             <div className="flex flex-wrap items-start justify-between gap-3">
-                              <div>
+                              <div className="flex-1">
                                 <p className="font-bold text-[#1a2b4b]">{review.reviewer?.name || "Utilisateur"}</p>
                                 <p className="text-sm text-[#617089]">Note: {review.rating}/5</p>
                                 <p className="mt-1 text-sm text-[#334155]">{review.comment || "Sans commentaire"}</p>
                               </div>
-                              <p className="text-xs text-[#617089]">{new Date(review.created_at).toLocaleDateString("fr-FR")}</p>
+                              <div className="flex flex-col items-end gap-2">
+                                <p className="text-xs text-[#617089]">{new Date(review.created_at).toLocaleDateString("fr-FR")}</p>
+                                <button
+                                  onClick={() => {
+                                    setReportData({
+                                      entityType: 'review',
+                                      entityId: review.id,
+                                      entityName: `Avis de ${review.reviewer?.name || 'Utilisateur'}`
+                                    });
+                                    setShowReportModal(true);
+                                  }}
+                                  className="text-xs px-2 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition"
+                                >
+                                  Signaler
+                                </button>
+                              </div>
                             </div>
                           </li>
                         ))}
@@ -1382,8 +1512,20 @@ const GaragesPage = () => {
         garage={selectedGarage}
         vehicules={vehicules}
         onAppointmentCreated={() => {
-          setSuccessMessage("✓ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
+          setSuccessMessage("✅ Rendez-vous créé avec succès! Le garage répondra dans les 24 heures.");
           setShowAppointmentModal(false);
+        }}
+      />
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        entityType={reportData.entityType}
+        entityId={reportData.entityId}
+        entityName={reportData.entityName}
+        onSuccess={() => {
+          setSuccessMessage("✅ Merci! Votre signalement a été reçu par nos modérateurs.");
+          setTimeout(() => setSuccessMessage(""), 3000);
         }}
       />
     </PlatformLayout>
@@ -1391,3 +1533,5 @@ const GaragesPage = () => {
 };
 
 export default GaragesPage;
+
+

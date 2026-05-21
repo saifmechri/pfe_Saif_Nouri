@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from "react";
+﻿import { createContext, useState, useEffect } from "react";
 import API from "../services/api";
 
 export const AuthContext = createContext();
@@ -62,10 +62,11 @@ export const AuthProvider = ({ children }) => {
   const loginAdmin = async (formData) => {
     const res = await API.post("/admin/login", formData);
     const token = res.data?.data?.token || res.data?.token;
+    const backendAdminUser = res.data?.data?.user || null;
 
     localStorage.setItem("token", token);
 
-    const adminUser = {
+    const adminUser = backendAdminUser || {
       id: "admin",
       name: "Administrateur",
       email: formData.email,
@@ -96,3 +97,4 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+

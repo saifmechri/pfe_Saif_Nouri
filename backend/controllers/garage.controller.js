@@ -1,3 +1,16 @@
+﻿/**
+ * GARAGE MANAGEMENT SYSTEM
+ * 
+ * Handles garage profiles, services, location tracking, and ratings.
+ * 
+ * FEATURES:
+ * - Garage profiles with full details
+ * - Services catalog per garage
+ * - GPS coordinates for distance calculations
+ * - Ratings and customer reviews
+ * - Working hours and availability
+ */
+
 const { pool } = require('../db');
 const { asyncHandler } = require('../middlewares/asyncHandler');
 const { sendApiResponse } = require('../utils/apiResponse');
@@ -26,6 +39,7 @@ const mapGarageRow = (row) => ({
   longitude: row.longitude === null ? null : Number(row.longitude),
   rating: row.rating === null ? null : Number(row.rating),
   is_open: row.is_open === null ? true : Boolean(row.is_open),
+  status: row.status || 'en_attente',
   created_at: row.created_at,
   updated_at: row.updated_at
 });
@@ -118,6 +132,19 @@ const parseOptionalStringList = (value, fieldName) => {
   return [...new Set(normalizedItems)];
 };
 
+const parseBrandList = (value) => {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  const items = String(value)
+    .split(/[\n,;]+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+
+  return [...new Set(items)];
+};
+
 const buildExactTextMatchClause = (columnName, values, params) => {
   if (!values || values.length === 0) {
     return null;
@@ -136,11 +163,34 @@ const buildExactTextMatchClause = (columnName, values, params) => {
   ) > 0`;
 };
 
+const buildGarageBrandMatchClause = (brandNames, params) => {
+  if (!brandNames || brandNames.length === 0) {
+    return null;
+  }
+
+  params.push(brandNames);
+  const valuesParam = `$${params.length}`;
+
+  return `(
+    EXISTS (
+      SELECT 1
+      FROM garage_vehicle_brands gv
+      WHERE gv.garage_id = g.id
+        AND LOWER(gv.brand_name) = ANY(${valuesParam}::text[])
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM regexp_split_to_table(COALESCE(g.vehicle_brands, ''), E'[\\n,;]+') AS legacy_brand
+      WHERE LOWER(BTRIM(legacy_brand)) = ANY(${valuesParam}::text[])
+    )
+  )`;
+};
+
 const resolveOwnerUserId = (req, providedUserId) => {
   const role = req.user?.role;
   const currentUserId = Number(req.user?.id);
 
-  if (!Number.isFinite(currentUserId) || currentUserId <= 0) {
+  if (role !== 'admin' && (!Number.isFinite(currentUserId) || currentUserId <= 0)) {
     throw new AppError('Utilisateur authentifie invalide', 401, 'INVALID_AUTH_USER');
   }
 
@@ -208,6 +258,13 @@ const ensureGarageOwnershipAllowed = (req, garage) => {
 };
 
 const createGarage = asyncHandler(async (req, res) => {
+  const role = req.user?.role;
+  const currentUserId = Number(req.user?.id);
+
+  if (role !== 'admin' && (!Number.isFinite(currentUserId) || currentUserId <= 0)) {
+    throw new AppError('Utilisateur authentifie invalide', 401, 'INVALID_AUTH_USER');
+  }
+
   const ownerUserId = resolveOwnerUserId(req, req.body?.user_id);
   const garageName = normalizeOptionalString(req.body?.name);
 
@@ -228,10 +285,13 @@ const createGarage = asyncHandler(async (req, res) => {
     }
   }
 
+  // Determine initial status: admin-created garages become 'actif', others 'en_attente'
+  const initialStatus = (role === 'admin') ? (normalizeOptionalString(req.body?.status) || 'actif') : 'en_attente';
+
   const insertResult = await pool.query(
-    `INSERT INTO garages (user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, COALESCE($17, true), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-     RETURNING id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at`,
+    `INSERT INTO garages (user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, status, is_open, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, COALESCE($18, true), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+     RETURNING id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, status, is_open, created_at, updated_at`,
     [
       ownerUserId,
       garageName,
@@ -251,6 +311,7 @@ const createGarage = asyncHandler(async (req, res) => {
       req.body?.rating === undefined || req.body?.rating === null || req.body?.rating === ''
         ? 3.5
         : parseNullableNumber(req.body?.rating, 'rating'),
+      initialStatus,
       req.body?.is_open
     ]
   );
@@ -315,8 +376,8 @@ const listGarages = asyncHandler(async (req, res) => {
   if (!includeClosed) {
     whereClauses.push('g.is_open = true');
   }
-  // Only show admin-validated garages in public listings
-  whereClauses.push('COALESCE(g.is_validated, false) = true');
+  // Only show admin-validated (status = 'actif') garages in public listings
+  whereClauses.push("g.status = 'actif'");
 
   if (search) {
     params.push(`%${search}%`);
@@ -334,7 +395,7 @@ const listGarages = asyncHandler(async (req, res) => {
     whereClauses.push(`g.rating <= $${params.length}`);
   }
 
-  const brandClause = buildExactTextMatchClause('g.vehicle_brands', brandNames, params);
+  const brandClause = buildGarageBrandMatchClause(brandNames, params);
   if (brandClause) {
     whereClauses.push(brandClause);
   }
@@ -575,6 +636,36 @@ const getGarageById = asyncHandler(async (req, res) => {
 });
 
 const getMyGarage = asyncHandler(async (req, res) => {
+  if (req.user?.role === 'admin') {
+    const requestedGarageId = Number.parseInt(req.query?.garageId, 10);
+
+    let result;
+    if (Number.isInteger(requestedGarageId) && requestedGarageId > 0) {
+      result = await pool.query(
+        `SELECT id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at
+         FROM garages
+         WHERE id = $1`,
+        [requestedGarageId]
+      );
+    } else {
+      result = await pool.query(
+        `SELECT id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at
+         FROM garages
+         ORDER BY created_at DESC
+         LIMIT 1`
+      );
+    }
+
+    if (result.rows.length === 0) {
+      throw new AppError('Profil garage introuvable pour cet utilisateur', 404, 'GARAGE_PROFILE_NOT_FOUND');
+    }
+
+    return sendApiResponse(res, {
+      message: 'Profil garage recupere avec succes',
+      data: mapGarageRow(result.rows[0])
+    });
+  }
+
   const currentUserId = Number(req.user?.id);
 
   if (!Number.isFinite(currentUserId) || currentUserId <= 0) {
@@ -658,9 +749,10 @@ const updateGarage = asyncHandler(async (req, res) => {
          latitude = COALESCE($13, latitude),
          longitude = COALESCE($14, longitude),
          rating = COALESCE($15, rating),
-         is_open = COALESCE($16, is_open),
+         is_validated = COALESCE($16, is_validated),
+         is_open = COALESCE($17, is_open),
          updated_at = CURRENT_TIMESTAMP
-       WHERE id = $17
+      WHERE id = $18
        RETURNING id, user_id, name, description, adresse, telephone, email, specialties, services_catalog, keywords, photo_urls, work_hours, travel_hours, vehicle_brands, latitude, longitude, rating, is_open, created_at, updated_at`,
     [
       req.body?.name !== undefined ? normalizeOptionalString(req.body.name) : null,
@@ -678,6 +770,8 @@ const updateGarage = asyncHandler(async (req, res) => {
       req.body?.latitude !== undefined ? parseNullableNumber(req.body.latitude, 'latitude') : null,
       req.body?.longitude !== undefined ? parseNullableNumber(req.body.longitude, 'longitude') : null,
       req.body?.rating !== undefined ? parseNullableNumber(req.body.rating, 'rating') : null,
+      // is_validated: if admin performed update and didn't provide explicit value, keep validated true
+      req.body?.is_validated !== undefined ? Boolean(req.body.is_validated) : (req.user?.role === 'admin' ? true : null),
       req.body?.is_open !== undefined ? Boolean(req.body.is_open) : null,
       garageId
     ]
@@ -758,13 +852,21 @@ const getFilterOptions = asyncHandler(async (req, res) => {
 
   // Récupérer les marques distinctes depuis vehicle_brands dans garages
   const brandsResult = await pool.query(`
-    SELECT DISTINCT TRIM(brand) AS brand
+    SELECT DISTINCT brand
     FROM (
-      SELECT UNNEST(STRING_TO_ARRAY(g.vehicle_brands, ',')) AS brand
+      SELECT TRIM(gv.brand_name) AS brand
+      FROM garage_vehicle_brands gv
+      WHERE gv.brand_name IS NOT NULL AND gv.brand_name <> ''
+
+      UNION
+
+      SELECT TRIM(brand) AS brand
       FROM garages g
-      WHERE g.vehicle_brands IS NOT NULL AND g.vehicle_brands != ''
-    ) subquery
-    WHERE brand != ''
+      CROSS JOIN LATERAL regexp_split_to_table(COALESCE(g.vehicle_brands, ''), E'[\\n,;]+') AS brand
+      WHERE g.vehicle_brands IS NOT NULL AND g.vehicle_brands <> ''
+        AND TRIM(brand) <> ''
+    ) normalized_brands
+    WHERE brand IS NOT NULL AND brand <> ''
     ORDER BY brand ASC
   `);
 
@@ -790,3 +892,5 @@ module.exports = {
   uploadGaragePhotos,
   getFilterOptions
 };
+
+

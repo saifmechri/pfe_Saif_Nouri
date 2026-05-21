@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
@@ -7,6 +7,7 @@ import PlatformLayout from "../components/PlatformLayout";
 import TopBar from "../components/TopBar";
 import { getAppointment, listAppointments, updateAppointment } from "../services/appointments";
 import { ArrowLeft, Send, CheckCircle, AlertCircle, Calendar, Clock, MapPin, User, MessageSquare } from "lucide-react";
+import { formatAppointmentDate, parseAppointmentNotes } from "../utils/appointmentConstants";
 
 dayjs.extend(localizedFormat);
 dayjs.locale("fr");
@@ -63,13 +64,9 @@ const AppointmentDetail = () => {
 
           // Parse notes for messages if they exist
           if (apt.notes) {
-            try {
-              const parsedNotes = JSON.parse(apt.notes);
-              if (parsedNotes.messages && Array.isArray(parsedNotes.messages)) {
-                setMessages(parsedNotes.messages);
-              }
-            } catch (e) {
-              // notes is not JSON messages
+            const parsedNotes = parseAppointmentNotes(apt.notes);
+            if (parsedNotes.messages.length > 0) {
+              setMessages(parsedNotes.messages);
             }
           }
         } else {
@@ -98,7 +95,7 @@ const AppointmentDetail = () => {
       const status = decision === "accept" ? "confirmed" : "cancelled";
       await updateAppointment(appointmentId, { status });
       
-      setMessage(status === "confirmed" ? "✓ Rendez-vous confirmé" : "✕ Rendez-vous refusé");
+      setMessage(status === "confirmed" ? "✅ Rendez-vous confirmé" : "❌ Rendez-vous refusé");
       setMessageType("success");
       
       setTimeout(() => {
@@ -124,7 +121,7 @@ const AppointmentDetail = () => {
         proposed_note: proposalNote
       });
       
-      setMessage("✓ Proposition envoyée à l'automobiliste");
+      setMessage("✅ Proposition envoyée à l'automobiliste");
       setMessageType("success");
       setShowProposal(false);
       
@@ -156,7 +153,7 @@ const AppointmentDetail = () => {
       ];
 
       const notes = {
-        ...(appointment.notes ? JSON.parse(appointment.notes) : {}),
+        ...parseAppointmentNotes(appointment.notes),
         messages: updatedMessages
       };
 
@@ -166,7 +163,7 @@ const AppointmentDetail = () => {
 
       setMessages(updatedMessages);
       setNewMessage("");
-      setMessage("✓ Message envoyé");
+      setMessage("✅ Message envoyé");
       setMessageType("success");
     } catch (err) {
       console.error("Error sending message:", err);
@@ -208,6 +205,7 @@ const AppointmentDetail = () => {
   }
 
   const appointmentDateTime = dayjs(`${appointment.appointment_date}T${appointment.appointment_time || "12:00"}`);
+  const parsedNotes = parseAppointmentNotes(appointment.notes);
   const statusColor = {
     pending: "bg-amber-50 border-amber-200 text-amber-700",
     confirmed: "bg-emerald-50 border-emerald-200 text-emerald-700",
@@ -245,8 +243,8 @@ const AppointmentDetail = () => {
                   <div>
                     <p className="text-sm font-semibold opacity-75">Statut du Rendez-vous</p>
                     <p className="mt-1 text-2xl font-bold">
-                      {appointment.status === "confirmed" ? "✓ Confirmé" :
-                       appointment.status === "cancelled" ? "✕ Annulé" :
+                      {appointment.status === "confirmed" ? "✅ Confirmé" :
+                       appointment.status === "cancelled" ? "❌ Annulé" :
                        appointment.status === "proposed" ? "📅 Proposition" :
                        "⏳ En attente"}
                     </p>
@@ -263,7 +261,7 @@ const AppointmentDetail = () => {
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Date</p>
                     <p className="mt-2 flex items-center gap-2 text-base font-semibold text-slate-900">
                       <Calendar className="h-5 w-5 text-blue-500" />
-                      {dayjs(appointment.appointment_date).format("dddd D MMMM YYYY")}
+                      {formatAppointmentDate(appointment.appointment_date)}
                     </p>
                   </div>
 
@@ -288,7 +286,9 @@ const AppointmentDetail = () => {
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Créé le</p>
                     <p className="mt-2 text-base font-semibold text-slate-900">
-                      {dayjs(appointment.created_at).format("D MMMM à HH:mm")}
+                      {dayjs(appointment.created_at).isValid()
+                        ? dayjs(appointment.created_at).format("D MMMM à HH:mm")
+                        : "—"}
                     </p>
                   </div>
                 </div>
@@ -301,6 +301,19 @@ const AppointmentDetail = () => {
                   <p className="mt-3 whitespace-pre-wrap text-base text-slate-700">
                     {appointment.description}
                   </p>
+                </div>
+              )}
+
+              {parsedNotes.services.length > 0 && (
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-600">Services optionnels</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {parsedNotes.services.map((service) => (
+                      <span key={service} className="rounded-full border border-blue-200 bg-white px-3 py-1 text-sm font-semibold text-blue-700">
+                        {service}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -402,7 +415,7 @@ const AppointmentDetail = () => {
                     disabled={actionLoading}
                     className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-50"
                   >
-                    ✓ Accepter
+                    ✅ Accepter
                   </button>
                   
                   <button
@@ -410,7 +423,7 @@ const AppointmentDetail = () => {
                     disabled={actionLoading}
                     className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                   >
-                    ✕ Refuser
+                    ❌ Refuser
                   </button>
                   
                   <button
@@ -489,3 +502,5 @@ const AppointmentDetail = () => {
 };
 
 export default AppointmentDetail;
+
+

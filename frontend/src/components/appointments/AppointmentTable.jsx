@@ -1,8 +1,9 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { ChevronDown, Trash2, Clock, MapPin, User, Calendar } from "lucide-react";
 import dayjs from "dayjs";
 import localizedFormat from "dayjs/plugin/localizedFormat";
 import "dayjs/locale/fr";
+import { formatAppointmentDate, parseAppointmentNotes } from "../../utils/appointmentConstants";
 
 dayjs.extend(localizedFormat);
 dayjs.locale("fr");
@@ -81,7 +82,12 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
               const colors = getStatusColor(item.status);
               const isExpanded = expandedId === item.id;
               const appointmentDateTime = dayjs(`${item.appointment_date}T${item.appointment_time || "12:00"}`);
-              const isUpcoming = appointmentDateTime.isAfter(dayjs());
+              const isUpcoming = appointmentDateTime.isValid() && appointmentDateTime.isAfter(dayjs());
+              const parsedNotes = parseAppointmentNotes(item.notes);
+              const servicesLabel = parsedNotes.services.length > 0 ? parsedNotes.services.join(", ") : "Aucun service renseigné";
+              const createdAtLabel = dayjs(item.created_at).isValid()
+                ? dayjs(item.created_at).format("D MMMM YYYY [à] HH:mm")
+                : "—";
 
               return (
                 <div key={item.id} className="hover:bg-slate-50 transition">
@@ -95,7 +101,7 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
                         {/* Date/Time */}
                         <div className="flex flex-col gap-1 min-w-[140px]">
                           <p className="font-semibold text-slate-900">
-                            {appointmentDateTime.format("D MMMM YYYY")}
+                            {formatAppointmentDate(item.appointment_date)}
                           </p>
                           {item.appointment_time && (
                             <p className="flex items-center gap-1 text-sm text-slate-600">
@@ -145,7 +151,7 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
                           <div>
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Date & Heure</p>
                             <p className="mt-1 text-sm font-medium text-slate-900">
-                              {appointmentDateTime.format("dddd D MMMM YYYY")}
+                              {formatAppointmentDate(item.appointment_date)}
                               {item.appointment_time && ` à ${item.appointment_time}`}
                             </p>
                           </div>
@@ -158,7 +164,7 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
                           <div>
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Créé le</p>
                             <p className="mt-1 text-sm text-slate-700">
-                              {dayjs(item.created_at).format("D MMMM YYYY [à] HH:mm")}
+                              {createdAtLabel}
                             </p>
                           </div>
                         </div>
@@ -178,8 +184,22 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
                           <div>
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Notes</p>
                             <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white bg-opacity-50 p-2 text-sm text-slate-700">
-                              {item.notes}
+                              {parsedNotes.remark || item.notes}
                             </p>
+                          </div>
+                        )}
+
+                        {parsedNotes.services.length > 0 && (
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-600">Services optionnels</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {parsedNotes.services.map((service) => (
+                                <span key={service} className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                                  {service}
+                                </span>
+                              ))}
+                            </div>
+                            <p className="mt-2 text-xs text-slate-500">{servicesLabel}</p>
                           </div>
                         )}
 
@@ -191,13 +211,13 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
                                 onClick={() => onUpdate?.(item.id, "confirmed")}
                                 className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
                               >
-                                ✓ Confirmer
+                                ✅ Confirmer
                               </button>
                               <button
                                 onClick={() => onUpdate?.(item.id, "cancelled")}
                                 className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
                               >
-                                ✕ Annuler
+                                ❌ Annuler
                               </button>
                             </>
                           )}
@@ -223,3 +243,5 @@ const AppointmentTable = ({ items = [], onDelete, onUpdate, isLoading = false })
 };
 
 export default AppointmentTable;
+
+

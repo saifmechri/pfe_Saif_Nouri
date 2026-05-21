@@ -1,4 +1,4 @@
-const { pool } = require('../db');
+﻿const { pool } = require('../db');
 
 // Calcul de distance Haversine (en km)
 const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
@@ -263,3 +263,5 @@ module.exports = {
   isGarageAvailable,
   matchGaragesForVehicle
 };
+
+

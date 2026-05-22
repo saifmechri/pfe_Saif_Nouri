@@ -79,11 +79,7 @@ const Register = () => {
             <h1 className="mt-4 text-4xl font-extrabold leading-tight">Rejoignez un ecosysteme automobile intelligent.</h1>
             <p className="mt-5 max-w-md text-sm text-blue-100/95">Inscription rapide avec choix de role pour acceder a votre espace metier.</p>
           </div>
-          <ul className="space-y-2 rounded-lg border border-white/25 bg-white/10 p-5 text-sm text-blue-50">
-            <li>Automobiliste: suivi vehicules et recommandations</li>
-            <li>Garage: planning interventions et services</li>
-            <li>Vendeur: catalogue pieces et stock</li>
-          </ul>
+          
         </section>
 
         <section className="flex items-center justify-center p-6 md:p-10">

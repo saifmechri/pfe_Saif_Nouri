@@ -80,9 +80,7 @@ const Login = () => {
             <h1 className="mt-4 text-4xl font-extrabold leading-tight">Connectez-vous a votre plateforme automobile.</h1>
             <p className="mt-5 max-w-md text-sm text-blue-100/95">Pilotez vehicules, interventions et recommandations dans une interface metier moderne.</p>
           </div>
-          <div className="rounded-lg border border-white/25 bg-white/10 p-5 text-sm text-blue-50">
-            Design System Velocity Blue: precis, lisible, rapide.
-          </div>
+          
         </section>
 
         <section className="flex items-center justify-center p-6 md:p-10">

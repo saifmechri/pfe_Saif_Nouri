@@ -6,6 +6,7 @@ import Register from "../pages/auth/Register";
 import AdminLogin from "../pages/auth/AdminLogin";
 import Unauthorized from "../pages/Unauthorized";
 import Profil from '../pages/profil/profil';
+import AutomobilisteRecommendations from "../pages/automobiliste/Recommendations";
 import GaragesPage from "../pages/automobiliste/Garages";
 import AutomobilisteAppointments from "../pages/automobiliste/Appointments";
 import AppointmentDetail from "../pages/AppointmentDetail";
@@ -52,7 +53,14 @@ const AppRouter = () => {
         />
 
         {/* Tableaux de bord protégés par rôle */}
-        {/* Recommandations dynamiques supprimées */}
+        <Route
+          path="/automobiliste/recommandations"
+          element={
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
+              <AutomobilisteRecommendations />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/automobiliste/garages"
           element={
@@ -62,25 +70,9 @@ const AppRouter = () => {
           }
         />
         <Route
-          path="/vendeur/garages"
-          element={
-            <ProtectedRoute allowedRoles={["vendeur", "admin"]}>
-              <GaragesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/automobiliste/appointments"
           element={
-            <ProtectedRoute allowedRoles={["automobiliste", "vendeur", "admin"]}>
-              <AutomobilisteAppointments />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/vendeur/appointments"
-          element={
-            <ProtectedRoute allowedRoles={["vendeur", "admin"]}>
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
               <AutomobilisteAppointments />
             </ProtectedRoute>
           }
@@ -88,7 +80,7 @@ const AppRouter = () => {
         <Route
           path="/automobiliste/messages"
           element={
-            <ProtectedRoute allowedRoles={["automobiliste", "admin"]}>
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
               <ChatCenter />
             </ProtectedRoute>
           }
@@ -96,7 +88,7 @@ const AppRouter = () => {
         <Route
           path="/automobiliste/*"
           element={
-            <ProtectedRoute allowedRoles={["automobiliste", "admin"]}>
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
               <AutomobilisteDashboard />
             </ProtectedRoute>
           }
@@ -104,7 +96,7 @@ const AppRouter = () => {
         <Route
           path="/automobiliste"
           element={
-            <ProtectedRoute allowedRoles={["automobiliste", "admin"]}>
+            <ProtectedRoute allowedRoles={["automobiliste"]}>
               <AutomobilisteDashboard />
             </ProtectedRoute>
           }
@@ -112,7 +104,7 @@ const AppRouter = () => {
         <Route
           path="/garage/messages"
           element={
-            <ProtectedRoute allowedRoles={["garage", "admin"]}>
+            <ProtectedRoute allowedRoles={["garage"]}>
               <ChatCenter />
             </ProtectedRoute>
           }
@@ -120,7 +112,7 @@ const AppRouter = () => {
         <Route
           path="/garage/appointments"
           element={
-            <ProtectedRoute allowedRoles={["garage", "admin"]}>
+            <ProtectedRoute allowedRoles={["garage"]}>
               <GarageAppointments />
             </ProtectedRoute>
           }
@@ -161,7 +153,7 @@ const AppRouter = () => {
         <Route
           path="/garage/appointments/:appointmentId"
           element={
-            <ProtectedRoute allowedRoles={["garage", "admin"]}>
+            <ProtectedRoute allowedRoles={["garage"]}>
               <AppointmentDetail />
             </ProtectedRoute>
           }
@@ -169,7 +161,7 @@ const AppRouter = () => {
         <Route
           path="/garage/*"
           element={
-            <ProtectedRoute allowedRoles={["garage", "admin"]}>
+            <ProtectedRoute allowedRoles={["garage"]}>
               <GarageDashboard />
             </ProtectedRoute>
           }
@@ -177,7 +169,7 @@ const AppRouter = () => {
         <Route
           path="/garage"
           element={
-            <ProtectedRoute allowedRoles={["garage", "admin"]}>
+            <ProtectedRoute allowedRoles={["garage"]}>
               <GarageDashboard />
             </ProtectedRoute>
           }
@@ -185,7 +177,7 @@ const AppRouter = () => {
         <Route
           path="/vendeur/messages"
           element={
-            <ProtectedRoute allowedRoles={["vendeur", "admin"]}>
+            <ProtectedRoute allowedRoles={["vendeur"]}>
               <ChatCenter />
             </ProtectedRoute>
           }
@@ -193,7 +185,7 @@ const AppRouter = () => {
         <Route
           path="/vendeur/*"
           element={
-            <ProtectedRoute allowedRoles={["vendeur", "admin"]}>
+            <ProtectedRoute allowedRoles={["vendeur"]}>
               <VendeurDashboard />
             </ProtectedRoute>
           }
@@ -202,14 +194,6 @@ const AppRouter = () => {
           path="/vendeur/catalogue"
           element={
             <ProtectedRoute allowedRoles={["vendeur", "admin", "automobiliste", "garage"]}>
-              <CataloguePieces />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/automobiliste/catalogue"
-          element={
-            <ProtectedRoute allowedRoles={["automobiliste", "admin", "garage", "vendeur"]}>
               <CataloguePieces />
             </ProtectedRoute>
           }
@@ -233,7 +217,7 @@ const AppRouter = () => {
         <Route
           path="/vendeur"
           element={
-            <ProtectedRoute allowedRoles={["vendeur", "admin"]}>
+            <ProtectedRoute allowedRoles={["vendeur"]}>
               <VendeurDashboard />
             </ProtectedRoute>
           }
@@ -254,41 +238,6 @@ const AppRouter = () => {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/admin/messages"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <ChatCenter />
-            </ProtectedRoute>
-          }
-        />
-        {/* Admin view of garages (reuse existing GaragesPage) */}
-        <Route
-          path="/admin/garages"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <GaragesPage />
-            </ProtectedRoute>
-          }
-        />
-        {/* Admin view of catalogue (reuse CataloguePieces) */}
-        <Route
-          path="/admin/catalogue"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-              <CataloguePieces />
-            </ProtectedRoute>
-          }
-        />
-        {/* Garage view of catalogue (reuse CataloguePieces) */}
-        <Route
-          path="/garage/catalogue"
-          element={
-            <ProtectedRoute allowedRoles={["garage", "admin", "vendeur", "automobiliste"]}>
-              <CataloguePieces />
-            </ProtectedRoute>
-          }
-        />
 
         {/* Route 404 - optionnelle */}
         <Route path="*" element={<div>Page non trouvée</div>} />
@@ -306,4 +255,3 @@ const AppRouter = () => {
 };
 
 export default AppRouter;
-

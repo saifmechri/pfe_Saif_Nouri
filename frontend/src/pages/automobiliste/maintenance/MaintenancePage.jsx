@@ -4,10 +4,9 @@ import { AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/fr';
 import PlatformLayout from '../../../components/PlatformLayout';
-import { getMaintenanceDashboard, getMaintenanceRecommendations } from '../../../services/maintenance';
+import { getMaintenanceDashboard } from '../../../services/maintenance';
 import AlertCard from './AlertCard';
 import MaintenanceCalendar from './MaintenanceCalendar';
-import RecommendedGarages from './RecommendedGarages';
 
 dayjs.locale('fr');
 
@@ -16,74 +15,15 @@ const formatDate = (value) => {
   return dayjs(value).locale('fr').format('DD MMMM YYYY');
 };
 
-const getGarageCoverage = (garage, recommendationType) => {
-  const labels = new Set([...(garage.maintenanceLabels || [])]);
-  if (recommendationType) labels.add(recommendationType);
-  return Array.from(labels);
-};
-
-const buildGarageCards = (recommendations = []) => {
-  const garageMap = new Map();
-
-  const normalizedRecommendations = recommendations.length > 0 && !recommendations.some((item) => item?.garages)
-    ? [{ intervention: { type: 'Entretien' }, garages: recommendations }]
-    : recommendations;
-
-  normalizedRecommendations.forEach((recommendation) => {
-    const maintenanceType = recommendation?.intervention?.type || 'Entretien';
-    const garages = recommendation?.garages || [];
-
-    garages.forEach((garage) => {
-      const id = garage.id;
-      const currentScore = Number(garage.score_global ?? garage.score ?? 0);
-      const existing = garageMap.get(id);
-      const baseRecord = existing || {
-        id,
-        name: garage.name,
-        address: garage.adresse,
-        distance: garage.distance_km ?? garage.distance ?? null,
-        rating: Number(garage.rating ?? 0),
-        isOpen: Boolean(garage.isOpen ?? garage.is_open),
-        score: currentScore,
-        specialties: garage.specialties || [],
-        maintenanceLabels: [],
-        bestMatch: false,
-      };
-
-      const nextSpecialties = Array.from(new Set([...(baseRecord.specialties || []), ...(garage.specialties || [])]));
-      const nextCoverage = getGarageCoverage(baseRecord, maintenanceType);
-
-      garageMap.set(id, {
-        ...baseRecord,
-        name: garage.name || baseRecord.name,
-        address: garage.adresse || baseRecord.address,
-        distance: baseRecord.distance === null || baseRecord.distance === undefined ? garage.distance_km ?? garage.distance ?? null : baseRecord.distance,
-        rating: Number(garage.rating ?? baseRecord.rating ?? 0),
-        isOpen: Boolean(garage.isOpen ?? garage.is_open ?? baseRecord.isOpen),
-        score: Math.max(baseRecord.score || 0, currentScore),
-        specialties: nextSpecialties,
-        maintenanceLabels: Array.from(new Set(nextCoverage)),
-        bestMatch: (garageMap.size === 0 && currentScore > 0) || (existing && currentScore >= (existing.score || 0)),
-      });
-    });
-  });
-
-  return Array.from(garageMap.values())
-    .sort((a, b) => (a.distance ?? 9999) - (b.distance ?? 9999) || (b.score || 0) - (a.score || 0))
-    .slice(0, 6);
-};
-
 const MaintenancePage = () => {
   const navigate = useNavigate();
   const { vehicleId } = useParams();
   const parsedVehicleId = Number.parseInt(vehicleId, 10);
 
   const [dashboard, setDashboard] = useState(null);
-  const [recommendations, setRecommendations] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [recommendationError, setRecommendationError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -101,34 +41,19 @@ const MaintenancePage = () => {
       try {
         setLoading(true);
         setError('');
-        setRecommendationError('');
 
-        const [dashboardResult, recommendationResult] = await Promise.allSettled([
-          getMaintenanceDashboard(parsedVehicleId),
-          getMaintenanceRecommendations(parsedVehicleId),
-        ]);
+        const dashboardResult = await getMaintenanceDashboard(parsedVehicleId);
 
         if (!isMounted) return;
 
-        if (dashboardResult.status === 'fulfilled') {
-          const data = dashboardResult.value || null;
-          setDashboard(data);
+        const data = dashboardResult || null;
+        setDashboard(data);
 
-          const nextSelected =
-            data?.schedule?.items?.find((item) => item?.date)?.date ||
-            data?.nextInterventions?.find((item) => item?.date)?.date ||
-            dayjs().format('YYYY-MM-DD');
-          setSelectedDate(nextSelected);
-        } else {
-          setError(dashboardResult.reason?.response?.data?.message || dashboardResult.reason?.message || 'Erreur lors du chargement des données de maintenance');
-        }
-
-        if (recommendationResult.status === 'fulfilled') {
-          setRecommendations(Array.isArray(recommendationResult.value) ? recommendationResult.value : []);
-        } else {
-          setRecommendationError(recommendationResult.reason?.response?.data?.message || recommendationResult.reason?.message || 'Recommandations indisponibles');
-          setRecommendations([]);
-        }
+        const nextSelected =
+          data?.schedule?.items?.find((item) => item?.date)?.date ||
+          data?.nextInterventions?.find((item) => item?.date)?.date ||
+          dayjs().format('YYYY-MM-DD');
+        setSelectedDate(nextSelected);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -146,14 +71,8 @@ const MaintenancePage = () => {
       window.removeEventListener('maintenance:refresh', onRefresh);
     };
   }, [parsedVehicleId]);
-
-  const garageCards = buildGarageCards(recommendations);
   const scheduleItems = dashboard?.schedule?.items || [];
   const nextInterventions = dashboard?.nextInterventions || scheduleItems;
-
-  const handleReserveGarage = () => {
-    navigate('/automobiliste/appointments');
-  };
 
   if (loading) {
     return (
@@ -211,12 +130,6 @@ const MaintenancePage = () => {
             </div>
           </div>
 
-          {recommendationError && (
-            <div className="mb-6 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
-              {recommendationError}
-            </div>
-          )}
-
           <div className="space-y-6">
             <AlertCard
               vehicle={dashboard?.vehicle}
@@ -233,8 +146,6 @@ const MaintenancePage = () => {
                 onSelectDate={setSelectedDate}
                 title="Planning des entretiens"
               />
-
-              <RecommendedGarages garages={garageCards} onReserve={handleReserveGarage} />
             </div>
           </div>
         </div>

@@ -145,6 +145,33 @@ const parseBrandList = (value) => {
   return [...new Set(items)];
 };
 
+const hasColumn = async (tableName, columnName) => {
+  const result = await pool.query(
+    `SELECT 1
+     FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = $1
+       AND column_name = $2
+     LIMIT 1`,
+    [tableName, columnName]
+  );
+
+  return result.rows.length > 0;
+};
+
+const hasTable = async (tableName) => {
+  const result = await pool.query(
+    `SELECT 1
+     FROM information_schema.tables
+     WHERE table_schema = 'public'
+       AND table_name = $1
+     LIMIT 1`,
+    [tableName]
+  );
+
+  return result.rows.length > 0;
+};
+
 const buildExactTextMatchClause = (columnName, values, params) => {
   if (!values || values.length === 0) {
     return null;
@@ -163,7 +190,7 @@ const buildExactTextMatchClause = (columnName, values, params) => {
   ) > 0`;
 };
 
-const buildGarageBrandMatchClause = (brandNames, params) => {
+const buildGarageBrandMatchClause = (brandNames, params, { hasGarageVehicleBrandsTable = true } = {}) => {
   if (!brandNames || brandNames.length === 0) {
     return null;
   }
@@ -171,19 +198,24 @@ const buildGarageBrandMatchClause = (brandNames, params) => {
   params.push(brandNames);
   const valuesParam = `$${params.length}`;
 
-  return `(
-    EXISTS (
+  const clauses = [];
+
+  if (hasGarageVehicleBrandsTable) {
+    clauses.push(`EXISTS (
       SELECT 1
       FROM garage_vehicle_brands gv
       WHERE gv.garage_id = g.id
         AND LOWER(gv.brand_name) = ANY(${valuesParam}::text[])
-    )
-    OR EXISTS (
-      SELECT 1
-      FROM regexp_split_to_table(COALESCE(g.vehicle_brands, ''), E'[\\n,;]+') AS legacy_brand
-      WHERE LOWER(BTRIM(legacy_brand)) = ANY(${valuesParam}::text[])
-    )
-  )`;
+    )`);
+  }
+
+  clauses.push(`EXISTS (
+    SELECT 1
+    FROM regexp_split_to_table(COALESCE(g.vehicle_brands, ''), E'[\\n,;]+') AS legacy_brand
+    WHERE LOWER(BTRIM(legacy_brand)) = ANY(${valuesParam}::text[])
+  )`);
+
+  return `(${clauses.join(' OR ')})`;
 };
 
 const resolveOwnerUserId = (req, providedUserId) => {
@@ -370,14 +402,29 @@ const listGarages = asyncHandler(async (req, res) => {
     throw new AppError('minRating doit etre inferieur ou egal a maxRating', 400, 'INVALID_RATING_RANGE');
   }
 
+  const [hasGarageStatusColumn, hasGarageIsValidatedColumn, hasGarageServicesTable, hasGarageVehicleBrandsTable] = await Promise.all([
+    hasColumn('garages', 'status'),
+    hasColumn('garages', 'is_validated'),
+    hasTable('garage_services'),
+    hasTable('garage_vehicle_brands')
+  ]);
+
+  const hasGarageServicesIsActiveColumn = hasGarageServicesTable
+    ? await hasColumn('garage_services', 'is_active')
+    : false;
+
   const whereClauses = [];
   const params = [];
 
   if (!includeClosed) {
     whereClauses.push('g.is_open = true');
   }
-  // Only show admin-validated (status = 'actif') garages in public listings
-  whereClauses.push("g.status = 'actif'");
+  // Only show validated/active garages when the schema supports it.
+  if (hasGarageStatusColumn) {
+    whereClauses.push("g.status = 'actif'");
+  } else if (hasGarageIsValidatedColumn) {
+    whereClauses.push('COALESCE(g.is_validated, false) = true');
+  }
 
   if (search) {
     params.push(`%${search}%`);
@@ -395,7 +442,7 @@ const listGarages = asyncHandler(async (req, res) => {
     whereClauses.push(`g.rating <= $${params.length}`);
   }
 
-  const brandClause = buildGarageBrandMatchClause(brandNames, params);
+  const brandClause = buildGarageBrandMatchClause(brandNames, params, { hasGarageVehicleBrandsTable });
   if (brandClause) {
     whereClauses.push(brandClause);
   }
@@ -405,9 +452,15 @@ const listGarages = asyncHandler(async (req, res) => {
     whereClauses.push(specialtyClause);
   }
 
-  const serviceActiveClause = includeInactiveServices ? '' : 'AND gs.is_active = true';
+  const serviceActiveClause = includeInactiveServices || !hasGarageServicesIsActiveColumn
+    ? ''
+    : 'AND gs.is_active = true';
 
   if (serviceIds && serviceIds.length > 0) {
+    if (!hasGarageServicesTable) {
+      // If service IDs are requested but service catalog table is absent, no garage can match reliably.
+      whereClauses.push('1 = 0');
+    } else {
     params.push(serviceIds);
     const idsParam = `$${params.length}`;
 
@@ -432,6 +485,7 @@ const listGarages = asyncHandler(async (req, res) => {
         )`
       );
     }
+    }
   }
 
   if (serviceNames && serviceNames.length > 0) {
@@ -444,16 +498,19 @@ const listGarages = asyncHandler(async (req, res) => {
       whereClauses.push(
         `(SELECT COUNT(DISTINCT requested_name)
           FROM UNNEST(${namesParam}::text[]) AS requested_name
-          WHERE EXISTS (
-            SELECT 1
-            FROM garage_services gs
-            WHERE gs.garage_id = g.id
-              ${serviceActiveClause}
-              AND LOWER(gs.name) = requested_name
-          ) OR EXISTS (
-            SELECT 1
-            FROM regexp_split_to_table(COALESCE(g.services_catalog, ''), E'[\\n,;]+') AS service_item
-            WHERE LOWER(BTRIM(service_item)) = requested_name
+          WHERE (
+            ${hasGarageServicesTable ? `EXISTS (
+              SELECT 1
+              FROM garage_services gs
+              WHERE gs.garage_id = g.id
+                ${serviceActiveClause}
+                AND LOWER(gs.name) = requested_name
+            ) OR` : ''}
+            EXISTS (
+              SELECT 1
+              FROM regexp_split_to_table(COALESCE(g.services_catalog, ''), E'[\\n,;]+') AS service_item
+              WHERE LOWER(BTRIM(service_item)) = requested_name
+            )
           )) = ${countParam}`
       );
     } else {
@@ -461,16 +518,19 @@ const listGarages = asyncHandler(async (req, res) => {
         `EXISTS (
           SELECT 1
           FROM UNNEST(${namesParam}::text[]) AS requested_name
-          WHERE EXISTS (
-            SELECT 1
-            FROM garage_services gs
-            WHERE gs.garage_id = g.id
-              ${serviceActiveClause}
-              AND LOWER(gs.name) = requested_name
-          ) OR EXISTS (
+          WHERE (
+            ${hasGarageServicesTable ? `EXISTS (
+              SELECT 1
+              FROM garage_services gs
+              WHERE gs.garage_id = g.id
+                ${serviceActiveClause}
+                AND LOWER(gs.name) = requested_name
+            ) OR` : ''}
+            EXISTS (
             SELECT 1
             FROM regexp_split_to_table(COALESCE(g.services_catalog, ''), E'[\\n,;]+') AS service_item
             WHERE LOWER(BTRIM(service_item)) = requested_name
+            )
           )
         )`
       );
@@ -478,6 +538,14 @@ const listGarages = asyncHandler(async (req, res) => {
   }
 
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const serviceNamesSelectSql = hasGarageServicesTable
+    ? `(
+        SELECT ARRAY_AGG(DISTINCT LOWER(gs.name))
+        FROM garage_services gs
+        WHERE gs.garage_id = g.id
+          ${hasGarageServicesIsActiveColumn ? 'AND gs.is_active = true' : ''}
+      ) AS service_names`
+    : 'NULL::text[] AS service_names';
 
   // Si geo activee: on charge d abord le jeu complet, puis on applique
   // calcul distance/filtrage/tri en memoire avant la pagination finale.
@@ -489,12 +557,7 @@ const listGarages = asyncHandler(async (req, res) => {
     const result = await pool.query(
       `SELECT g.id, g.user_id, g.name, g.description, g.adresse, g.telephone, g.email, g.specialties, g.services_catalog, g.keywords, g.photo_urls, g.work_hours, g.travel_hours, g.vehicle_brands, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at,
               u.store_specialties, u.store_services,
-              (
-                SELECT ARRAY_AGG(DISTINCT LOWER(gs.name))
-                FROM garage_services gs
-                WHERE gs.garage_id = g.id
-                  AND gs.is_active = true
-              ) AS service_names
+              ${serviceNamesSelectSql}
        FROM garages g
         LEFT JOIN users u ON u.id = g.user_id
        ${whereSql}
@@ -510,12 +573,7 @@ const listGarages = asyncHandler(async (req, res) => {
     const result = await pool.query(
             `SELECT g.id, g.user_id, g.name, g.description, g.adresse, g.telephone, g.email, g.specialties, g.services_catalog, g.keywords, g.photo_urls, g.work_hours, g.travel_hours, g.vehicle_brands, g.latitude, g.longitude, g.rating, g.is_open, g.created_at, g.updated_at,
               u.store_specialties, u.store_services,
-              (
-          SELECT ARRAY_AGG(DISTINCT LOWER(gs.name))
-          FROM garage_services gs
-          WHERE gs.garage_id = g.id
-            AND gs.is_active = true
-              ) AS service_names,
+              ${serviceNamesSelectSql},
               COUNT(*) OVER() AS total_count
        FROM garages g
         LEFT JOIN users u ON u.id = g.user_id
@@ -830,6 +888,14 @@ const uploadGaragePhotos = asyncHandler(async (req, res) => {
 });
 
 const getFilterOptions = asyncHandler(async (req, res) => {
+  const [hasGarageServicesTable, hasGarageVehicleBrandsTable] = await Promise.all([
+    hasTable('garage_services'),
+    hasTable('garage_vehicle_brands')
+  ]);
+  const hasGarageServicesIsActiveColumn = hasGarageServicesTable
+    ? await hasColumn('garage_services', 'is_active')
+    : false;
+
   // Récupérer les specialités distinctes depuis store_specialties des utilisateurs garage
   const specialtiesResult = await pool.query(`
     SELECT DISTINCT TRIM(specialty) AS specialty
@@ -843,22 +909,24 @@ const getFilterOptions = asyncHandler(async (req, res) => {
   `);
 
   // Récupérer les services distinctes depuis garage_services
-  const servicesResult = await pool.query(`
-    SELECT DISTINCT LOWER(TRIM(gs.name)) AS service_name
-    FROM garage_services gs
-    WHERE gs.is_active = true
-    ORDER BY service_name ASC
-  `);
+  const servicesResult = hasGarageServicesTable
+    ? await pool.query(`
+      SELECT DISTINCT LOWER(TRIM(gs.name)) AS service_name
+      FROM garage_services gs
+      ${hasGarageServicesIsActiveColumn ? 'WHERE gs.is_active = true' : ''}
+      ORDER BY service_name ASC
+    `)
+    : { rows: [] };
 
   // Récupérer les marques distinctes depuis vehicle_brands dans garages
   const brandsResult = await pool.query(`
     SELECT DISTINCT brand
     FROM (
-      SELECT TRIM(gv.brand_name) AS brand
+      ${hasGarageVehicleBrandsTable ? `SELECT TRIM(gv.brand_name) AS brand
       FROM garage_vehicle_brands gv
       WHERE gv.brand_name IS NOT NULL AND gv.brand_name <> ''
 
-      UNION
+      UNION` : ''}
 
       SELECT TRIM(brand) AS brand
       FROM garages g

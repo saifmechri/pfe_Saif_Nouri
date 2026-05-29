@@ -1282,7 +1282,7 @@ const GaragesPage = () => {
                       </div>
                     </div>
 
-                    <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                    <div className="mt-6 grid grid-cols-1 gap-5">
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <h3 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-[#0f172a]">
                           <Clock3 className="h-5 w-5 text-amber-500" />
@@ -1304,26 +1304,6 @@ const GaragesPage = () => {
                         )}
                       </div>
 
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <h3 className="mb-3 flex items-center gap-2 text-lg font-extrabold text-[#0f172a]">
-                          <Clock3 className="h-5 w-5 text-amber-500" />
-                          Horaires de Déplacement
-                        </h3>
-                        {selectedGarageTravelSchedule.length === 0 ? (
-                          <p className="text-sm text-slate-500">Pas de déplacement déclaré.</p>
-                        ) : (
-                          <ul className="space-y-1">
-                            {selectedGarageTravelSchedule.map((item) => (
-                              <li key={`${item.day}-${item.timeLabel}`} className="flex items-center justify-between text-sm">
-                                <span className="font-semibold text-slate-700">{item.day}</span>
-                                <span className={`${item.enabled ? "text-slate-900" : "text-slate-400"}`}>
-                                  {item.enabled ? item.timeLabel : "Non disponible"}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
                     </div>
                   </article>
 

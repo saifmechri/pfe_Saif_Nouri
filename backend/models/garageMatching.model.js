@@ -126,10 +126,7 @@ const matchGaragesForVehicle = async (vehicleId, maxDistance = 50) => {
   }
 
   const vehicle = vehicleResult.rows[0];
-  
-  if (!vehicle.latitude || !vehicle.longitude) {
-    throw new Error('User location not set');
-  }
+  const hasLocation = vehicle.latitude !== null && vehicle.latitude !== undefined && vehicle.longitude !== null && vehicle.longitude !== undefined;
 
   const latestInterventionResult = await pool.query(
     `SELECT type, description
@@ -175,13 +172,15 @@ const matchGaragesForVehicle = async (vehicleId, maxDistance = 50) => {
   // Calcule les scores
   const scoredGarages = garagesResult.rows
     .map((garage) => {
-    // Distance
-    const distance = calculateHaversineDistance(
-      vehicle.latitude,
-      vehicle.longitude,
-      garage.latitude,
-      garage.longitude
-    );
+      // Distance calculée uniquement si on dispose de la localisation utilisateur
+      const distance = hasLocation
+        ? calculateHaversineDistance(
+            vehicle.latitude,
+            vehicle.longitude,
+            garage.latitude,
+            garage.longitude
+          )
+        : null;
 
       const isAvailable = isGarageAvailable(garage.work_hours, garage.is_open);
       const garageTerms = getGarageMatchingTerms(garage);
@@ -192,7 +191,7 @@ const matchGaragesForVehicle = async (vehicleId, maxDistance = 50) => {
 
       // Scoring (normalisé 0-100)
       // Distance: plus proche = meilleur score (max 100 pour <1km, min 0 pour maxDistance)
-      const distanceScore = Math.max(0, 100 - (distance / maxDistance) * 100);
+      const distanceScore = distance === null ? 0 : Math.max(0, 100 - (distance / maxDistance) * 100);
 
       // Rating: directement 0-100 (supposé 0-5, donc *20)
       const ratingScore = (garage.rating || 3.5) * 20;
@@ -216,8 +215,8 @@ const matchGaragesForVehicle = async (vehicleId, maxDistance = 50) => {
         garageId: garage.id,
         name: garage.name,
         adresse: garage.adresse,
-        distance: Math.round(distance * 10) / 10,
-        withinRadius: distance <= maxDistance,
+        distance: distance === null ? null : Math.round(distance * 10) / 10,
+        withinRadius: distance === null ? true : distance <= maxDistance,
         rating: garage.rating || 0,
         avgPrice: garage.avg_price ? parseFloat(garage.avg_price) : null,
         servicesCount: garage.services_count,
@@ -250,6 +249,14 @@ const matchGaragesForVehicle = async (vehicleId, maxDistance = 50) => {
   const garagesToReturn = garagesWithMatches.length > 0 ? garagesWithMatches : scoredGarages;
 
   return garagesToReturn.sort((a, b) => {
+    if (hasLocation) {
+      if (a.distance === null && b.distance !== null) return 1;
+      if (a.distance !== null && b.distance === null) return -1;
+      if (a.distance !== null && b.distance !== null && a.distance !== b.distance) {
+        return a.distance - b.distance;
+      }
+    }
+
     if (b.matchScore !== a.matchScore) {
       return b.matchScore - a.matchScore;
     }

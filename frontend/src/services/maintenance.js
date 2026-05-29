@@ -1,4 +1,5 @@
 ﻿import API from './api';
+import { getMatchingGarages } from './alerts';
 
 const buildNoCacheParams = (params = {}) => ({
   ...params,
@@ -11,7 +12,7 @@ export const getMaintenanceDashboard = async (vehicleId) => {
 };
 
 export const getMaintenanceRecommendations = async (vehicleId, params = {}) => {
-  // Dynamic recommendations feature removed — return empty list for compatibility.
-  return [];
+  const maxDistance = Number(params.maxDistance ?? 50);
+  return getMatchingGarages(vehicleId, maxDistance);
 };
 

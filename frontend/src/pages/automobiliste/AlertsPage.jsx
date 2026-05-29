@@ -1,6 +1,7 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import PlatformLayout from '../../components/PlatformLayout';
+import RecommendedGarages from './maintenance/RecommendedGarages';
 import {
   AlertCircle,
   AlertTriangle,
@@ -9,7 +10,7 @@ import {
   Calendar,
   Loader
 } from 'lucide-react';
-import { getNextRevision, calculateUrgencyLevel, formatDate } from '../../services/alerts';
+import { getNextRevision, getMatchingGarages, calculateUrgencyLevel, formatDate } from '../../services/alerts';
 
 const toNumberSafe = (value) => {
   const parsed = Number(value);
@@ -26,26 +27,61 @@ const formatScore = (value) => {
   return parsed === null ? '0.0' : parsed.toFixed(1);
 };
 
+const buildTopGarages = (garages = []) =>
+  garages
+    .filter(Boolean)
+    .map((garage, index) => ({
+      id: garage.garageId ?? garage.id ?? `garage-${index}`,
+      name: garage.name || 'Garage sans nom',
+      address: garage.adresse || garage.address || 'Adresse non renseignée',
+      score: garage.scores?.total ?? garage.score ?? 0,
+      rating: garage.rating ?? 0,
+      distance: garage.distance ?? garage.distance_km ?? null,
+      isOpen: Boolean(garage.isAvailable ?? garage.isOpen),
+      specialties: Array.isArray(garage.specialties) ? garage.specialties : [],
+      maintenanceLabels: Array.isArray(garage.matchedTerms) ? garage.matchedTerms : [],
+    }))
+    .sort((a, b) => {
+      const distanceA = a.distance === null || a.distance === undefined ? Number.POSITIVE_INFINITY : Number(a.distance);
+      const distanceB = b.distance === null || b.distance === undefined ? Number.POSITIVE_INFINITY : Number(b.distance);
+      return distanceA - distanceB;
+    })
+    .slice(0, 3)
+    .map((garage, index) => ({
+      ...garage,
+      bestMatch: index === 0
+    }));
+
 const AlertsPage = () => {
   const { vehicleId } = useParams();
   const numVehicleId = parseInt(vehicleId, 10);
   const navigate = useNavigate();
   const [revision, setRevision] = useState(null);
+  const [recommendedGarages, setRecommendedGarages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingGarages, setLoadingGarages] = useState(false);
   const [error, setError] = useState(null);
+  const [garageError, setGarageError] = useState(null);
 
   useEffect(() => {
     const fetchAlerts = async () => {
       try {
         setLoading(true);
+        setLoadingGarages(true);
         const revData = await getNextRevision(numVehicleId);
         setRevision(revData);
-        // Do not fetch matching garages on the Alerts page.
-        // Matching/recommendations live on the dedicated Recommendations page.
+        const garagesData = await getMatchingGarages(numVehicleId, 50);
+        setRecommendedGarages(buildTopGarages(Array.isArray(garagesData) ? garagesData : []));
+        setGarageError(null);
       } catch (err) {
-        setError(err.message || 'Erreur lors du chargement des alertes');
+        if (!revision) {
+          setError(err.message || 'Erreur lors du chargement des alertes');
+        }
+        setRecommendedGarages([]);
+        setGarageError(err.message || 'Erreur lors du chargement des garages recommandés');
       } finally {
         setLoading(false);
+        setLoadingGarages(false);
       }
     };
 
@@ -124,6 +160,21 @@ const AlertsPage = () => {
                 {getUrgencyIcon(urgency?.level)}
               </div>
               <div>
+
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Garages recommandés</h2>
+                {garageError ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
+                    {garageError}
+                  </div>
+                ) : loadingGarages ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-600">
+                    Chargement des garages recommandés...
+                  </div>
+                ) : (
+                  <RecommendedGarages garages={recommendedGarages} onReserve={() => navigate('/automobiliste/garages')} />
+                )}
+              </div>
                 <h2 className={`text-xl font-bold ${getUrgencyTextColor(urgency?.color)}`}>
                   Urgence: {urgency?.label}
                 </h2>

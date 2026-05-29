@@ -15,7 +15,11 @@ const getGarageCoverage = (garage, recommendationType) => {
 const buildGarageCards = (recommendations = []) => {
   const garageMap = new Map();
 
-  recommendations.forEach((recommendation) => {
+  const normalizedRecommendations = recommendations.length > 0 && !recommendations.some((item) => item?.garages)
+    ? [{ intervention: { type: 'Entretien' }, garages: recommendations }]
+    : recommendations;
+
+  normalizedRecommendations.forEach((recommendation) => {
     const maintenanceType = recommendation?.intervention?.type || 'Entretien';
     const garages = recommendation?.garages || [];
 
@@ -58,7 +62,7 @@ const buildGarageCards = (recommendations = []) => {
   });
 
   return Array.from(garageMap.values())
-    .sort((a, b) => (b.score || 0) - (a.score || 0) || (a.distance || 9999) - (b.distance || 9999))
+    .sort((a, b) => (a.distance ?? 9999) - (b.distance ?? 9999) || (b.score || 0) - (a.score || 0))
     .slice(0, 6);
 };
 

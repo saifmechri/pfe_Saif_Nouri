@@ -484,6 +484,38 @@ const serializeScheduleText = (schedule) =>
     .map((item) => `${item.day}|${item.enabled ? 1 : 0}|${item.start || "08:00"}|${item.end || "18:00"}`)
     .join("\n");
 
+const getEnabledScheduleDays = (schedule) =>
+  (Array.isArray(schedule) ? schedule : [])
+    .filter((item) => item.enabled)
+    .map((item) => item.day);
+
+const getTravelSelectionFromSchedule = (schedule) => {
+  const enabledDays = getEnabledScheduleDays(schedule);
+
+  if (enabledDays.length === openingDays.length) {
+    return "Tous les jours";
+  }
+
+  return enabledDays[0] || "";
+};
+
+const applyTravelSelectionToSchedule = (schedule, selection) => {
+  const baseSchedule = Array.isArray(schedule) && schedule.length > 0 ? schedule : createDefaultSchedule();
+
+  if (!selection) {
+    return baseSchedule;
+  }
+
+  if (selection === "Tous les jours") {
+    return baseSchedule.map((row) => ({ ...row, enabled: true }));
+  }
+
+  return baseSchedule.map((row) => ({
+    ...row,
+    enabled: row.day === selection
+  }));
+};
+
 const GarageDashboard = () => {
   const [activePanel, setActivePanel] = useState("garage");
   const [search, setSearch] = useState("");
@@ -942,15 +974,13 @@ const GarageDashboard = () => {
       const parsedOpenModes = splitBySeparators(payload?.work_hours).filter((item) => item === "Ouvert maintenant" || openingDays.includes(item));
       setSelectedOpenModes(parsedOpenModes);
 
-      const parsedDeplacement = splitBySeparators(payload?.travel_hours);
-      setSelectedDeplacement(parsedDeplacement[0] || "");
-
       const parsedWorkSchedule = parseScheduleText(payload?.work_hours);
       setWorkSchedule(parsedWorkSchedule);
 
       const parsedTravelSchedule = parseScheduleText(payload?.travel_hours);
       setTravelSchedule(parsedTravelSchedule);
       setDoesTravel(parsedTravelSchedule.some((item) => item.enabled));
+      setSelectedDeplacement(getTravelSelectionFromSchedule(parsedTravelSchedule));
 
       if (payload?.latitude !== null && payload?.latitude !== undefined && payload?.longitude !== null && payload?.longitude !== undefined) {
         setMapCenter([Number(payload.latitude), Number(payload.longitude)]);
@@ -1030,7 +1060,20 @@ const GarageDashboard = () => {
     if (!enabled) {
       setTravelSchedule(createDefaultSchedule());
       setSelectedDeplacement("");
+      return;
     }
+
+    setTravelSchedule((prev) => {
+      const next = Array.isArray(prev) && prev.length > 0 ? prev : createDefaultSchedule();
+      if (next.some((row) => row.enabled)) {
+        return next;
+      }
+
+      return next.map((row, index) => ({
+        ...row,
+        enabled: index === 0
+      }));
+    });
   };
 
   const handleSaveGarage = async (event) => {
@@ -1055,6 +1098,11 @@ const GarageDashboard = () => {
 
       const mergedPhotoUrls = [...existingPhotoUrls, ...uploadedPhotoUrls].slice(0, 9);
 
+      const effectiveTravelSchedule =
+        travelSchedule.some((row) => row.enabled)
+          ? travelSchedule
+          : applyTravelSelectionToSchedule(travelSchedule, selectedDeplacement);
+
       const payload = {
         name: garageName,
         description: garageForm.description || null,
@@ -1066,7 +1114,9 @@ const GarageDashboard = () => {
         keywords: garageForm.keywords || null,
         photo_urls: mergedPhotoUrls.length > 0 ? mergedPhotoUrls.join("\n") : null,
         work_hours: serializeScheduleText(workSchedule),
-        travel_hours: travelSchedule.some((row) => row.enabled) ? serializeScheduleText(travelSchedule) : null,
+        travel_hours: effectiveTravelSchedule.some((row) => row.enabled)
+          ? serializeScheduleText(effectiveTravelSchedule)
+          : null,
         vehicle_brands: selectedBrands.length > 0 ? selectedBrands.join("\n") : garageForm.vehicle_brands || null,
         latitude: garageForm.latitude === "" ? null : Number(garageForm.latitude),
         longitude: garageForm.longitude === "" ? null : Number(garageForm.longitude),
@@ -1080,6 +1130,10 @@ const GarageDashboard = () => {
       const savedGarage = getPayload(response);
       setGarage(savedGarage);
       setGarageForm(normalizeGarageForm(savedGarage));
+      const savedTravelSchedule = parseScheduleText(savedGarage?.travel_hours);
+      setTravelSchedule(savedTravelSchedule);
+      setDoesTravel(savedTravelSchedule.some((item) => item.enabled));
+      setSelectedDeplacement(getTravelSelectionFromSchedule(savedTravelSchedule));
       clearLocalPhotoSelection();
       if (savedGarage?.latitude !== null && savedGarage?.longitude !== null) {
         setMapCenter([Number(savedGarage.latitude), Number(savedGarage.longitude)]);
@@ -1362,7 +1416,7 @@ const GarageDashboard = () => {
                 {renderFilterButton("Spécialités", selectedSpecialties.length, () => setShowSpecialtiesModal(true), Settings)}
                 {renderFilterButton("Services", selectedServices.length, () => openServicesModal(), Wrench)}
                 {renderFilterButton("Ouvert", selectedOpenModes.length, () => setShowOpenModal(true), Clock3)}
-                {renderFilterButton("Déplacement", selectedDeplacement ? 1 : 0, () => setShowDeplacementModal(true), Truck)}
+                {renderFilterButton("Déplacement", getEnabledScheduleDays(travelSchedule).length, () => setShowDeplacementModal(true), Truck)}
               </div>
             </div>
           </header>
@@ -1776,18 +1830,18 @@ const GarageDashboard = () => {
 
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
                         <div className="mb-2 flex items-center justify-between">
-                          <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement (jour)</p>
-                          <button type="button" onClick={() => setShowOpenModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir jours</button>
-                        </div>
-                        {selectedOpenModes.length === 0 ? (
-                          <p className="text-xs text-[#6d7482]">Aucun jour sélectionné.</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            {selectedOpenModes.map((item) => (
-                              <span key={item} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{item}</span>
-                            ))}
-                          </div>
-                        )}
+                                <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement (jour)</p>
+                                <button type="button" onClick={() => setShowDeplacementModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir jours</button>
+                              </div>
+                              {getEnabledScheduleDays(travelSchedule).length === 0 ? (
+                                <p className="text-xs text-[#6d7482]">Aucun jour sélectionné.</p>
+                              ) : (
+                                <div className="flex flex-wrap gap-2">
+                                  {getEnabledScheduleDays(travelSchedule).map((item) => (
+                                    <span key={item} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{item}</span>
+                                  ))}
+                                </div>
+                              )}
                       </div>
 
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">

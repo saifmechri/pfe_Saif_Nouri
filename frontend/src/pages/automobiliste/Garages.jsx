@@ -1121,12 +1121,7 @@ const GaragesPage = () => {
                 {renderFilterButton("Spécialités", selectedSpecialties.length, () => setShowSpecialtiesModal(true))}
                 {renderFilterButton("Services", selectedServices.length, () => setShowServicesModal(true))}
                 {renderFilterButton("Ouvert", selectedOpenModes.length, () => setShowOpenModal(true))}
-                {renderFilterButton(
-                  "Déplacement",
-                  selectedDeplacements.length,
-                  () => setShowDeplacementModal(true),
-                  !hasAnyTravelSchedule
-                )}
+                {/* Déplacement filter removed per UX request */}
               </div>
               {hasAnyTravelSchedule ? (
                 <p className="text-xs text-[#617089]">Déplacement sélectionné: {selectedDeplacements.length > 0 ? selectedDeplacements.join(", ") : "Aucun jour"}</p>

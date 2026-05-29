@@ -1828,71 +1828,67 @@ const GarageDashboard = () => {
                         </div>
                       </div>
 
-                      <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
-                        <div className="mb-2 flex items-center justify-between">
-                                <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement (jour)</p>
-                                <button type="button" onClick={() => setShowDeplacementModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir jours</button>
-                              </div>
-                              {getEnabledScheduleDays(travelSchedule).length === 0 ? (
-                                <p className="text-xs text-[#6d7482]">Aucun jour sélectionné.</p>
-                              ) : (
-                                <div className="flex flex-wrap gap-2">
-                                  {getEnabledScheduleDays(travelSchedule).map((item) => (
-                                    <span key={item} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{item}</span>
-                                  ))}
-                                </div>
-                              )}
-                      </div>
+                      {getEnabledScheduleDays(travelSchedule).length > 0 && (
+                        <>
+                          <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
+                            <div className="mb-2 flex items-center justify-between">
+                              <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement (jour)</p>
+                              <button type="button" onClick={() => setShowDeplacementModal(true)} className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-600">Choisir jours</button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {getEnabledScheduleDays(travelSchedule).map((item) => (
+                                <span key={item} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{item}</span>
+                              ))}
+                            </div>
+                          </div>
 
-                      <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement</p>
-                          <label className="inline-flex items-center gap-2 rounded-full border border-[#dbe2ec] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155]">
-                            <input
-                              type="checkbox"
-                              checked={travelSchedule.some((row) => row.enabled)}
-                              onChange={(event) => handleTravelEnabledChange(event.target.checked)}
-                              className="h-4 w-4 accent-blue-500"
-                            />
-                            Activer
-                          </label>
-                        </div>
-
-                        {!travelSchedule.some((row) => row.enabled) ? (
-                          <p className="text-xs text-[#6d7482]">Aucun horaire de déplacement renseigné.</p>
-                        ) : (
-                          <div className="space-y-3">
-                            {travelSchedule.map((row, index) => (
-                              <div key={row.day} className="grid grid-cols-[30px_1fr_110px_110px] items-center gap-2">
+                          <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <p className="text-sm font-semibold text-[#334155]">Horaire de déplacement</p>
+                              <label className="inline-flex items-center gap-2 rounded-full border border-[#dbe2ec] bg-white px-3 py-1.5 text-xs font-semibold text-[#334155]">
                                 <input
                                   type="checkbox"
-                                  checked={row.enabled}
-                                  onChange={(event) => {
-                                    updateScheduleRow(setTravelSchedule, index, { enabled: event.target.checked });
-                                    setDoesTravel(true);
-                                  }}
-                                  className="h-6 w-6 accent-blue-500"
+                                  checked={travelSchedule.some((row) => row.enabled)}
+                                  onChange={(event) => handleTravelEnabledChange(event.target.checked)}
+                                  className="h-4 w-4 accent-blue-500"
                                 />
-                                <span className="text-2xl font-semibold text-[#1f2937]">{row.day}</span>
-                                <input
-                                  type="time"
-                                  value={row.start}
-                                  onChange={(event) => updateScheduleRow(setTravelSchedule, index, { start: event.target.value })}
-                                  disabled={!row.enabled}
-                                  className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
-                                />
-                                <input
-                                  type="time"
-                                  value={row.end}
-                                  onChange={(event) => updateScheduleRow(setTravelSchedule, index, { end: event.target.value })}
-                                  disabled={!row.enabled}
-                                  className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
-                                />
-                              </div>
-                            ))}
+                                Activer
+                              </label>
+                            </div>
+
+                            <div className="space-y-3">
+                              {travelSchedule.map((row, index) => (
+                                <div key={row.day} className="grid grid-cols-[30px_1fr_110px_110px] items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={row.enabled}
+                                    onChange={(event) => {
+                                      updateScheduleRow(setTravelSchedule, index, { enabled: event.target.checked });
+                                      setDoesTravel(true);
+                                    }}
+                                    className="h-6 w-6 accent-blue-500"
+                                  />
+                                  <span className="text-2xl font-semibold text-[#1f2937]">{row.day}</span>
+                                  <input
+                                    type="time"
+                                    value={row.start}
+                                    onChange={(event) => updateScheduleRow(setTravelSchedule, index, { start: event.target.value })}
+                                    disabled={!row.enabled}
+                                    className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
+                                  />
+                                  <input
+                                    type="time"
+                                    value={row.end}
+                                    onChange={(event) => updateScheduleRow(setTravelSchedule, index, { end: event.target.value })}
+                                    disabled={!row.enabled}
+                                    className="rounded-2xl border-2 border-blue-400 bg-white px-3 py-2 text-center text-lg font-semibold text-[#6b7280] disabled:border-[#a1a1aa] disabled:bg-[#f3f4f6]"
+                                  />
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        )}
-                      </div>
+                        </>
+                      )}
 
                       <div className="rounded-xl border border-[#ebedf2] bg-[#f8f9fb] p-4">
                         <div className="mb-3 flex items-center justify-between">

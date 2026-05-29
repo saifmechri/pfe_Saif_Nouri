@@ -25,6 +25,92 @@ const normalizeOptionalString = (value) => {
   return normalized.length === 0 ? null : normalized;
 };
 
+const hasTable = async (tableName) => {
+  const result = await pool.query(
+    `SELECT 1
+     FROM information_schema.tables
+     WHERE table_schema = 'public'
+       AND table_name = $1
+     LIMIT 1`,
+    [tableName]
+  );
+
+  return result.rows.length > 0;
+};
+
+const hasColumn = async (tableName, columnName) => {
+  const result = await pool.query(
+    `SELECT 1
+     FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = $1
+       AND column_name = $2
+     LIMIT 1`,
+    [tableName, columnName]
+  );
+
+  return result.rows.length > 0;
+};
+
+const resolveGarageServicesSchema = async () => {
+  const tableName = (await hasTable('garage_services'))
+    ? 'garage_services'
+    : (await hasTable('garages_services'))
+      ? 'garages_services'
+      : null;
+
+  if (!tableName) {
+    return null;
+  }
+
+  const [
+    hasName,
+    hasServiceName,
+    hasDescription,
+    hasBasePrice,
+    hasPriceEstimate,
+    hasDurationMinutes,
+    hasIsActive,
+    hasCreatedAt,
+    hasUpdatedAt
+  ] = await Promise.all([
+    hasColumn(tableName, 'name'),
+    hasColumn(tableName, 'service_name'),
+    hasColumn(tableName, 'description'),
+    hasColumn(tableName, 'base_price'),
+    hasColumn(tableName, 'price_estimate'),
+    hasColumn(tableName, 'duration_minutes'),
+    hasColumn(tableName, 'is_active'),
+    hasColumn(tableName, 'created_at'),
+    hasColumn(tableName, 'updated_at')
+  ]);
+
+  return {
+    tableName,
+    nameColumn: hasName ? 'name' : hasServiceName ? 'service_name' : null,
+    descriptionColumn: hasDescription ? 'description' : null,
+    priceColumn: hasBasePrice ? 'base_price' : hasPriceEstimate ? 'price_estimate' : null,
+    durationColumn: hasDurationMinutes ? 'duration_minutes' : null,
+    activeColumn: hasIsActive ? 'is_active' : null,
+    createdAtColumn: hasCreatedAt ? 'created_at' : null,
+    updatedAtColumn: hasUpdatedAt ? 'updated_at' : null
+  };
+};
+
+const buildGarageServiceSelectSql = (schema) => {
+  return `SELECT
+    id,
+    garage_id,
+    ${schema.nameColumn ? `${schema.nameColumn} AS name` : `NULL::text AS name`},
+    ${schema.descriptionColumn ? `${schema.descriptionColumn} AS description` : `NULL::text AS description`},
+    ${schema.priceColumn ? `${schema.priceColumn} AS base_price` : `NULL::numeric AS base_price`},
+    ${schema.durationColumn ? `${schema.durationColumn} AS duration_minutes` : `NULL::integer AS duration_minutes`},
+    ${schema.activeColumn ? `${schema.activeColumn} AS is_active` : `TRUE AS is_active`},
+    ${schema.createdAtColumn ? `${schema.createdAtColumn} AS created_at` : `NULL::timestamp AS created_at`},
+    ${schema.updatedAtColumn ? `${schema.updatedAtColumn} AS updated_at` : `NULL::timestamp AS updated_at`}
+  FROM ${schema.tableName}`;
+};
+
 const getGarageById = async (garageId) => {
   const garage = await findGarageIdentityById(garageId);
 
@@ -70,14 +156,21 @@ const listGarageServices = asyncHandler(async (req, res) => {
 
   await getGarageById(garageId);
 
+  const schema = await resolveGarageServicesSchema();
+  if (!schema) {
+    return sendApiResponse(res, {
+      message: 'Services du garage recuperes avec succes',
+      data: { items: [] }
+    });
+  }
+
   const includeInactive = ['true', '1', 'yes', 'on'].includes(String(req.query.includeInactive || '').toLowerCase());
-  const whereSql = includeInactive ? '' : 'WHERE is_active = true';
+  const whereActiveSql = !includeInactive && schema.activeColumn ? 'AND is_active = true' : '';
 
   const result = await pool.query(
-    `SELECT id, garage_id, name, description, base_price, duration_minutes, is_active, created_at, updated_at
-     FROM garage_services
-     WHERE garage_id = $1 ${whereSql ? 'AND is_active = true' : ''}
-     ORDER BY created_at DESC`,
+    `${buildGarageServiceSelectSql(schema)}
+     WHERE garage_id = $1 ${whereActiveSql}
+     ORDER BY ${schema.createdAtColumn ? 'created_at DESC' : 'id DESC'}`,
     [garageId]
   );
 
@@ -88,6 +181,17 @@ const listGarageServices = asyncHandler(async (req, res) => {
 });
 
 const listMyGarageServices = asyncHandler(async (req, res) => {
+  const schema = await resolveGarageServicesSchema();
+  if (!schema) {
+    return sendApiResponse(res, {
+      message: 'Liste de vos services recuperes avec succes',
+      data: {
+        garage_id: null,
+        items: []
+      }
+    });
+  }
+
   if (req.user?.role === 'admin') {
     const requestedGarageId = Number.parseInt(req.query?.garageId, 10);
     let myGarage = null;
@@ -109,10 +213,9 @@ const listMyGarageServices = asyncHandler(async (req, res) => {
     }
 
     const result = await pool.query(
-      `SELECT id, garage_id, name, description, base_price, duration_minutes, is_active, created_at, updated_at
-       FROM garage_services
+      `${buildGarageServiceSelectSql(schema)}
        WHERE garage_id = $1
-       ORDER BY created_at DESC`,
+       ORDER BY ${schema.createdAtColumn ? 'created_at DESC' : 'id DESC'}`,
       [myGarage.id]
     );
 
@@ -132,10 +235,9 @@ const listMyGarageServices = asyncHandler(async (req, res) => {
 
   const myGarage = await getMyGarageRow(userId);
   const result = await pool.query(
-    `SELECT id, garage_id, name, description, base_price, duration_minutes, is_active, created_at, updated_at
-     FROM garage_services
+    `${buildGarageServiceSelectSql(schema)}
      WHERE garage_id = $1
-     ORDER BY created_at DESC`,
+     ORDER BY ${schema.createdAtColumn ? 'created_at DESC' : 'id DESC'}`,
     [myGarage.id]
   );
 

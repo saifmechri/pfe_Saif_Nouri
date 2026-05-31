@@ -1,44 +1,48 @@
 @startuml
 actor Automobiliste
 boundary Interface
-control "Système (Backend)" as Backend
+participant "pieces.js Service (Frontend)" as PiecesService
+control "pieceController (Backend)" as PieceController
+control "pieceService (Backend)" as PieceService
+participant "utils/algorithms.js" as Algorithms
 database "Base de données" as DB
 
-ref over Automobiliste, Interface, Backend, DB : Authentification()
+ref over Automobiliste, Interface, PiecesService, PieceController, PieceService, DB : Authentification (optionnelle pour lecture)
 
-Automobiliste -> Interface : 1: Demander la page du catalogue pieces
-Interface -> Backend : 1.1: GetCatalogue()
-Backend -> DB : 2: Recuperer la liste des pieces
-DB --> Backend : 3: Retourner les pieces disponibles
-Backend --> Interface : 3.1: Liste des pieces formatée
-Interface --> Automobiliste : 4: Afficher le catalogue
+' Catalogue - listing
+Automobiliste -> Interface : 1: Ouvrir catalogue pièces
+Interface -> PiecesService : 1.1: listerPieces(page,limit,search,sort)
+PiecesService -> PieceController : GET /api/pieces?params
+PieceController -> PieceService : getPieces(params)
+PieceService -> DB : SELECT ... FROM pieces WHERE ... LIMIT/OFFSET
+DB --> PieceService : rows
+PieceService --> PieceController : liste_pieces + métadonnées
+PieceController --> PiecesService : 200 OK { pieces, total, page, limit }
+PiecesService --> Interface : rendre la liste (filtres actifs)
+Interface --> Automobiliste : affichage catalogue
 
-Automobiliste -> Interface : 5: Choisir une piece a comparer
-Interface -> Backend : 5.1: ComparerOffres(pieceId)
-Backend -> DB : 6: Verifier les offres des vendeurs
-DB --> Backend : 7: Retourner les offres
+' Comparaison multi‑vendeurs
+Automobiliste -> Interface : 2: Demande comparaison (nom ou pieceId)
+Interface -> PiecesService : 2.1: comparePieceAcrossVendors(params)
+PiecesService -> PieceController : GET /api/pieces/compare/vendors?name=...&pieceId=...
+PieceController -> PieceService : comparePieceAcrossVendors({ pieceId, name, includeOutOfStock })
+note right of PieceService: Implémente logique de comparaison
+note right of PieceService: - SELECT offres (JOIN users)
+note right of PieceService: - Calcul des stats prix (min,max,avg)
+note right of PieceService: - Construction du résumé et des offres triées
+PieceService -> DB : SELECT * FROM pieces WHERE ... ORDER BY prix_unitaire ASC
+DB --> PieceService : offres
+PieceService --> PieceController : 200 OK { piece, offres, summary }
+PieceController --> PiecesService : 200 OK { comparison data }
+PiecesService --> Interface : afficher tableau comparatif
+Interface --> Automobiliste : comparaison affichée
 
-alt [valides]
-  Backend -> Backend : 8: Calculer le score intelligent
-  Backend -> Backend : 9: Classer les offres (prix/proximite)
-  Backend --> Interface : 9.1: Resultats de comparaison
-  Interface --> Automobiliste : 10: Afficher la comparaison intelligente
-else [non valides]
-  Backend --> Interface : 10.1: Erreur (Aucune offre)
-  Interface --> Automobiliste : 11: Message d'erreur
-end
-
-Automobiliste -> Interface : 12: Acceder a la carte des garages
-Interface -> Backend : 12.1: FiltrerGarages(criteres)
-Backend -> DB : 13: Recuperer les garages filtres
-DB --> Backend : 14: Retourner les garages compatibles
-
-alt [trouves]
-  Backend --> Interface : 14.1: Donnees cartographiques
-  Interface --> Automobiliste : 15: Afficher la carte et les resultats
-else [aucun garage trouve]
-  Backend --> Interface : 14.2: Liste vide
-  Interface --> Automobiliste : 16: Message "Aucun garage trouve"
-end
+' Remarque: scoring/algorithmes
+note left of Algorithms
+  `backend/utils/algorithms.js` contient
+  fonctions de scoring (haversine, calculateGarageScore,
+  calculateInterventionScore) utilisées par les
+  endpoints de garages / matching.
+end note
 
 @enduml

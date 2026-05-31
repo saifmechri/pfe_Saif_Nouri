@@ -1,5 +1,5 @@
 ﻿import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Bell, ChevronDown, ChevronRight, Clock3, Heart, Home, ImagePlus, Lock, MapPin, Menu, MinusCircle, PlusCircle, Search, Settings, Truck, Wrench } from "lucide-react";
+import { ArrowLeft, Bell, ChevronDown, ChevronRight, Clock3, Heart, Home, ImagePlus, Lock, MapPin, MinusCircle, PlusCircle, Search, Settings, Wrench } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import PlatformLayout from "../../components/PlatformLayout";
@@ -1357,7 +1357,7 @@ const GarageDashboard = () => {
       onClick={onClick}
       className="inline-flex items-center gap-2 rounded-full border border-[#dde3ec] bg-white px-4 py-2 text-sm font-semibold text-[#5e6d86] transition hover:border-blue-300 hover:text-blue-600"
     >
-      <Icon className="h-4 w-4" />
+      {Icon ? <Icon className="h-4 w-4" /> : null}
       {label}{count > 0 ? ` (${count})` : ""}
     </button>
   );
@@ -1371,9 +1371,6 @@ const GarageDashboard = () => {
             <div className="absolute -bottom-12 left-1/3 h-32 w-32 rounded-full bg-sky-100/70 blur-3xl" />
             <div className="relative flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
               <div className="flex items-start gap-4">
-                <button type="button" className="mt-1 rounded-2xl border border-blue-200 bg-white p-2.5 text-blue-500 shadow-sm transition hover:border-blue-300 hover:shadow">
-                  <Menu className="h-6 w-6" />
-                </button>
                 <div className="space-y-2">
                   <div>
                     <h1 className="text-3xl font-black tracking-tight text-[#10243f] sm:text-4xl">Gestion du garage</h1>
@@ -1416,7 +1413,6 @@ const GarageDashboard = () => {
                 {renderFilterButton("Spécialités", selectedSpecialties.length, () => setShowSpecialtiesModal(true), Settings)}
                 {renderFilterButton("Services", selectedServices.length, () => openServicesModal(), Wrench)}
                 {renderFilterButton("Ouvert", selectedOpenModes.length, () => setShowOpenModal(true), Clock3)}
-                {renderFilterButton("Déplacement", getEnabledScheduleDays(travelSchedule).length, () => setShowDeplacementModal(true), Truck)}
               </div>
             </div>
           </header>

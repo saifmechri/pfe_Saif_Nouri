@@ -67,25 +67,7 @@ const VehicleHistory = () => {
                 </div>
               </div>
               <div className="mt-2">{it.description}</div>
-              <div className="mt-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pièces utilisées</div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {Array.isArray(it.pieces) && it.pieces.length > 0 ? (
-                    it.pieces.map((piece) => (
-                      <span
-                        key={piece.id || `${piece.reference || piece.nom}-${piece.quantite}`}
-                        className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
-                      >
-                        {piece.nom || piece.reference || 'Pièce'}
-                        {piece.InterventionPiece?.quantite || piece.quantite ? ` x${piece.InterventionPiece?.quantite || piece.quantite}` : ''}
-                        {formatMoney(piece.InterventionPiece?.prix_unitaire_applique || piece.prix_unitaire)}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-gray-500">Aucune pièce associée</span>
-                  )}
-                </div>
-              </div>
+              {/* Pièces utilisées: section retirée */}
               <div className="mt-3 flex gap-2 justify-end">
                 <Link to={`/vehicules/${vehicleId}/interventions/${it.id}`} className="text-sm text-blue-600">Gérer les pièces</Link>
               </div>

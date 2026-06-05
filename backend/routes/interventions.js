@@ -61,10 +61,7 @@ router.post('/', createInterventionValidation, verifyToken, interventionControll
 // Get single intervention by id
 router.get('/:id', interventionIdParam, validateRequest, verifyToken, interventionController.getInterventionById);
 
-// Manage pieces linked to an intervention
-
-router.post('/:id/pieces', addPieceValidation, verifyToken, interventionController.addPieceToIntervention);
-router.delete('/:id/pieces/:pieceId', removePieceValidation, verifyToken, interventionController.removePieceFromIntervention);
+// Note: piece management endpoints removed — pieces are no longer handled here.
 
 // Update intervention
 router.patch('/:id', updateInterventionValidation, verifyToken, interventionController.updateIntervention);

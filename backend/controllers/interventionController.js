@@ -98,83 +98,7 @@ const getInterventionBaseById = async (interventionId, client = pool) => {
   }
 };
 
-// Charge les pièces liées à une intervention.
-const getPiecesByInterventionId = async (interventionId, client = pool) => {
-  try {
-    const result = await client.query(
-      `SELECT
-         p.id,
-         p.nom,
-         p.reference,
-         p.description,
-         p.prix_unitaire,
-         p.stock,
-         ip.quantite,
-         ip.prix_unitaire_applique
-       FROM intervention_pieces ip
-       JOIN pieces p ON p.id = ip.piece_id
-       WHERE ip.intervention_id = $1
-       ORDER BY p.nom ASC`,
-      [interventionId]
-    );
-
-    return result.rows;
-  } catch (error) {
-    if (!isMissingColumnError(error)) throw error;
-
-    const legacyResult = await client.query(
-      `SELECT
-         p.id,
-         p.nom,
-         p.reference,
-         p.description,
-         p.prix_unitaire,
-         p.stock,
-         ip.quantite,
-         ip.prix_unitaire_applique
-       FROM intervention_pieces ip
-       JOIN pieces p ON p.id = COALESCE(ip.piece_id, ip."pieceId")
-       WHERE COALESCE(ip.intervention_id, ip."interventionId") = $1
-       ORDER BY p.nom ASC`,
-      [interventionId]
-    );
-
-    return legacyResult.rows;
-  }
-};
-
-// Agrège intervention + pièces dans un seul objet de réponse.
-const getInterventionWithPiecesById = async (interventionId, client = pool) => {
-  const intervention = await getInterventionBaseById(interventionId, client);
-  if (!intervention) return null;
-
-  const pieces = await getPiecesByInterventionId(interventionId, client);
-  return {
-    ...intervention,
-    pieces
-  };
-};
-
-// Recalcule le coût total d'une intervention à partir des pièces liées.
-const recalculateInterventionTotal = async (interventionId, client = pool) => {
-  const sumResult = await client.query(
-    `SELECT COALESCE(SUM(quantite * prix_unitaire_applique), 0) AS total
-     FROM intervention_pieces
-     WHERE intervention_id = $1`,
-    [interventionId]
-  );
-
-  const total = Number(sumResult.rows[0]?.total || 0);
-
-  await client.query(
-    `UPDATE interventions
-     SET cout_total = $1, updated_at = NOW()
-     WHERE id = $2`,
-    [total, interventionId]
-  );
-
-  return total;
-};
+// Pieces management removed: intervention_pieces is not used by this controller anymore.
 
 // Crée une intervention pour un véhicule appartenant à l'utilisateur.
 exports.createIntervention = async (req, res) => {
@@ -252,66 +176,16 @@ exports.createIntervention = async (req, res) => {
 
     const interventionId = insertInterventionResult.rows[0].id;
 
-    if (Array.isArray(pieces) && pieces.length > 0) {
-      for (const item of pieces) {
-        const pieceId = Number.parseInt(item?.pieceId, 10);
-        const quantite = parsePositiveInt(item?.quantite, 1) || 1;
-
-        if (!Number.isFinite(pieceId) || pieceId <= 0) {
-          throw new Error('PIECE_ID_INVALID');
-        }
-
-        const pieceResult = await client.query(
-          'SELECT id, prix_unitaire FROM pieces WHERE id = $1',
-          [pieceId]
-        );
-
-        if (pieceResult.rows.length === 0) {
-          throw new Error(`PIECE_NOT_FOUND_${pieceId}`);
-        }
-
-        const fallbackUnitPrice = Number(pieceResult.rows[0].prix_unitaire);
-        const customPrice = item?.prix_unitaire !== undefined ? Number(item.prix_unitaire) : NaN;
-        const prixUnitaireApplique = Number.isFinite(customPrice) && customPrice >= 0
-          ? customPrice
-          : fallbackUnitPrice;
-
-        await client.query(
-          `INSERT INTO intervention_pieces (
-             intervention_id,
-             piece_id,
-             quantite,
-             prix_unitaire_applique
-           )
-           VALUES ($1, $2, $3, $4)`,
-          [interventionId, pieceId, quantite, prixUnitaireApplique]
-        );
-      }
-    }
-
-    if (Array.isArray(pieces) && pieces.length > 0) {
-      await recalculateInterventionTotal(interventionId, client);
-    }
     await client.query('COMMIT');
 
     await maintenanceService.syncMaintenanceState(vehicleId).catch((error) => {
       console.error('Failed to sync maintenance state after intervention creation:', error);
     });
 
-    const responsePayload = await getInterventionWithPiecesById(interventionId);
+    const responsePayload = await getInterventionBaseById(interventionId);
     return res.status(201).json(responsePayload);
   } catch (error) {
     await client.query('ROLLBACK');
-
-    if (error.message === 'PIECE_ID_INVALID') {
-      return res.status(400).json({ message: 'pieceId invalide dans la liste des pièces' });
-    }
-
-    if (error.message.startsWith('PIECE_NOT_FOUND_')) {
-      const missingId = error.message.replace('PIECE_NOT_FOUND_', '');
-      return res.status(400).json({ message: `Pièce id ${missingId} introuvable` });
-    }
-
     console.error(error);
     return res.status(500).json({ message: 'Erreur serveur' });
   } finally {
@@ -380,13 +254,7 @@ exports.getInterventionsByVehicle = async (req, res) => {
       );
     }
 
-    const interventions = [];
-    for (const row of result.rows) {
-      const pieces = await getPiecesByInterventionId(row.id);
-      interventions.push({ ...row, pieces });
-    }
-
-    return res.json(interventions);
+    return res.json(result.rows);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: 'Erreur serveur' });
@@ -402,7 +270,7 @@ exports.getInterventionById = async (req, res) => {
   }
 
   try {
-    const intervention = await getInterventionWithPiecesById(interventionId);
+    const intervention = await getInterventionBaseById(interventionId);
     if (!intervention) {
       return res.status(404).json({ message: 'Intervention non trouvée' });
     }

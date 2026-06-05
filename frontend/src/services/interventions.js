@@ -50,17 +50,15 @@ const deleteIntervention = async (vehicleId, id) => {
 };
 
 const addPiece = async (vehicleId, interventionId, payload) => {
-  const res = await API.post(`/vehicules/${vehicleId}/interventions/${interventionId}/pieces`, payload);
-  return res.data?.data || res.data;
+  // pieces management removed on backend; this function is deprecated
+  throw new Error('La gestion des pièces a été désactivée');
 };
-
 export default {
   listForVehicle,
   getById,
   create,
   update,
   remove,
-  deleteIntervention,
-  addPiece,
+  deleteIntervention
 };
 

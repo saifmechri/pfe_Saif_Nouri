@@ -2,30 +2,18 @@
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Pencil, Save, X } from 'lucide-react';
 import interventionsApi from '../../services/interventions';
-import { getPieces } from '../../services/pieces';
-
-const extractPieces = (response) => {
-  const payload = response?.data?.data ?? response?.data ?? response ?? {};
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
-};
 
 const InterventionDetail = () => {
   const { vehicleId, id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [item, setItem] = useState(null);
-  const [availablePieces, setAvailablePieces] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [piecesLoading, setPiecesLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({});
   const [submitting, setSubmitting] = useState(false);
-  const [pieceForm, setPieceForm] = useState({ pieceId: '', quantite: '1', prix_unitaire: '' });
-  const [pieceActionLoading, setPieceActionLoading] = useState(false);
-  const [pieceActionError, setPieceActionError] = useState(null);
+  
 
   const loadIntervention = async () => {
     setLoading(true);
@@ -48,23 +36,8 @@ const InterventionDetail = () => {
       setLoading(false);
     }
   };
-
-  const loadAvailablePieces = async () => {
-    setPiecesLoading(true);
-    try {
-      const response = await getPieces({ page: 1, limit: 500, sortBy: 'created_at', sortOrder: 'desc' });
-      const pieces = extractPieces(response).filter((piece) => Number(piece.stock ?? 0) > 0);
-      setAvailablePieces(pieces);
-    } catch (err) {
-      setAvailablePieces([]);
-    } finally {
-      setPiecesLoading(false);
-    }
-  };
-
   useEffect(() => {
     loadIntervention();
-    loadAvailablePieces();
   }, [vehicleId, id]);
 
   useEffect(() => {
@@ -115,61 +88,7 @@ const InterventionDetail = () => {
     await loadIntervention();
   };
 
-  const handlePieceSelectionChange = (event) => {
-    const { name, value } = event.target;
-    setPieceForm((current) => ({ ...current, [name]: value }));
-  };
-
-  const handleAddPiece = async () => {
-    if (!pieceForm.pieceId) {
-      setPieceActionError('Sélectionnez une pièce.');
-      return;
-    }
-
-    const quantite = Number.parseInt(pieceForm.quantite, 10);
-    if (!Number.isInteger(quantite) || quantite <= 0) {
-      setPieceActionError('La quantité doit être supérieure ou égale à 1.');
-      return;
-    }
-
-    setPieceActionLoading(true);
-    setPieceActionError(null);
-    try {
-      const payload = {
-        pieceId: Number(pieceForm.pieceId),
-        quantite
-      };
-
-      if (pieceForm.prix_unitaire !== '') {
-        payload.prix_unitaire = Number(pieceForm.prix_unitaire);
-      }
-
-      const updated = await interventionsApi.addPiece(vehicleId, id, payload);
-      setItem(updated);
-      setPieceForm({ pieceId: '', quantite: '1', prix_unitaire: '' });
-      await refreshIntervention();
-    } catch (err) {
-      setPieceActionError(err?.response?.data?.message || err.message || 'Erreur lors de l’ajout de la pièce');
-    } finally {
-      setPieceActionLoading(false);
-    }
-  };
-
-  const handleRemovePiece = async (pieceId) => {
-    setPieceActionLoading(true);
-    setPieceActionError(null);
-    try {
-      const updated = await interventionsApi.removePiece(vehicleId, id, pieceId);
-      setItem(updated);
-      await refreshIntervention();
-    } catch (err) {
-      setPieceActionError(err?.response?.data?.message || err.message || 'Erreur lors de la suppression de la pièce');
-    } finally {
-      setPieceActionLoading(false);
-    }
-  };
-
-  const currentPieces = Array.isArray(item?.pieces) ? item.pieces : [];
+  
 
   const formatDate = (value) => {
     if (!value) return '—';
@@ -283,98 +202,7 @@ const InterventionDetail = () => {
 
               <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Pièces utilisées</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {currentPieces.length > 0 ? (
-                    currentPieces.map((piece) => (
-                      <div
-                        key={piece.id || `${piece.reference || piece.nom}-${piece.quantite}`}
-                        className="flex items-center gap-2 rounded-full border border-[#cfd9ea] bg-white px-3 py-1 text-sm text-[#1f3558]"
-                      >
-                        <span className="font-medium">{piece.nom || piece.reference || 'Pièce'}</span>
-                        {piece.quantite ? <span className="text-[#5d7397]">x{piece.quantite}</span> : null}
-                        {editing ? (
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePiece(piece.id)}
-                            disabled={pieceActionLoading}
-                            className="ml-1 text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-60"
-                          >
-                            Retirer
-                          </button>
-                        ) : null}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-[#5d7397]">Aucune pièce associée à cette intervention.</p>
-                  )}
-                </div>
-
-                {editing ? (
-                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-                    <label className="block md:col-span-2">
-                      <span className="mb-1 block text-sm font-medium text-[#1a355e]">Choisir une pièce</span>
-                      <select
-                        name="pieceId"
-                        value={pieceForm.pieceId}
-                        onChange={handlePieceSelectionChange}
-                        className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
-                        disabled={piecesLoading}
-                      >
-                        <option value="">{piecesLoading ? 'Chargement des pièces...' : 'Sélectionnez une pièce'}</option>
-                        {availablePieces.map((piece) => (
-                          <option key={piece.id} value={piece.id}>
-                            {piece.nom || piece.reference || `Pièce #${piece.id}`} {piece.reference ? `(${piece.reference})` : ''}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-[#1a355e]">Quantité</span>
-                      <input
-                        name="quantite"
-                        value={pieceForm.quantite}
-                        onChange={handlePieceSelectionChange}
-                        type="number"
-                        min="1"
-                        className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
-                      />
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-1 block text-sm font-medium text-[#1a355e]">Prix unitaire</span>
-                      <input
-                        name="prix_unitaire"
-                        value={pieceForm.prix_unitaire}
-                        onChange={handlePieceSelectionChange}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="w-full rounded-lg border border-[#cfd9ea] bg-white px-3 py-2 text-[#0f2747] outline-none transition focus:border-[#1d4ed8] focus:ring-4 focus:ring-[#1d4ed826]"
-                      />
-                    </label>
-
-                    <div className="md:col-span-4 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={handleAddPiece}
-                        disabled={pieceActionLoading || piecesLoading}
-                        className="inline-flex items-center gap-2 rounded-lg bg-[#0f766e] px-4 py-2 text-sm font-semibold text-white hover:bg-[#115e59] disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {pieceActionLoading ? 'Ajout...' : 'Ajouter la pièce'}
-                      </button>
-                      <span className="text-xs text-[#5d7397]">
-                        Les pièces affichées sont filtrées sur le stock disponible.
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
-
-                {pieceActionError ? (
-                  <div className="mt-3 rounded-lg border border-[#f6d2d2] bg-[#fff6f6] px-4 py-3 text-sm text-[#8f1f1f]">
-                    {pieceActionError}
-                  </div>
-                ) : null}
+                <p className="mt-3 text-sm text-[#5d7397]">La gestion des pièces a été désactivée dans cette version.</p>
               </div>
             </div>
           ) : (

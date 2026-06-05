@@ -115,7 +115,12 @@ const AlertsPage = () => {
 
       {/* Section Alerte Principale */}
       {revision && (
-        <div className={`border-l-4 border-l-${urgency?.color}-500 p-6 rounded-lg ${getUrgencyBg(urgency?.color)}`}>
+        <div 
+          className={`border-l-4 p-6 rounded-lg ${getUrgencyBg(urgency?.color)}`}
+          style={{ 
+            borderLeftColor: urgency?.color === 'red' ? '#dc2626' : urgency?.color === 'orange' ? '#ea580c' : urgency?.color === 'green' ? '#16a34a' : '#3b82f6'
+          }}
+        >
           <div className="flex items-start justify-between">
             <div className="flex items-start space-x-4">
               <div className={`${getUrgencyTextColor(urgency?.color)} mt-1`}>
@@ -232,6 +237,7 @@ const AlertsPage = () => {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </PlatformLayout>
   );

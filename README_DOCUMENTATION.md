@@ -448,6 +448,198 @@ Comparaison multi-vendeurs pour une référence/nom de pièce ; redirection vers
 
 ---
 
+# Capture du menu latéral: Garages, Messagerie, Catalogue pièces
+
+Cette capture correspond au menu latéral de l’espace automobiliste. Les trois entrées visibles ne sont pas trois fichiers uniques, mais trois écrans pilotés par un layout commun et un routeur central.
+
+## Emplacement des fichiers principaux
+
+| Élément | Fichier | Rôle |
+|---|---|---|
+| Menu latéral | frontend/src/components/PlatformLayout.jsx | Construit la sidebar, affiche les liens selon le rôle et gère la navigation active |
+| Routage protégé | frontend/src/routes/AppRouter.jsx | Déclare les URLs, protège les pages et associe chaque URL à son écran |
+| Garages | frontend/src/pages/automobiliste/Garages.jsx | Affiche la liste des garages, la carte, les filtres et les actions de réservation |
+| Messagerie | frontend/src/pages/chat/ChatCenter.jsx | Gère les conversations, les contacts et l’envoi/réception des messages |
+| Catalogue pièces | frontend/src/pages/vendeur/CataloguePieces.jsx | Affiche le catalogue, la recherche, la comparaison et le contact vendeur |
+
+## Comment ça fonctionne
+
+1. Le composant [PlatformLayout.jsx](frontend/src/components/PlatformLayout.jsx#L1) affiche le menu latéral.
+2. Pour un automobiliste, il ajoute les liens vers `Garages`, `Messagerie` et `Catalogue pièces`.
+3. Quand l’utilisateur clique sur un lien, React Router charge la route correspondante dans [AppRouter.jsx](frontend/src/routes/AppRouter.jsx#L1).
+4. La route est protégée par `ProtectedRoute`, donc l’écran ne s’ouvre que si le rôle est autorisé.
+5. La page chargée appelle ensuite ses services frontend, qui parlent à l’API backend.
+
+### Détail par écran
+
+- [Garages.jsx](frontend/src/pages/automobiliste/Garages.jsx#L1) charge les garages depuis l’API, affiche la carte et permet de consulter les détails, les services, les avis et la réservation.
+- [ChatCenter.jsx](frontend/src/pages/chat/ChatCenter.jsx#L1) charge les contacts et conversations, puis écoute les messages en temps réel pour mettre à jour l’interface.
+- [CataloguePieces.jsx](frontend/src/pages/vendeur/CataloguePieces.jsx#L1) charge les pièces, propose les filtres et permet la création, la modification, la suppression et la comparaison.
+
+## Cycle de déplacement dans une architecture 3-tier
+
+```mermaid
+flowchart LR
+  U[Utilisateur dans le navigateur] --> F[Frontend React]
+  F --> R[Route React Router]
+  R --> P[Page métier
+Garages / Messagerie / Catalogue]
+  P --> S[Service frontend
+src/services/*]
+  S --> A[API backend Express]
+  A --> C[Controller]
+  C --> M[Service métier]
+  M --> D[Base de données PostgreSQL]
+  D --> M
+  M --> C
+  C --> A
+  A --> S
+  S --> P
+  P --> F
+  F --> U
+```
+
+### Couche présentation
+
+Le frontend React gère l’affichage. Il contient le layout, les pages, les composants visuels et la navigation. Cette couche ne doit pas accéder directement à la base de données.
+
+### Couche logique applicative
+
+Le backend Express reçoit les requêtes HTTP, vérifie le token, applique les règles métier et prépare les réponses. C’est ici que vivent les contrôleurs et les services.
+
+### Couche données
+
+PostgreSQL stocke les garages, les pièces, les conversations, les messages, les utilisateurs et les autres entités métier. Le backend lit et écrit dans cette couche.
+
+## Cycle complet d’un clic utilisateur
+
+1. L’utilisateur clique sur `Garages`, `Messagerie` ou `Catalogue pièces`.
+2. `PlatformLayout.jsx` met à jour la navigation et React Router affiche la bonne page.
+3. La page appelle un service, par exemple `src/services/garage.js`, `src/services/chat.js` ou `src/services/pieces.js`.
+4. Le service envoie une requête HTTP au backend.
+5. Le backend passe par les middlewares, puis par le controller et le service métier.
+6. Le service métier interroge PostgreSQL.
+7. La base renvoie les données au backend.
+8. Le backend renvoie une réponse JSON.
+9. Le frontend met à jour l’interface avec les nouvelles données.
+
+## Exemples concrets par lien du menu
+
+### 1. Lien Garages
+
+Quand l’automobiliste clique sur `Garages`, le menu vient de [PlatformLayout.jsx](frontend/src/components/PlatformLayout.jsx#L97), puis React Router ouvre [Garages.jsx](frontend/src/pages/automobiliste/Garages.jsx#L355). Cette page appelle les services garage, par exemple pour récupérer la liste, les filtres, la carte et les détails du garage. Le backend reçoit la requête sur `/api/garages`, passe par le controller garage, puis interroge PostgreSQL pour retourner les garages proches, leurs services et leurs avis.
+
+### 2. Lien Messagerie
+
+Quand l’utilisateur clique sur `Messagerie`, le layout redirige vers [AppRouter.jsx](frontend/src/routes/AppRouter.jsx#L81), puis la page [ChatCenter.jsx](frontend/src/pages/chat/ChatCenter.jsx#L39) charge les conversations via `src/services/chat.js`. Le frontend demande d’abord les contacts et les conversations, ensuite il récupère les messages, et enfin il s’abonne au flux temps réel pour afficher les nouveaux messages sans recharger la page.
+
+### 3. Lien Catalogue pièces
+
+Quand l’utilisateur clique sur `Catalogue pièces`, React Router ouvre [CataloguePieces.jsx](frontend/src/pages/vendeur/CataloguePieces.jsx#L475). La page charge les pièces via `src/services/pieces.js`, applique les filtres de marque, modèle, catégorie et zone, puis permet au vendeur ou à l’automobiliste de comparer les offres ou de contacter le vendeur via le chat. Le backend répond par les routes `/api/pieces`, `/api/pieces/:id` et les actions CRUD associées.
+
+## Envoi d’un message dans l’architecture 3-tier
+
+Voici le chemin réel d’un message dans Autobot :
+
+```mermaid
+sequenceDiagram
+  participant U as Utilisateur
+  participant F as Frontend React
+  participant P as src/services/chat.js
+  participant R as Backend route /api/chat
+  participant C as chat.controller.js
+  participant S as chatService.js
+  participant M as chat.model.js
+  participant D as PostgreSQL
+  participant N as notificationService.js
+  participant RT as Supabase Realtime
+
+  U->>F: Saisir un message et cliquer envoyer
+  F->>P: sendConversationMessage(conversationId, payload)
+  P->>R: POST /api/chat/conversations/:id/messages
+  R->>C: createChatMessage(req, res)
+  C->>S: sendMessageToConversation(...)
+  S->>M: createMessage(...)
+  M->>D: INSERT INTO chat_messages
+  D-->>M: Message créé
+  M-->>S: Ligne insérée
+  S->>M: touchConversation(...)
+  S->>N: createForUser(...)
+  S-->>C: conversation + message
+  C-->>R: JSON response
+  R-->>P: Message créé
+  P-->>F: Mise à jour UI
+  D-->>RT: INSERT détecté sur chat_messages
+  RT-->>F: Nouveau message en temps réel
+```
+
+### Schéma de fichiers pour l’envoi de message
+
+```text
+frontend/
+  src/
+    pages/chat/ChatCenter.jsx
+      -> affiche l’interface de messagerie
+      -> charge les conversations, les contacts et les messages
+      -> envoie les messages via le service frontend
+
+    services/chat.js
+      -> fetchChatContacts()
+      -> fetchChatConversations()
+      -> fetchConversationMessages()
+      -> sendConversationMessage()
+      -> subscribeToConversationMessages()
+
+backend/
+  routes/chat.routes.js
+      -> POST /conversations/:conversationId/messages
+
+  controllers/chat.controller.js
+      -> createChatMessage(req, res)
+
+  services/chatService.js
+      -> sendMessageToConversation()
+      -> listConversationMessages()
+      -> startConversation()
+
+  models/chat.model.js
+      -> createMessage()
+      -> listMessagesByConversation()
+      -> touchConversation()
+
+  services/notificationService.js
+      -> crée la notification du destinataire
+
+database/
+  chat_conversations
+  chat_messages
+  users
+  garages
+  roles
+```
+
+## Méthode de développement de la messagerie dans ce projet
+
+La messagerie a été développée avec une approche hybride :
+
+1. Une API REST pour la logique métier principale, avec `GET` pour lire les conversations/messages et `POST` pour envoyer un message.
+2. Une couche service backend pour centraliser les règles métier, les contrôles d’accès et la création de notifications.
+3. Une couche modèle SQL pour écrire et lire dans les tables `chat_conversations` et `chat_messages`.
+4. Un mécanisme temps réel côté frontend avec Supabase Realtime, afin d’ajouter instantanément les nouveaux messages à l’écran.
+
+Concrètement, l’envoi d’un message passe par `sendConversationMessage()` dans [frontend/src/services/chat.js](frontend/src/services/chat.js#L1), puis par `createChatMessage()` dans [backend/controllers/chat.controller.js](backend/controllers/chat.controller.js#L1), puis par `sendMessageToConversation()` dans [backend/services/chatService.js](backend/services/chatService.js#L1). Ensuite, le message est stocké dans la base, une notification est créée pour le destinataire, et le frontend écoute aussi l’insertion pour rafraîchir l’interface en temps réel.
+
+## Résumé simple
+
+- `PlatformLayout.jsx` décide ce que l’utilisateur voit dans le menu.
+- `AppRouter.jsx` décide quelle page est ouverte.
+- `Garages.jsx`, `ChatCenter.jsx` et `CataloguePieces.jsx` affichent le contenu fonctionnel.
+- Le frontend envoie les demandes au backend.
+- Le backend traite la logique métier.
+- PostgreSQL conserve les données.
+
+---
+
 # Interface Admin Dashboard
 
 ## Frontend

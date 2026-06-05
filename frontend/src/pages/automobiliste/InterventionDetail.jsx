@@ -199,11 +199,6 @@ const InterventionDetail = () => {
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Description</p>
                 <p className="mt-2 whitespace-pre-wrap text-[#1f3558]">{item.description || 'Aucune description.'}</p>
               </div>
-
-              <div className="rounded-xl border border-[#e2eaf6] bg-[#f9fbff] p-4 md:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#5a6f91]">Pièces utilisées</p>
-                <p className="mt-3 text-sm text-[#5d7397]">La gestion des pièces a été désactivée dans cette version.</p>
-              </div>
             </div>
           ) : (
             <div className="p-5 md:p-6">

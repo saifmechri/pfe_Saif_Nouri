@@ -68,7 +68,7 @@ const AutomobilisteDashboard = () => {
     garage_adresse: "",
     kilometrage: "",
     cout_total: "",
-    pieces_libres: "",
+    
   });
 
   // États pour le formulaire
@@ -313,7 +313,6 @@ const AutomobilisteDashboard = () => {
       garage_adresse: "",
       kilometrage: "",
       cout_total: "",
-      pieces_libres: "",
     });
 
     setShowInterventionForm(true);
@@ -336,7 +335,6 @@ const AutomobilisteDashboard = () => {
       garage_adresse: "",
       kilometrage: "",
       cout_total: "",
-      pieces_libres: "",
     });
   };
 
@@ -353,10 +351,10 @@ const AutomobilisteDashboard = () => {
    * - kilometrage: Vehicle mileage when maintenance done
    * - description: Detailed notes about work performed
   * - cout_total: Total cost of the intervention
-  * - pieces_libres: Manual free-text parts used
+  * - (pieces libres field removed)
    * PROCESS:
    * 1. Validate all required fields
-  * 2. Append pieces_libres to the description when provided
+  * 2. (No automatic append of manual parts)
   * 3. Send to backend API
   * 4. Update vehicle intervention history
   * 5. Show success/error message to user
@@ -371,11 +369,7 @@ const AutomobilisteDashboard = () => {
     setInterventionError("");
 
     try {
-      const manualPiecesText = String(interventionFormData.pieces_libres || "").trim();
-      const mergedDescription = [
-        interventionFormData.description?.trim(),
-        manualPiecesText ? `Pièces utilisées: ${manualPiecesText}` : ""
-      ].filter(Boolean).join("\n\n");
+      const mergedDescription = interventionFormData.description?.trim();
 
       const payload = {
         date_intervention: interventionFormData.date_intervention || undefined,
@@ -858,19 +852,7 @@ const AutomobilisteDashboard = () => {
                       rows="3"
                     />
 
-                    <div className="md:col-span-2 border border-gray-200 rounded p-3 bg-white">
-                      <label className="block">
-                        <span className="mb-1 block text-sm font-medium text-gray-700">Pièces utilisées</span>
-                        <textarea
-                          name="pieces_libres"
-                          value={interventionFormData.pieces_libres}
-                          onChange={handleInterventionFieldChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded"
-                          rows="3"
-                          placeholder="Écrire manuellement, ex: Filtre à huile x1, Huile moteur 5W30 x4L"
-                        />
-                      </label>
-                    </div>
+                    {/* Champ 'Pièces utilisées' retiré */}
 
                     <div className="md:col-span-2 flex gap-2">
                       <button
@@ -964,20 +946,7 @@ const AutomobilisteDashboard = () => {
                                 </p>
                               )}
 
-                              <div className="mt-2 text-sm">
-                                <p className="font-semibold mb-1">Pièces utilisées :</p>
-                                {Array.isArray(intervention.pieces) && intervention.pieces.length > 0 ? (
-                                  <ul className="list-disc list-inside text-gray-700">
-                                    {intervention.pieces.map((piece) => (
-                                      <li key={piece.id}>
-                                        {piece.nom} (x{piece.InterventionPiece?.quantite || 1}) - {piece.InterventionPiece?.prix_unitaire_applique || piece.prix_unitaire || 0} TND
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <p className="text-gray-500">Aucune pièce enregistrée.</p>
-                                )}
-                              </div>
+                              {/* Affichage des pièces utilisées retiré */}
                             </div>
                           ))}
                         </div>

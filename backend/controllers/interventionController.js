@@ -123,9 +123,11 @@ exports.createIntervention = async (req, res) => {
     return res.status(400).json({ message: 'vehicleId invalide' });
   }
 
-  if (!allowedInterventionTypes.includes(type)) {
+  // `type` is optional at the API layer; if omitted, default to 'autre'.
+  if (type !== undefined && !allowedInterventionTypes.includes(type)) {
     return res.status(400).json({ message: 'Type intervention invalide' });
   }
+  const finalType = type || 'autre';
 
   const parsedKilometrage = parsePositiveInt(kilometrage, null);
   if (kilometrage !== undefined && parsedKilometrage === null) {
@@ -152,7 +154,7 @@ exports.createIntervention = async (req, res) => {
       `INSERT INTO interventions (
          vehicle_id,
          date_intervention,
-         type,
+        finalType,
          description,
          garage_nom,
          garage_adresse,
@@ -357,7 +359,7 @@ exports.updateIntervention = async (req, res) => {
       ]
     );
 
-    const updated = await getInterventionWithPiecesById(interventionId);
+    const updated = await getInterventionBaseById(interventionId);
 
     await maintenanceService.syncMaintenanceState(current.vehicle_id).catch((error) => {
       console.error('Failed to sync maintenance state after intervention update:', error);
@@ -475,7 +477,7 @@ exports.addPieceToIntervention = async (req, res) => {
       console.error('Failed to sync maintenance state after adding a piece:', error);
     });
 
-    const updated = await getInterventionWithPiecesById(interventionId);
+    const updated = await getInterventionBaseById(interventionId);
     return res.json(updated);
   } catch (error) {
     await client.query('ROLLBACK');
@@ -524,7 +526,7 @@ exports.removePieceFromIntervention = async (req, res) => {
       console.error('Failed to sync maintenance state after removing a piece:', error);
     });
 
-    const updated = await getInterventionWithPiecesById(interventionId);
+    const updated = await getInterventionBaseById(interventionId);
     return res.json(updated);
   } catch (error) {
     await client.query('ROLLBACK');

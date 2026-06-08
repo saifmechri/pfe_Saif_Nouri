@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle2, Loader2, RefreshCcw, ShieldAlert, Store, Package, TriangleAlert, Trash2, BarChart3, Users, CalendarRange, Award } from "lucide-react";
 import PlatformLayout from "../../components/PlatformLayout";
 import {
@@ -45,8 +45,21 @@ const INITIAL_COUNTS = {
 
 const CHART_COLORS = ["#2563eb", "#7c3aed", "#f59e0b", "#10b981", "#ef4444", "#14b8a6"];
 
+const getAdminTabFromPath = (pathname) => {
+  if (pathname.startsWith("/admin/catalogue")) {
+    return "pieces";
+  }
+
+  if (pathname.startsWith("/admin/garages")) {
+    return "garages";
+  }
+
+  return "stats";
+};
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("stats");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState({ type: null, id: null });
@@ -205,6 +218,10 @@ const AdminDashboard = () => {
   useEffect(() => {
     loadDashboard();
   }, []);
+
+  useEffect(() => {
+    setActiveTab(getAdminTabFromPath(location.pathname));
+  }, [location.pathname]);
 
   useEffect(() => {
     if (activeTab === 'audit') {
@@ -385,11 +402,22 @@ const AdminDashboard = () => {
               { key: "overview", label: "Vue globale" }
             ].map((tab) => {
               const isActive = activeTab === tab.key;
+              const tabPath = tab.key === "garages"
+                ? "/admin/garages"
+                : tab.key === "pieces"
+                  ? "/admin/catalogue"
+                  : null;
+
               return (
                 <button
                   key={tab.key}
                   type="button"
-                  onClick={() => setActiveTab(tab.key)}
+                  onClick={() => {
+                    setActiveTab(tab.key);
+                    if (tabPath && location.pathname !== tabPath) {
+                      navigate(tabPath, { replace: false });
+                    }
+                  }}
                   className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${isActive ? "bg-[#13243f] text-white shadow-lg" : "text-[#5b6981] hover:bg-[#edf3fb] hover:text-[#13243f]"}`}
                 >
                   {tab.label}

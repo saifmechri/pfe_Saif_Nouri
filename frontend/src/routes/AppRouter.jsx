@@ -239,6 +239,14 @@ const AppRouter = () => {
           }
         />
         <Route
+          path="/admin/messages"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <ChatCenter />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>

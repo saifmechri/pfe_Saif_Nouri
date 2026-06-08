@@ -86,8 +86,8 @@ const PlatformLayout = ({ children }) => {
 
     // Admin keeps the same shared shell, with actions handled from admin pages only.
     if (user?.role === "admin") {
-      items.push({ label: "Catalogue pièces", to: "/admin/catalogue" });
-      items.push({ label: "Garages", to: "/admin/garages" });
+      items.push({ label: "Catalogue pièces", to: "/automobiliste/catalogue" });
+      items.push({ label: "Garages", to: "/automobiliste/garages" });
       items.push({ label: "Messagerie", to: "/admin/messages" });
       return items;
     }

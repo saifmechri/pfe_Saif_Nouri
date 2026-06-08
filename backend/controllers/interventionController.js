@@ -3,8 +3,75 @@ const { validationResult } = require('express-validator');
 const maintenanceService = require('../services/maintenanceService');
 
 const allowedInterventionTypes = ['révision', 'réparation', 'vidange', 'autre'];
+const tableColumnsCache = new Map();
 
 const isMissingColumnError = (error) => error && error.code === '42703';
+
+const quoteIdentifier = (identifier) => `"${String(identifier).replace(/"/g, '""')}"`;
+
+const getTableColumns = async (tableName, client = pool) => {
+  if (tableColumnsCache.has(tableName)) {
+    return tableColumnsCache.get(tableName);
+  }
+
+  const result = await client.query(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = 'public' AND table_name = $1`,
+    [tableName]
+  );
+
+  const columns = new Set(result.rows.map((row) => row.column_name));
+  tableColumnsCache.set(tableName, columns);
+  return columns;
+};
+
+const resolveColumnExpression = (columns, aliases, { required = false, type = 'TEXT' } = {}) => {
+  for (const alias of aliases) {
+    if (columns.has(alias)) {
+      return `i.${quoteIdentifier(alias)} AS ${aliases[0]}`;
+    }
+  }
+
+  if (required) {
+    throw new Error(`Missing required column(s): ${aliases.join(', ')}`);
+  }
+
+  return `NULL::${type} AS ${aliases[0]}`;
+};
+
+const resolveWritableColumn = (columns, aliases) => {
+  for (const alias of aliases) {
+    if (columns.has(alias)) {
+      return alias;
+    }
+  }
+
+  return null;
+};
+
+const buildInterventionSelectList = async (client = pool) => {
+  const columns = await getTableColumns('interventions', client);
+
+  return {
+    columns,
+    selectList: [
+      resolveColumnExpression(columns, ['id'], { required: true, type: 'BIGINT' }),
+      resolveColumnExpression(columns, ['vehicle_id', 'vehicleId'], { required: true, type: 'BIGINT' }),
+      resolveColumnExpression(columns, ['date_intervention', 'dateIntervention'], { type: 'DATE' }),
+      resolveColumnExpression(columns, ['type', 'interventionType'], { type: 'TEXT' }),
+      resolveColumnExpression(columns, ['description', 'details'], { type: 'TEXT' }),
+      resolveColumnExpression(columns, ['garage_nom', 'garageNom'], { type: 'TEXT' }),
+      resolveColumnExpression(columns, ['garage_adresse', 'garageAdresse'], { type: 'TEXT' }),
+      resolveColumnExpression(columns, ['kilometrage', 'mileage'], { type: 'INTEGER' }),
+      resolveColumnExpression(columns, ['cout_total', 'coutTotal'], { type: 'NUMERIC' }),
+      resolveColumnExpression(columns, ['km_recommande', 'kmRecommande'], { type: 'INTEGER' }),
+      resolveColumnExpression(columns, ['jours_recommandes', 'joursRecommandes'], { type: 'INTEGER' }),
+      resolveColumnExpression(columns, ['created_at', 'createdAt'], { type: 'TIMESTAMP' }),
+      resolveColumnExpression(columns, ['updated_at', 'updatedAt'], { type: 'TIMESTAMP' })
+    ]
+  };
+};
 
 const getVehicleMileage = async (vehicleId, client = pool) => {
   const result = await client.query(
@@ -50,21 +117,9 @@ const checkVehicleOwnership = async (vehicleId, userId, client = pool) => {
 // Charge les données principales d'une intervention.
 const getInterventionBaseById = async (interventionId, client = pool) => {
   try {
+    const { selectList } = await buildInterventionSelectList(client);
     const result = await client.query(
-      `SELECT
-         i.id,
-         i.vehicle_id,
-         i.date_intervention,
-         i.type,
-         i.description,
-         i.garage_nom,
-         i.garage_adresse,
-         i.kilometrage,
-         i.cout_total,
-         i.km_recommande,
-         i.jours_recommandes,
-         i.created_at,
-         i.updated_at
+      `SELECT ${selectList.join(', ')}
        FROM interventions i
        WHERE i.id = $1`,
       [interventionId]
@@ -74,21 +129,13 @@ const getInterventionBaseById = async (interventionId, client = pool) => {
   } catch (error) {
     if (!isMissingColumnError(error)) throw error;
 
+    const { columns, selectList } = await buildInterventionSelectList(client);
+    if (!columns.has('vehicle_id') && !columns.has('vehicleId')) {
+      throw error;
+    }
+
     const legacyResult = await client.query(
-      `SELECT
-         i.id,
-         COALESCE(i.vehicle_id, i."vehicleId") AS vehicle_id,
-         i.date_intervention,
-         i.type,
-         i.description,
-         i.garage_nom,
-         i.garage_adresse,
-         i.kilometrage,
-         i.cout_total,
-         i.km_recommande,
-         i.jours_recommandes,
-         i."createdAt" AS created_at,
-         i."updatedAt" AS updated_at
+      `SELECT ${selectList.join(', ')}
        FROM interventions i
        WHERE i.id = $1`,
       [interventionId]
@@ -136,6 +183,21 @@ exports.createIntervention = async (req, res) => {
 
   const client = await pool.connect();
   try {
+    const interventionColumns = await getTableColumns('interventions', client);
+    const vehicleColumn = resolveWritableColumn(interventionColumns, ['vehicle_id', 'vehicleId']);
+    const dateColumn = resolveWritableColumn(interventionColumns, ['date_intervention', 'dateIntervention']);
+    const typeColumn = resolveWritableColumn(interventionColumns, ['type', 'interventionType']);
+    const descriptionColumn = resolveWritableColumn(interventionColumns, ['description', 'details']);
+    const garageNameColumn = resolveWritableColumn(interventionColumns, ['garage_nom', 'garageNom']);
+    const garageAddressColumn = resolveWritableColumn(interventionColumns, ['garage_adresse', 'garageAdresse']);
+    const kilometrageColumn = resolveWritableColumn(interventionColumns, ['kilometrage', 'mileage']);
+    const coutTotalColumn = resolveWritableColumn(interventionColumns, ['cout_total', 'coutTotal']);
+    const updatedAtColumn = resolveWritableColumn(interventionColumns, ['updated_at', 'updatedAt']);
+
+    if (!vehicleColumn || !typeColumn) {
+      return res.status(500).json({ message: 'Schéma interventions incompatible' });
+    }
+
     const isOwner = await checkVehicleOwnership(vehicleId, req.user.id, client);
     if (!isOwner) {
       return res.status(403).json({ message: 'Accès interdit à ce véhicule' });
@@ -150,41 +212,67 @@ exports.createIntervention = async (req, res) => {
 
     await client.query('BEGIN');
 
+    const insertColumns = [];
+    const insertValues = [];
+    const insertParams = [];
+
+    const addInsertValue = (columnName, value) => {
+      if (!columnName) return;
+      insertColumns.push(quoteIdentifier(columnName));
+      insertValues.push(`$${insertValues.length + 1}`);
+      insertParams.push(value);
+    };
+
+    addInsertValue(vehicleColumn, vehicleId);
+    if (dateColumn && date_intervention) {
+      addInsertValue(dateColumn, date_intervention);
+    }
+    addInsertValue(typeColumn, finalType);
+    addInsertValue(descriptionColumn, description || null);
+    addInsertValue(garageNameColumn, garage_nom || null);
+    addInsertValue(garageAddressColumn, garage_adresse || null);
+    addInsertValue(kilometrageColumn, parsedKilometrage);
+    addInsertValue(coutTotalColumn, Number.isFinite(Number(cout_total)) && Number(cout_total) >= 0 ? Number(cout_total) : 0);
+    addInsertValue(updatedAtColumn, new Date());
+
     const insertInterventionResult = await client.query(
-      `INSERT INTO interventions (
-         vehicle_id,
-         date_intervention,
-        finalType,
-         description,
-         garage_nom,
-         garage_adresse,
-         kilometrage,
-         cout_total,
-         updated_at
-       )
-       VALUES ($1, COALESCE($2, CURRENT_DATE), $3, $4, $5, $6, $7, $8, NOW())
+      `INSERT INTO interventions (${insertColumns.join(', ')})
+       VALUES (${insertValues.join(', ')})
        RETURNING id`,
-      [
-        vehicleId,
-        date_intervention || null,
-        type,
-        description || null,
-        garage_nom || null,
-        garage_adresse || null,
-        parsedKilometrage,
-        Number.isFinite(Number(cout_total)) && Number(cout_total) >= 0 ? Number(cout_total) : 0
-      ]
+      insertParams
     );
 
     const interventionId = insertInterventionResult.rows[0].id;
 
     await client.query('COMMIT');
 
+    const fallbackPayload = {
+      id: interventionId,
+      vehicle_id: vehicleId,
+      date_intervention: date_intervention || new Date().toISOString().slice(0, 10),
+      type: finalType,
+      description: description || null,
+      garage_nom: garage_nom || null,
+      garage_adresse: garage_adresse || null,
+      kilometrage: parsedKilometrage,
+      cout_total: Number.isFinite(Number(cout_total)) && Number(cout_total) >= 0 ? Number(cout_total) : 0,
+      km_recommande: 15000,
+      jours_recommandes: 365,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
     await maintenanceService.syncMaintenanceState(vehicleId).catch((error) => {
       console.error('Failed to sync maintenance state after intervention creation:', error);
     });
 
-    const responsePayload = await getInterventionBaseById(interventionId);
+    let responsePayload = fallbackPayload;
+    try {
+      responsePayload = await getInterventionBaseById(interventionId) || fallbackPayload;
+    } catch (readError) {
+      console.error('Failed to reload created intervention, using fallback payload:', readError);
+    }
+
     return res.status(201).json(responsePayload);
   } catch (error) {
     await client.query('ROLLBACK');
@@ -209,52 +297,34 @@ exports.getInterventionsByVehicle = async (req, res) => {
       return res.status(403).json({ message: 'Accès interdit' });
     }
 
-    let result;
-    try {
-      result = await pool.query(
-        `SELECT
-           id,
-           vehicle_id,
-           date_intervention,
-           type,
-           description,
-           garage_nom,
-           garage_adresse,
-           kilometrage,
-           cout_total,
-           km_recommande,
-           jours_recommandes,
-           created_at,
-           updated_at
-         FROM interventions
-         WHERE vehicle_id = $1
-         ORDER BY date_intervention DESC, id DESC`,
-        [vehicleId]
-      );
-    } catch (error) {
-      if (!isMissingColumnError(error)) throw error;
+    const { columns, selectList } = await buildInterventionSelectList();
+    const vehicleColumn = columns.has('vehicle_id')
+      ? 'vehicle_id'
+      : columns.has('vehicleId')
+        ? 'vehicleId'
+        : null;
 
-      result = await pool.query(
-        `SELECT
-           id,
-           COALESCE(vehicle_id, "vehicleId") AS vehicle_id,
-           date_intervention,
-           type,
-           description,
-           garage_nom,
-           garage_adresse,
-           kilometrage,
-           cout_total,
-           km_recommande,
-           jours_recommandes,
-           "createdAt" AS created_at,
-           "updatedAt" AS updated_at
-         FROM interventions
-         WHERE COALESCE(vehicle_id, "vehicleId") = $1
-         ORDER BY date_intervention DESC, id DESC`,
-        [vehicleId]
-      );
+    if (!vehicleColumn) {
+      throw new Error('Interventions table missing vehicle column');
     }
+
+    const orderColumn = columns.has('date_intervention')
+      ? 'date_intervention'
+      : columns.has('dateIntervention')
+        ? 'dateIntervention'
+        : columns.has('created_at')
+          ? 'created_at'
+          : columns.has('createdAt')
+            ? 'createdAt'
+            : 'id';
+
+    const result = await pool.query(
+      `SELECT ${selectList.join(', ')}
+       FROM interventions i
+       WHERE i.${quoteIdentifier(vehicleColumn)} = $1
+       ORDER BY i.${quoteIdentifier(orderColumn)} DESC, i.id DESC`,
+      [vehicleId]
+    );
 
     return res.json(result.rows);
   } catch (error) {

@@ -167,13 +167,13 @@ const AppRouter = () => {
           }
         />
         <Route
-          path="/garage/*"
-          element={
-            <ProtectedRoute allowedRoles={["garage"]}>
-              <GarageDashboard />
-            </ProtectedRoute>
-          }
-        />
+  path="/garage/catalogue"
+  element={
+    <ProtectedRoute allowedRoles={["garage"]}>
+      <CataloguePieces />
+    </ProtectedRoute>
+  }
+/>
         <Route
           path="/garage"
           element={

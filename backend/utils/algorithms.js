@@ -1,10 +1,6 @@
-﻿/**
- * 📊 ALGORITHMES DE RECOMMANDATION
- * Fonctions de scoring pour interventions et garages
- */
-
+﻿
 /**
- * ✅ FONCTION 1: Calculer distance Haversine entre 2 points GPS
+ *  FONCTION 1: Calculer distance Haversine entre 2 points GPS
  */
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371; // Rayon Terre en km

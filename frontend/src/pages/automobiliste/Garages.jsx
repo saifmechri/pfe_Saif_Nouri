@@ -635,7 +635,7 @@ const GaragesPage = () => {
   const buildGarageFilters = (customSearch) => {
     const trimmedSearch = String(customSearch || "").trim();
     const serviceTerms = [...selectedServices];
-
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     const filters = {
       page: 1,
       limit: 100,

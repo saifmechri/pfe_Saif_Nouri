@@ -120,7 +120,7 @@ const chatRouteByRole = {
   automobiliste: "/automobiliste/messages",
   garage: "/garage/messages",
   vendeur: "/vendeur/messages",
-  admin: "/vendeur/messages"
+  admin: "/admin/messages"
 };
 
 const marqueStyleByName = {

@@ -385,7 +385,7 @@ const listGarages = asyncHandler(async (req, res) => {
 
   const useDistance = userLat !== null && userLon !== null;
 
-  // Tri distance ou rayon impossible sans position utilisateur.
+  ///////////////////////// Tri distance ou rayon impossible sans position utilisateur.
   if ((sortBy === 'distance' || radiusKm !== null) && !useDistance) {
     throw new AppError('userLat et userLon sont obligatoires pour distance/radiusKm', 400, 'COORDINATES_REQUIRED');
   }
@@ -419,7 +419,7 @@ const listGarages = asyncHandler(async (req, res) => {
   if (!includeClosed) {
     whereClauses.push('g.is_open = true');
   }
-  // Only show validated/active garages when the schema supports it.
+  //////////////////////////////////////////////////////////////// Only show validated/active garages when the schema supports it.
   if (hasGarageStatusColumn) {
     whereClauses.push("g.status = 'actif'");
   } else if (hasGarageIsValidatedColumn) {
